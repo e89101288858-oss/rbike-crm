@@ -1,0 +1,242 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  OWNER
+  FRANCHISEE
+  MANAGER
+  MECHANIC
+}
+
+enum BikeStatus {
+  AVAILABLE
+  RENTED
+  MAINTENANCE
+  BLOCKED
+  LOST
+}
+
+enum RentalStatus {
+  ACTIVE
+  CLOSED
+  CANCELED
+}
+
+enum PaymentStatus {
+  PLANNED
+  PAID
+}
+
+enum DocumentType {
+  PASSPORT_PHOTO
+  CONTRACT
+  ACT
+}
+
+enum RentalChangeType {
+  EXTEND
+  SHORTEN
+  CLOSE
+}
+
+model User {
+  id           String       @id @default(uuid())
+  email        String       @unique
+  passwordHash String
+  role         UserRole
+  franchiseeId String?
+  franchisee   Franchisee?  @relation(fields: [franchiseeId], references: [id])
+  userTenants  UserTenant[]
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+
+  // обратные связи для createdBy / markedBy
+  createdRentals       Rental[]       @relation("RentalCreatedBy")
+  createdRentalChanges RentalChange[] @relation("RentalChangeCreatedBy")
+  markedPayments       Payment[]      @relation("PaymentMarkedBy")
+  createdRepairs       Repair[]       @relation("RepairCreatedBy")
+  createdDocuments     Document[]     @relation("DocumentCreatedBy")
+}
+
+model Franchisee {
+  id        String   @id @default(uuid())
+  name      String
+  tenants   Tenant[]
+  users     User[]
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Tenant {
+  id           String     @id @default(uuid())
+  name         String
+  franchiseeId String
+  franchisee   Franchisee @relation(fields: [franchiseeId], references: [id])
+
+  userTenants UserTenant[]
+
+  bikes         Bike[]
+  clients       Client[]
+  rentals       Rental[]
+  rentalChanges RentalChange[]
+  payments      Payment[]
+  repairs       Repair[]
+  documents     Document[]
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model UserTenant {
+  userId   String
+  tenantId String
+  user     User   @relation(fields: [userId], references: [id])
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  @@id([userId, tenantId])
+}
+
+model Bike {
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  code   String
+  model  String?
+  status BikeStatus @default(AVAILABLE)
+
+  rentals Rental[]
+  repairs Repair[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([tenantId, code])
+}
+
+model Client {
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  fullName String
+  phone    String?
+  notes    String?
+
+  rentals   Rental[]
+  documents Document[]
+
+  createdAt DateTime @default(now())
+}
+
+model Rental {
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  bikeId String
+  bike   Bike   @relation(fields: [bikeId], references: [id])
+
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id])
+
+  startDate      DateTime
+  plannedEndDate DateTime
+  actualEndDate  DateTime?
+
+  status RentalStatus @default(ACTIVE)
+
+  changes  RentalChange[]
+  payments Payment[]
+
+  createdById String?
+  createdBy   User?   @relation("RentalCreatedBy", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, status])
+  @@index([bikeId])
+  @@index([clientId])
+}
+
+model RentalChange {
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  rentalId String
+  rental   Rental @relation(fields: [rentalId], references: [id])
+
+  type      RentalChangeType
+  daysDelta Int
+  reason    String?
+
+  createdById String?
+  createdBy   User?   @relation("RentalChangeCreatedBy", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([rentalId])
+}
+
+model Payment {
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  rentalId String
+  rental   Rental @relation(fields: [rentalId], references: [id])
+
+  amount Float
+  status PaymentStatus @default(PLANNED)
+
+  markedById String?
+  markedBy   User?   @relation("PaymentMarkedBy", fields: [markedById], references: [id])
+
+  paidAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([tenantId, status])
+}
+
+model Repair {
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  bikeId String
+  bike   Bike   @relation(fields: [bikeId], references: [id])
+
+  description String
+  isClosed    Boolean @default(false)
+
+  createdById String?
+  createdBy   User?   @relation("RepairCreatedBy", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+model Document {
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  clientId String?
+  client   Client? @relation(fields: [clientId], references: [id])
+
+  type     DocumentType
+  filePath String // локальный путь или относительный путь
+
+  createdById String?
+  createdBy   User?   @relation("DocumentCreatedBy", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, type])
+  @@index([clientId])
+}

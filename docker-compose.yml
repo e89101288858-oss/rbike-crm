@@ -1,0 +1,17 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:16
+    container_name: rbike_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rbikedbnn52
+      POSTGRES_PASSWORD: 7t6tt4Hf!t4x056ya
+      POSTGRES_DB: rbike_crm
+    ports:
+      - "5432:5432"
+    volumes:
+      - rbike_pgdata:/var/lib/postgresql/data
+
+volumes:
+  rbike_pgdata:
