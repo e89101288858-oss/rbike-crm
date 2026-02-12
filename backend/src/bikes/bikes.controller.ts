@@ -10,7 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common'
 import { BikeStatus } from '@prisma/client'
-import { Request } from 'express'
+import type { Request } from 'express'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { TenantGuard } from '../common/guards/tenant.guard'
 import { PrismaService } from '../prisma/prisma.service'
