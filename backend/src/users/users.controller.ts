@@ -11,6 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common'
 import * as bcrypt from 'bcrypt'
+import { Prisma, UserRole } from '@prisma/client'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { Roles } from '../common/decorators/roles.decorator'
 import { RolesGuard } from '../common/guards/roles.guard'
@@ -61,7 +62,7 @@ export class UsersController {
       data: {
         email: dto.email,
         passwordHash,
-        role: dto.role,
+        role: dto.role as UserRole,
         franchiseeId: dto.role === 'FRANCHISEE' ? dto.franchiseeId! : null,
       },
     })
@@ -120,24 +121,30 @@ export class UsersController {
       throw new BadRequestException('OWNER user cannot be modified')
     }
 
-    const data: {
-      role?: string
-      isActive?: boolean
-      passwordHash?: string
-    } = {}
+    // Prisma-compatible typing
+    const data: Prisma.UserUpdateInput = {}
 
     if (dto.role !== undefined) {
       if (!ALLOWED_ROLES.includes(dto.role)) {
         throw new BadRequestException('Invalid role')
       }
 
+      // По твоему решению: FRANCHISEE ↔ MANAGER/MECHANIC через update не нужен
       if (dto.role === 'FRANCHISEE') {
         throw new BadRequestException(
           'Changing role to FRANCHISEE is not supported via update',
         )
       }
 
-      data.role = dto.role
+      if (dto.franchiseeId !== undefined) {
+        throw new BadRequestException('franchiseeId cannot be updated via PATCH')
+      }
+
+      data.role = dto.role as UserRole
+    } else if (dto.franchiseeId !== undefined) {
+      throw new BadRequestException(
+        'franchiseeId can only be provided together with role change',
+      )
     }
 
     if (dto.isActive !== undefined) {
@@ -145,15 +152,22 @@ export class UsersController {
     }
 
     if (dto.password !== undefined) {
-      const passwordHash = await bcrypt.hash(dto.password, 10)
-      data.passwordHash = passwordHash
+      data.passwordHash = await bcrypt.hash(dto.password, 10)
     }
 
     const updated = await this.prisma.user.update({
       where: { id },
       data,
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        franchiseeId: true,
+        isActive: true,
+        createdAt: true,
+      },
     })
 
-    const { passwordHash: _, ...rest } = updated
-    return rest
+    return updated
   }
+}
