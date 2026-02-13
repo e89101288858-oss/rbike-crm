@@ -29,3 +29,9 @@
 - Do NOT upgrade Prisma to v7.
 - Do NOT change prisma/schema.prisma unless explicitly instructed.
 - Prefer simple, explicit code over magic.
+
+## Development discipline
+- All changes must follow this spec strictly.
+- Never weaken access control or tenant isolation.
+- Never introduce automatic bike status transitions except the one defined above.
+- Any new module must respect tenant_id isolation.
