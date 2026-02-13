@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -9,13 +10,14 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common'
-import { BikeStatus } from '@prisma/client'
+import { BikeStatus, RentalStatus } from '@prisma/client'
 import type { Request } from 'express'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { TenantGuard } from '../common/guards/tenant.guard'
 import { PrismaService } from '../prisma/prisma.service'
 import { CreateBikeDto } from './dto/create-bike.dto'
 import { UpdateBikeDto } from './dto/update-bike.dto'
+import { UpdateBikeStatusDto } from './dto/update-bike-status.dto'
 
 @Controller('bikes')
 @UseGuards(JwtAuthGuard, TenantGuard)
@@ -56,6 +58,7 @@ export class BikesController {
     return bike
   }
 
+  // Update bike basic fields (model only). Status changes must go through /bikes/:id/status
   @Patch(':id')
   async update(
     @Req() req: Request,
@@ -63,18 +66,77 @@ export class BikesController {
     @Body() dto: UpdateBikeDto,
   ) {
     const tenantId = req.tenantId!
+
+    const existing = await this.prisma.bike.findFirst({
+      where: { id, tenantId },
+      select: { id: true },
+    })
+    if (!existing) {
+      throw new NotFoundException('Bike not found')
+    }
+
+    const result = await this.prisma.bike.updateMany({
+      where: { id, tenantId },
+      data: {
+        ...(dto.model !== undefined && { model: dto.model }),
+      },
+    })
+
+    if (result.count === 0) {
+      throw new NotFoundException('Bike not found')
+    }
+
+    return this.prisma.bike.findFirst({
+      where: { id, tenantId },
+    })
+  }
+
+  // Manual status change endpoint (CRITICAL BUSINESS RULE)
+  @Patch(':id/status')
+  async setStatus(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @Body() dto: UpdateBikeStatusDto,
+  ) {
+    const tenantId = req.tenantId!
+
     const bike = await this.prisma.bike.findFirst({
       where: { id, tenantId },
+      select: { id: true },
     })
     if (!bike) {
       throw new NotFoundException('Bike not found')
     }
-    return this.prisma.bike.update({
-      where: { id },
-      data: {
-        ...(dto.model !== undefined && { model: dto.model }),
-        ...(dto.status !== undefined && { status: dto.status }),
-      },
+
+    // If trying to set AVAILABLE, forbid when there is an ACTIVE rental for this bike
+    if (dto.status === BikeStatus.AVAILABLE) {
+      const activeRental = await this.prisma.rental.findFirst({
+        where: {
+          tenantId,
+          bikeId: id,
+          status: RentalStatus.ACTIVE,
+        },
+        select: { id: true },
+      })
+
+      if (activeRental) {
+        throw new BadRequestException(
+          'Cannot set bike status to AVAILABLE while there is an ACTIVE rental',
+        )
+      }
+    }
+
+    const result = await this.prisma.bike.updateMany({
+      where: { id, tenantId },
+      data: { status: dto.status },
+    })
+
+    if (result.count === 0) {
+      throw new NotFoundException('Bike not found')
+    }
+
+    return this.prisma.bike.findFirst({
+      where: { id, tenantId },
     })
   }
 }
