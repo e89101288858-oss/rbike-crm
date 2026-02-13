@@ -4,6 +4,7 @@ import { AdminModule } from './admin/admin.module'
 import { AuthModule } from './auth/auth.module'
 import { BikesModule } from './bikes/bikes.module'
 import { ClientsModule } from './clients/clients.module'
+import { DocumentsModule } from './documents/documents.module'
 import { PrismaModule } from './prisma/prisma.module'
 import { UsersModule } from './users/users.module'
 
@@ -18,6 +19,7 @@ import { UsersModule } from './users/users.module'
     UsersModule,
     BikesModule,
     ClientsModule,
+    DocumentsModule,
   ],
 })
 export class AppModule {}
