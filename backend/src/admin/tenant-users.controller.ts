@@ -10,7 +10,8 @@ import {
   UseGuards,
 } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
-import { CurrentUser, JwtUser } from '../common/decorators/current-user.decorator'
+import { CurrentUser } from '../common/decorators/current-user.decorator'
+import type { JwtUser } from '../common/decorators/current-user.decorator'
 import { Roles } from '../common/decorators/roles.decorator'
 import { RolesGuard } from '../common/guards/roles.guard'
 import { PrismaService } from '../prisma/prisma.service'

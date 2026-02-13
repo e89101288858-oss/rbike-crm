@@ -7,7 +7,8 @@ import {
   MinLength,
   ValidateIf,
 } from 'class-validator'
-import { ALLOWED_ROLES, AllowedRole } from './create-user.dto'
+import { ALLOWED_ROLES } from './create-user.dto'
+import type { AllowedRole } from './create-user.dto'
 
 export class UpdateUserDto {
   @IsOptional()

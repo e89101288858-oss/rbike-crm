@@ -62,6 +62,7 @@ export class UsersController {
         email: dto.email,
         passwordHash,
         role: dto.role,
+        // В create можно хранить null (в твоей схеме это работало).
         franchiseeId: dto.role === 'FRANCHISEE' ? dto.franchiseeId! : null,
       },
     })
@@ -122,11 +123,13 @@ export class UsersController {
       throw new BadRequestException('OWNER user cannot be modified')
     }
 
+    // ВАЖНО: не используем franchiseeId: null в update, чтобы Prisma типы не падали
     const data: {
       role?: string
-      franchiseeId?: string | null
       isActive?: boolean
       passwordHash?: string
+      // franchiseeId добавляем ТОЛЬКО когда реально задаём строкой
+      franchiseeId?: string
     } = {}
 
     if (dto.role !== undefined) {
@@ -146,12 +149,12 @@ export class UsersController {
         }
         data.franchiseeId = dto.franchiseeId
       } else {
+        // Для MANAGER/MECHANIC franchiseeId в апдейте НЕ трогаем (не ставим null)
         if (dto.franchiseeId) {
           throw new BadRequestException(
             'franchiseeId must not be provided for MANAGER or MECHANIC',
           )
         }
-        data.franchiseeId = null
       }
 
       data.role = dto.role
