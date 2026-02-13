@@ -1,184 +1,52 @@
-import {
-  BadRequestException,
-  Body,
-  ConflictException,
-  Controller,
-  Get,
-  NotFoundException,
-  Param,
-  Patch,
-  Post,
-  UseGuards,
-} from '@nestjs/common'
-import * as bcrypt from 'bcrypt'
-import { JwtAuthGuard } from '../auth/jwt-auth.guard'
-import { Roles } from '../common/decorators/roles.decorator'
-import { RolesGuard } from '../common/guards/roles.guard'
-import { PrismaService } from '../prisma/prisma.service'
-import { CreateUserDto, ALLOWED_ROLES } from './dto/create-user.dto'
-import { UpdateUserDto } from './dto/update-user.dto'
+@Patch(':id')
+async update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
+  const user = await this.prisma.user.findUnique({
+    where: { id },
+  })
 
-@Controller('admin/users')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('OWNER')
-export class UsersController {
-  constructor(private readonly prisma: PrismaService) {}
+  if (!user) {
+    throw new NotFoundException('User not found')
+  }
 
-  @Post()
-  async create(@Body() dto: CreateUserDto) {
-    const existing = await this.prisma.user.findUnique({
-      where: { email: dto.email },
-    })
-    if (existing) {
-      throw new ConflictException('Email already in use')
-    }
+  if (user.role === 'OWNER') {
+    throw new BadRequestException('OWNER user cannot be modified')
+  }
 
+  const data: {
+    role?: string
+    isActive?: boolean
+    passwordHash?: string
+  } = {}
+
+  if (dto.role !== undefined) {
     if (!ALLOWED_ROLES.includes(dto.role)) {
       throw new BadRequestException('Invalid role')
     }
 
+    // Запрещаем изменение роли на FRANCHISEE через update
     if (dto.role === 'FRANCHISEE') {
-      if (!dto.franchiseeId) {
-        throw new BadRequestException('franchiseeId is required for FRANCHISEE')
-      }
-      const franchisee = await this.prisma.franchisee.findUnique({
-        where: { id: dto.franchiseeId },
-      })
-      if (!franchisee) {
-        throw new BadRequestException('Franchisee not found')
-      }
-    }
-
-    if ((dto.role === 'MANAGER' || dto.role === 'MECHANIC') && dto.franchiseeId) {
       throw new BadRequestException(
-        'franchiseeId must not be provided for MANAGER or MECHANIC',
+        'Changing role to FRANCHISEE is not supported via update',
       )
     }
 
+    data.role = dto.role
+  }
+
+  if (dto.isActive !== undefined) {
+    data.isActive = dto.isActive
+  }
+
+  if (dto.password !== undefined) {
     const passwordHash = await bcrypt.hash(dto.password, 10)
-
-    const user = await this.prisma.user.create({
-      data: {
-        email: dto.email,
-        passwordHash,
-        role: dto.role,
-        // В create можно хранить null (в твоей схеме это работало).
-        franchiseeId: dto.role === 'FRANCHISEE' ? dto.franchiseeId! : null,
-      },
-    })
-
-    const { passwordHash: _, ...rest } = user
-    return rest
+    data.passwordHash = passwordHash
   }
 
-  @Get()
-  async list() {
-    const users = await this.prisma.user.findMany({
-      orderBy: { createdAt: 'asc' },
-      select: {
-        id: true,
-        email: true,
-        role: true,
-        franchiseeId: true,
-        isActive: true,
-        createdAt: true,
-      },
-    })
+  const updated = await this.prisma.user.update({
+    where: { id },
+    data,
+  })
 
-    return users
-  }
-
-  @Get(':id')
-  async getById(@Param('id') id: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        email: true,
-        role: true,
-        franchiseeId: true,
-        isActive: true,
-        createdAt: true,
-      },
-    })
-
-    if (!user) {
-      throw new NotFoundException('User not found')
-    }
-
-    return user
-  }
-
-  @Patch(':id')
-  async update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
-    const user = await this.prisma.user.findUnique({
-      where: { id },
-    })
-
-    if (!user) {
-      throw new NotFoundException('User not found')
-    }
-
-    if (user.role === 'OWNER') {
-      throw new BadRequestException('OWNER user cannot be modified')
-    }
-
-    // ВАЖНО: не используем franchiseeId: null в update, чтобы Prisma типы не падали
-    const data: {
-      role?: string
-      isActive?: boolean
-      passwordHash?: string
-      // franchiseeId добавляем ТОЛЬКО когда реально задаём строкой
-      franchiseeId?: string
-    } = {}
-
-    if (dto.role !== undefined) {
-      if (!ALLOWED_ROLES.includes(dto.role)) {
-        throw new BadRequestException('Invalid role')
-      }
-
-      if (dto.role === 'FRANCHISEE') {
-        if (!dto.franchiseeId) {
-          throw new BadRequestException('franchiseeId is required for FRANCHISEE')
-        }
-        const franchisee = await this.prisma.franchisee.findUnique({
-          where: { id: dto.franchiseeId },
-        })
-        if (!franchisee) {
-          throw new BadRequestException('Franchisee not found')
-        }
-        data.franchiseeId = dto.franchiseeId
-      } else {
-        // Для MANAGER/MECHANIC franchiseeId в апдейте НЕ трогаем (не ставим null)
-        if (dto.franchiseeId) {
-          throw new BadRequestException(
-            'franchiseeId must not be provided for MANAGER or MECHANIC',
-          )
-        }
-      }
-
-      data.role = dto.role
-    } else if (dto.franchiseeId !== undefined) {
-      throw new BadRequestException(
-        'franchiseeId can only be updated together with role change',
-      )
-    }
-
-    if (dto.isActive !== undefined) {
-      data.isActive = dto.isActive
-    }
-
-    if (dto.password !== undefined) {
-      const passwordHash = await bcrypt.hash(dto.password, 10)
-      data.passwordHash = passwordHash
-    }
-
-    const updated = await this.prisma.user.update({
-      where: { id },
-      data,
-    })
-
-    const { passwordHash: _, ...rest } = updated
-    return rest
-  }
+  const { passwordHash: _, ...rest } = updated
+  return rest
 }
