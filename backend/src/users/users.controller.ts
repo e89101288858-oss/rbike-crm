@@ -121,7 +121,6 @@ export class UsersController {
       throw new BadRequestException('OWNER user cannot be modified')
     }
 
-    // Prisma-compatible typing
     const data: Prisma.UserUpdateInput = {}
 
     if (dto.role !== undefined) {
@@ -129,22 +128,13 @@ export class UsersController {
         throw new BadRequestException('Invalid role')
       }
 
-      // По твоему решению: FRANCHISEE ↔ MANAGER/MECHANIC через update не нужен
       if (dto.role === 'FRANCHISEE') {
         throw new BadRequestException(
           'Changing role to FRANCHISEE is not supported via update',
         )
       }
 
-      if (dto.franchiseeId !== undefined) {
-        throw new BadRequestException('franchiseeId cannot be updated via PATCH')
-      }
-
       data.role = dto.role as UserRole
-    } else if (dto.franchiseeId !== undefined) {
-      throw new BadRequestException(
-        'franchiseeId can only be provided together with role change',
-      )
     }
 
     if (dto.isActive !== undefined) {
