@@ -18,9 +18,13 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
     try {
+      if (!tenantId.trim()) {
+        throw new Error('Укажи Tenant ID перед входом')
+      }
+
       const res = await api.login(email, password)
       setToken(res.accessToken)
-      if (tenantId) setTenantId(tenantId)
+      setTenantId(tenantId.trim())
       router.push('/dashboard')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка входа')
@@ -35,7 +39,7 @@ export default function LoginPage() {
       <form onSubmit={onSubmit} className="space-y-3 rounded border p-4">
         <input className="w-full rounded border p-2" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
         <input className="w-full rounded border p-2" placeholder="Пароль" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-        <input className="w-full rounded border p-2" placeholder="Tenant ID (опц.)" value={tenantId} onChange={(e) => setTenant(e.target.value)} />
+        <input className="w-full rounded border p-2" placeholder="Tenant ID (обязательно)" value={tenantId} onChange={(e) => setTenant(e.target.value)} />
         <button disabled={loading} className="w-full rounded bg-black p-2 text-white disabled:opacity-50">
           {loading ? 'Входим…' : 'Войти'}
         </button>

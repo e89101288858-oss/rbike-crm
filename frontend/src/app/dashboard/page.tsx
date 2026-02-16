@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'
-import { getToken } from '@/lib/auth'
+import { getTenantId, getToken } from '@/lib/auth'
 
 function currentMonth() {
   const d = new Date()
@@ -17,6 +17,7 @@ export default function DashboardPage() {
   const [activeRentals, setActiveRentals] = useState<any[]>([])
   const [debts, setDebts] = useState<any>(null)
   const [billing, setBilling] = useState<any>(null)
+  const [error, setError] = useState('')
   const month = useMemo(() => currentMonth(), [])
 
   useEffect(() => {
@@ -30,6 +31,11 @@ export default function DashboardPage() {
         const me = await api.me()
         setRole(me.role)
 
+        if (!getTenantId()) {
+          setError('Укажи Tenant ID в верхней панели (или заново войди с Tenant ID).')
+          return
+        }
+
         const [rentalsRes, debtsRes] = await Promise.all([api.activeRentals(), api.debts(false)])
         setActiveRentals(rentalsRes)
         setDebts(debtsRes)
@@ -37,8 +43,13 @@ export default function DashboardPage() {
         const billingRes =
           me.role === 'OWNER' ? await api.franchiseOwnerMonthly(month) : await api.franchiseMyMonthly(month)
         setBilling(billingRes)
-      } catch {
-        router.replace('/login')
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : ''
+        if (msg.includes('401') || msg.toLowerCase().includes('unauthorized')) {
+          router.replace('/login')
+          return
+        }
+        setError(msg || 'Ошибка загрузки dashboard')
       }
     })()
   }, [month, router])
@@ -48,6 +59,7 @@ export default function DashboardPage() {
       <Topbar />
       <h1 className="mb-4 text-2xl font-semibold">Dashboard</h1>
       <p className="mb-6 text-sm text-gray-600">Role: {role || '...'}</p>
+      {error && <p className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
       <section className="mb-6 rounded border p-4">
         <h2 className="mb-2 font-semibold">Активные аренды</h2>

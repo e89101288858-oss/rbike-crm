@@ -4,18 +4,26 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'
-import { getToken } from '@/lib/auth'
+import { getTenantId, getToken } from '@/lib/auth'
 
 export default function PaymentsPage() {
   const router = useRouter()
   const [items, setItems] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   async function load() {
     setLoading(true)
+    setError('')
     try {
+      if (!getTenantId()) {
+        throw new Error('Укажи Tenant ID в верхней панели')
+      }
       const data = await api.payments('status=PLANNED&kind=WEEKLY_RENT')
       setItems(data)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Ошибка загрузки платежей'
+      setError(msg)
     } finally {
       setLoading(false)
     }
@@ -41,6 +49,7 @@ export default function PaymentsPage() {
       <button className="mb-4 rounded border px-3 py-1" onClick={load} disabled={loading}>
         {loading ? 'Обновление…' : 'Обновить'}
       </button>
+      {error && <p className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
       <div className="space-y-2">
         {items.map((p) => (

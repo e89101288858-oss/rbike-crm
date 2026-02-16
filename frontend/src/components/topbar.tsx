@@ -2,11 +2,12 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { clearTenantId, clearToken, getTenantId, setTenantId } from '@/lib/auth'
 
 export function Topbar() {
   const router = useRouter()
-  const tenantId = getTenantId()
+  const [tenantId, setTenantIdState] = useState(getTenantId())
 
   return (
     <header className="mb-6 flex flex-wrap items-center gap-3 border-b pb-3">
@@ -14,9 +15,13 @@ export function Topbar() {
       <Link href="/payments">Payments</Link>
       <input
         className="rounded border px-2 py-1 text-sm"
-        defaultValue={tenantId}
+        value={tenantId}
         placeholder="Tenant ID"
-        onBlur={(e) => setTenantId(e.target.value)}
+        onChange={(e) => {
+          const value = e.target.value
+          setTenantIdState(value)
+          setTenantId(value)
+        }}
       />
       <button
         className="rounded border px-2 py-1 text-sm"
