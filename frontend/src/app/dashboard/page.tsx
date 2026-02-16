@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'
 import { getTenantId, getToken, setTenantId } from '@/lib/auth'
+import { formatRub } from '@/lib/format'
 
 function currentMonth() {
   const d = new Date()
@@ -77,12 +78,17 @@ export default function DashboardPage() {
       <section className="mb-6 rounded border p-4">
         <h2 className="mb-2 font-semibold">Долги</h2>
         <p>Платежей: {debts?.count ?? 0}</p>
-        <p>Сумма: {debts?.totalDebtRub ?? 0} RUB</p>
+        <p>Сумма: {formatRub(debts?.totalDebtRub ?? 0)}</p>
       </section>
 
       <section className="rounded border p-4">
         <h2 className="mb-2 font-semibold">Franchise billing ({month})</h2>
-        <pre className="overflow-auto text-xs">{JSON.stringify(billing?.summary ?? {}, null, 2)}</pre>
+        <div className="grid gap-2 text-sm md:grid-cols-2">
+          <div className="rounded border p-3">Тенантов: {billing?.summary?.tenants ?? 0}</div>
+          <div className="rounded border p-3">Франчайзи: {billing?.summary?.franchisees ?? 0}</div>
+          <div className="rounded border p-3">Выручка: {formatRub(billing?.summary?.totalRevenueRub ?? 0)}</div>
+          <div className="rounded border p-3">Роялти к оплате: {formatRub(billing?.summary?.totalRoyaltyDueRub ?? 0)}</div>
+        </div>
       </section>
     </main>
   )

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api, Bike, Client, Rental } from '@/lib/api'
 import { getToken, getTenantId, setTenantId } from '@/lib/auth'
+import { diffDays, formatDate, formatRub } from '@/lib/format'
 
 export default function RentalsPage() {
   const router = useRouter()
@@ -47,6 +48,10 @@ export default function RentalsPage() {
         throw new Error('Заполни все поля аренды')
       }
 
+      if (diffDays(startDate, plannedEndDate) < 7) {
+        throw new Error('Минимальный срок аренды — 7 дней')
+      }
+
       await api.createRental({
         clientId,
         bikeId,
@@ -87,6 +92,8 @@ export default function RentalsPage() {
     })()
   }, [router])
 
+  const rentalDays = startDate && plannedEndDate ? diffDays(startDate, plannedEndDate) : 0
+
   return (
     <main className="mx-auto max-w-6xl p-6">
       <Topbar tenants={tenants} />
@@ -104,8 +111,16 @@ export default function RentalsPage() {
         <input type="date" className="rounded border p-2" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
         <input type="date" className="rounded border p-2" value={plannedEndDate} onChange={(e) => setPlannedEndDate(e.target.value)} />
         <input type="number" className="rounded border p-2" value={weeklyRateRub} onChange={(e) => setWeeklyRateRub(e.target.value)} placeholder="Ставка/неделя" />
-        <button className="rounded bg-black p-2 text-white md:col-span-5">Создать аренду</button>
+        <button
+          disabled={!clientId || !bikeId || !startDate || !plannedEndDate || rentalDays < 7}
+          className="rounded bg-black p-2 text-white disabled:opacity-50 md:col-span-5"
+        >
+          Создать аренду
+        </button>
       </form>
+      {startDate && plannedEndDate && (
+        <p className="mb-3 text-sm text-gray-600">Срок аренды: {rentalDays} дн. (минимум 7)</p>
+      )}
 
       {error && <p className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
@@ -113,7 +128,8 @@ export default function RentalsPage() {
         {rentals.map((r) => (
           <div key={r.id} className="rounded border p-3 text-sm">
             <div className="font-medium">{r.client.fullName} — {r.bike.code}</div>
-            <div>Период: {r.startDate.slice(0, 10)} → {r.plannedEndDate.slice(0, 10)}</div>
+            <div>Период: {formatDate(r.startDate)} → {formatDate(r.plannedEndDate)}</div>
+            <div>Текущая ставка: {formatRub(r.weeklyRateRub ?? 0)} / неделя</div>
             <div className="mt-2 flex items-center gap-2">
               <input
                 type="number"

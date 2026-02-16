@@ -93,6 +93,9 @@ export const api = {
   markPaid: (paymentId: string) =>
     request<any>(`/payments/${paymentId}/mark-paid`, { method: 'POST' }, true),
 
+  markPlanned: (paymentId: string) =>
+    request<any>(`/payments/${paymentId}/mark-planned`, { method: 'POST' }, true),
+
   debts: (overdueOnly = false) =>
     request<any>(`/weekly-payments/debts?overdueOnly=${overdueOnly}`, undefined, true),
 
