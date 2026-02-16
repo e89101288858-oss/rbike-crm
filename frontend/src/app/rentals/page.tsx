@@ -21,6 +21,7 @@ export default function RentalsPage() {
   const [startDate, setStartDate] = useState('')
   const [plannedEndDate, setPlannedEndDate] = useState('')
   const [extendMap, setExtendMap] = useState<Record<string, string>>({})
+  const [journalMap, setJournalMap] = useState<Record<string, any[]>>({})
   const [error, setError] = useState('')
 
   async function loadAll() {
@@ -85,6 +86,16 @@ export default function RentalsPage() {
       await loadAll()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка закрытия аренды')
+    }
+  }
+
+  async function loadJournal(rentalId: string) {
+    setError('')
+    try {
+      const data = await api.rentalJournal(rentalId)
+      setJournalMap((prev) => ({ ...prev, [rentalId]: data.events ?? [] }))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка загрузки журнала')
     }
   }
 
@@ -154,8 +165,19 @@ export default function RentalsPage() {
                 onChange={(e) => setExtendMap((prev) => ({ ...prev, [r.id]: e.target.value }))}
               />
               <button className="rounded border px-2 py-1" onClick={() => extendRental(r.id)}>Продлить</button>
+              <button className="rounded border px-2 py-1" onClick={() => loadJournal(r.id)}>Журнал</button>
               <button className="rounded border border-red-300 px-2 py-1 text-red-700" onClick={() => closeRental(r.id)}>Завершить досрочно</button>
             </div>
+            {!!journalMap[r.id]?.length && (
+              <div className="mt-3 rounded border p-2">
+                <div className="mb-2 font-medium">Журнал операций</div>
+                <div className="space-y-1 text-xs">
+                  {journalMap[r.id].map((e: any, idx: number) => (
+                    <div key={idx}>{formatDate(e.at)} {new Date(e.at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} — {e.type}: {e.details}</div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ))}
         {!rentals.length && <p className="text-sm text-gray-600">Активных аренд пока нет</p>}

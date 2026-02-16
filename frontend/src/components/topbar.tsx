@@ -18,6 +18,7 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
       <Link href="/bikes">Велосипеды</Link>
       <Link href="/rentals">Аренды</Link>
       <Link href="/payments">Платежи</Link>
+      <Link href="/finance">Финансы</Link>
 
       {tenants.length > 0 ? (
         <select

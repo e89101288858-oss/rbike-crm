@@ -8,6 +8,7 @@ import { RolesGuard } from '../common/guards/roles.guard'
 import { TenantGuard } from '../common/guards/tenant.guard'
 import { ListPaymentsQueryDto } from './dto/list-payments.query.dto'
 import { RevenueByBikeQueryDto } from './dto/revenue-by-bike.query.dto'
+import { RevenueByDaysQueryDto } from './dto/revenue-by-days.query.dto'
 import { PaymentsService } from './payments.service'
 
 @Controller('payments')
@@ -25,7 +26,13 @@ export class PaymentsController {
   @Get('revenue-by-bike')
   async revenueByBike(@Req() req: Request, @Query() query: RevenueByBikeQueryDto) {
     const tenantId = req.tenantId!
-    return this.paymentsService.revenueByBike(tenantId, query.from, query.to)
+    return this.paymentsService.revenueByBike(tenantId, query.from, query.to, query.bikeId)
+  }
+
+  @Get('revenue-by-days')
+  async revenueByDays(@Req() req: Request, @Query() query: RevenueByDaysQueryDto) {
+    const tenantId = req.tenantId!
+    return this.paymentsService.revenueByDays(tenantId, query.from, query.to)
   }
 
   @Post(':id/mark-paid')

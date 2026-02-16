@@ -10,9 +10,11 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common'
-import { BikeStatus, PaymentKind, PaymentStatus, RentalStatus } from '@prisma/client'
+import { BikeStatus, PaymentKind, PaymentStatus, RentalChangeType, RentalStatus } from '@prisma/client'
 import type { Request } from 'express'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
+import { CurrentUser } from '../common/decorators/current-user.decorator'
+import type { JwtUser } from '../common/decorators/current-user.decorator'
 import { Roles } from '../common/decorators/roles.decorator'
 import { RolesGuard } from '../common/guards/roles.guard'
 import { TenantGuard } from '../common/guards/tenant.guard'
@@ -45,7 +47,7 @@ export class RentalsController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Post()
-  async create(@Req() req: Request, @Body() dto: CreateRentalDto) {
+  async create(@Req() req: Request, @CurrentUser() user: JwtUser, @Body() dto: CreateRentalDto) {
     const tenantId = req.tenantId!
 
     const startDate = new Date(dto.startDate)
@@ -104,6 +106,18 @@ export class RentalsController {
           plannedEndDate,
           status: RentalStatus.ACTIVE,
           weeklyRateRub: DAILY_RENT_RUB * 7,
+          createdById: user.userId,
+        },
+      })
+
+      await tx.rentalChange.create({
+        data: {
+          tenantId,
+          rentalId: created.id,
+          type: RentalChangeType.EXTEND,
+          daysDelta: diffDays,
+          reason: 'Создание аренды',
+          createdById: user.userId,
         },
       })
 
@@ -123,6 +137,7 @@ export class RentalsController {
           dueAt: startDate,
           periodStart: startDate,
           periodEnd: plannedEndDate,
+          markedById: user.userId,
         },
       })
 
@@ -165,7 +180,12 @@ export class RentalsController {
   }
 
   @Post(':id/extend')
-  async extend(@Req() req: Request, @Param('id') id: string, @Body() dto: ExtendRentalDto) {
+  async extend(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @CurrentUser() user: JwtUser,
+    @Body() dto: ExtendRentalDto,
+  ) {
     const tenantId = req.tenantId!
 
     const rental = await this.prisma.rental.findFirst({
@@ -201,6 +221,18 @@ export class RentalsController {
           dueAt: rental.plannedEndDate,
           periodStart: rental.plannedEndDate,
           periodEnd: newPlannedEndDate,
+          markedById: user.userId,
+        },
+      })
+
+      await tx.rentalChange.create({
+        data: {
+          tenantId,
+          rentalId: id,
+          type: RentalChangeType.EXTEND,
+          daysDelta: days,
+          reason: 'Продление аренды',
+          createdById: user.userId,
         },
       })
     })
@@ -211,8 +243,71 @@ export class RentalsController {
     })
   }
 
+  @Get(':id/journal')
+  async journal(@Req() req: Request, @Param('id') id: string) {
+    const tenantId = req.tenantId!
+
+    const rental = await this.prisma.rental.findFirst({
+      where: { id, tenantId },
+      select: {
+        id: true,
+        createdAt: true,
+        startDate: true,
+        plannedEndDate: true,
+        actualEndDate: true,
+        client: { select: { fullName: true } },
+        bike: { select: { code: true } },
+      },
+    })
+
+    if (!rental) throw new NotFoundException('Rental not found')
+
+    const [changes, payments] = await Promise.all([
+      this.prisma.rentalChange.findMany({
+        where: { tenantId, rentalId: id },
+        orderBy: { createdAt: 'asc' },
+      }),
+      this.prisma.payment.findMany({
+        where: { tenantId, rentalId: id, status: PaymentStatus.PAID },
+        orderBy: { paidAt: 'asc' },
+      }),
+    ])
+
+    const events: Array<{ at: Date; type: string; details: string }> = []
+
+    events.push({
+      at: rental.createdAt,
+      type: 'СОЗДАНА_АРЕНДА',
+      details: `${rental.client.fullName} / ${rental.bike.code}`,
+    })
+
+    for (const c of changes) {
+      if (c.type === RentalChangeType.EXTEND && c.reason?.includes('Создание')) continue
+      if (c.type === RentalChangeType.EXTEND) {
+        events.push({ at: c.createdAt, type: 'ПРОДЛЕНА', details: `+${c.daysDelta} дн.` })
+      } else if (c.type === RentalChangeType.CLOSE) {
+        events.push({ at: c.createdAt, type: 'ЗАКРЫТА_ДОСРОЧНО', details: c.reason ?? '' })
+      }
+    }
+
+    for (const p of payments) {
+      if (p.amount < 0) {
+        events.push({ at: p.paidAt ?? p.createdAt, type: 'ВОЗВРАТ', details: `${p.amount} RUB` })
+      } else {
+        events.push({ at: p.paidAt ?? p.createdAt, type: 'ОПЛАТА', details: `${p.amount} RUB` })
+      }
+    }
+
+    events.sort((a, b) => a.at.getTime() - b.at.getTime())
+
+    return {
+      rentalId: rental.id,
+      events,
+    }
+  }
+
   @Post(':id/close')
-  async close(@Req() req: Request, @Param('id') id: string) {
+  async close(@Req() req: Request, @Param('id') id: string, @CurrentUser() user: JwtUser) {
     const tenantId = req.tenantId!
 
     const rental = await this.prisma.rental.findFirst({
@@ -242,6 +337,17 @@ export class RentalsController {
         data: {
           status: RentalStatus.CLOSED,
           actualEndDate: closedAt,
+        },
+      })
+
+      await tx.rentalChange.create({
+        data: {
+          tenantId,
+          rentalId: id,
+          type: RentalChangeType.CLOSE,
+          daysDelta: 0,
+          reason: 'Досрочное завершение аренды',
+          createdById: user.userId,
         },
       })
 
@@ -276,6 +382,7 @@ export class RentalsController {
             dueAt: closedAt,
             periodStart: closedAt,
             periodEnd: rental.plannedEndDate,
+            markedById: user.userId,
           },
         })
       }

@@ -63,7 +63,7 @@ export class PaymentsService {
     })
   }
 
-  async revenueByBike(tenantId: string, from?: string, to?: string) {
+  async revenueByBike(tenantId: string, from?: string, to?: string, bikeId?: string) {
     const fromDate = toDate(from)
     const toDateValue = toDate(to)
 
@@ -71,6 +71,7 @@ export class PaymentsService {
       where: {
         tenantId,
         status: PaymentStatus.PAID,
+        ...(bikeId ? { rental: { bikeId } } : {}),
         ...(fromDate || toDateValue
           ? {
               paidAt: {
@@ -120,8 +121,54 @@ export class PaymentsService {
       currency: 'RUB',
       from: fromDate ?? null,
       to: toDateValue ?? null,
+      bikeId: bikeId ?? null,
       bikes: items,
       totalRevenueRub,
+    }
+  }
+
+  async revenueByDays(tenantId: string, from?: string, to?: string) {
+    const fromDate = toDate(from)
+    const toDateValue = toDate(to)
+
+    const rows = await this.prisma.payment.findMany({
+      where: {
+        tenantId,
+        status: PaymentStatus.PAID,
+        ...(fromDate || toDateValue
+          ? {
+              paidAt: {
+                ...(fromDate ? { gte: fromDate } : {}),
+                ...(toDateValue ? { lte: toDateValue } : {}),
+              },
+            }
+          : {}),
+      },
+      select: {
+        amount: true,
+        paidAt: true,
+      },
+      orderBy: { paidAt: 'asc' },
+    })
+
+    const map = new Map<string, number>()
+    for (const row of rows) {
+      if (!row.paidAt) continue
+      const key = row.paidAt.toISOString().slice(0, 10)
+      map.set(key, Math.round(((map.get(key) ?? 0) + row.amount) * 100) / 100)
+    }
+
+    const days = Array.from(map.entries())
+      .map(([date, revenueRub]) => ({ date, revenueRub }))
+      .sort((a, b) => a.date.localeCompare(b.date))
+
+    return {
+      tenantId,
+      currency: 'RUB',
+      from: fromDate ?? null,
+      to: toDateValue ?? null,
+      days,
+      totalRevenueRub: Math.round(days.reduce((s, d) => s + d.revenueRub, 0) * 100) / 100,
     }
   }
 

@@ -70,7 +70,7 @@ export default function PaymentsPage() {
             <div>Велосипед: {p.rental?.bike?.code}</div>
             <div>Период: {formatDate(p.periodStart)} → {formatDate(p.periodEnd)}</div>
             <div>Дата и время платежа: {formatDateTime(p.paidAt)}</div>
-            <div>Статус: <span className={p.status === 'PAID' ? 'text-green-700' : 'text-amber-700'}>{p.status}</span></div>
+            <div>Статус: <span className={p.status === 'PAID' ? 'text-green-700' : 'text-amber-700'}>{p.status === 'PAID' ? 'Оплачен' : 'Плановый'}</span></div>
           </div>
         ))}
         {!items.length && <p className="text-sm text-gray-600">Нет платежей в этом статусе</p>}

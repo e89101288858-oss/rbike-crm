@@ -113,10 +113,15 @@ export const api = {
   closeRental: (rentalId: string) =>
     request<any>(`/rentals/${rentalId}/close`, { method: 'POST' }, true),
 
+  rentalJournal: (rentalId: string) => request<any>(`/rentals/${rentalId}/journal`, undefined, true),
+
   payments: (query = '') => request<any[]>(`/payments${query ? `?${query}` : ''}`, undefined, true),
 
   revenueByBike: (query = '') =>
     request<any>(`/payments/revenue-by-bike${query ? `?${query}` : ''}`, undefined, true),
+
+  revenueByDays: (query = '') =>
+    request<any>(`/payments/revenue-by-days${query ? `?${query}` : ''}`, undefined, true),
 
   markPaid: (paymentId: string) =>
     request<any>(`/payments/${paymentId}/mark-paid`, { method: 'POST' }, true),

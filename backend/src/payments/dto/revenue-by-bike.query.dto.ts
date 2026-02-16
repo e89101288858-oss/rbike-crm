@@ -1,4 +1,4 @@
-import { IsDateString, IsOptional } from 'class-validator'
+import { IsDateString, IsOptional, IsUUID } from 'class-validator'
 
 export class RevenueByBikeQueryDto {
   @IsOptional()
@@ -8,4 +8,8 @@ export class RevenueByBikeQueryDto {
   @IsOptional()
   @IsDateString()
   to?: string
+
+  @IsOptional()
+  @IsUUID()
+  bikeId?: string
 }
