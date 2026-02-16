@@ -118,6 +118,7 @@ model Bike {
   motorWheelNumber String?
   simCardNumber    String?
   status           BikeStatus @default(AVAILABLE)
+  isActive         Boolean    @default(true)
 
   rentals Rental[]
   repairs Repair[]
@@ -138,6 +139,7 @@ model Client {
   passportSeries String?
   passportNumber String?
   notes          String?
+  isActive       Boolean @default(true)
 
   rentals   Rental[]
   documents Document[]

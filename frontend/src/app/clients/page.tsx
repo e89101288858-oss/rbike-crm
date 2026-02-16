@@ -6,6 +6,19 @@ import { Topbar } from '@/components/topbar'
 import { api, Client } from '@/lib/api'
 import { getToken, getTenantId, setTenantId } from '@/lib/auth'
 
+type ClientForm = Partial<Client>
+
+function toClientForm(c: Client): ClientForm {
+  return {
+    fullName: c.fullName ?? '',
+    phone: c.phone ?? '',
+    address: c.address ?? '',
+    passportSeries: c.passportSeries ?? '',
+    passportNumber: c.passportNumber ?? '',
+    notes: c.notes ?? '',
+  }
+}
+
 export default function ClientsPage() {
   const router = useRouter()
   const [tenants, setTenants] = useState<any[]>([])
@@ -17,7 +30,9 @@ export default function ClientsPage() {
   const [passportNumber, setPassportNumber] = useState('')
   const [notes, setNotes] = useState('')
   const [query, setQuery] = useState('')
-  const [editMap, setEditMap] = useState<Record<string, Partial<Client>>>({})
+  const [includeArchived, setIncludeArchived] = useState(false)
+  const [editMap, setEditMap] = useState<Record<string, ClientForm>>({})
+  const [originalMap, setOriginalMap] = useState<Record<string, ClientForm>>({})
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -25,10 +40,14 @@ export default function ClientsPage() {
     setLoading(true)
     setError('')
     try {
-      const q = query.trim() ? `q=${encodeURIComponent(query.trim())}` : ''
-      const data = await api.clients(q)
+      const params = new URLSearchParams()
+      if (query.trim()) params.set('q', query.trim())
+      if (includeArchived) params.set('includeArchived', 'true')
+      const data = await api.clients(params.toString())
       setClients(data)
-      setEditMap(Object.fromEntries(data.map((c) => [c.id, c])))
+      const mapped = Object.fromEntries(data.map((c) => [c.id, toClientForm(c)])) as Record<string, ClientForm>
+      setEditMap(mapped)
+      setOriginalMap(mapped)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки')
     } finally {
@@ -81,6 +100,20 @@ export default function ClientsPage() {
     }
   }
 
+  async function restoreClient(id: string) {
+    setError('')
+    try {
+      await api.restoreClient(id)
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка восстановления курьера')
+    }
+  }
+
+  function cancelChanges(id: string) {
+    setEditMap((p) => ({ ...p, [id]: { ...originalMap[id] } }))
+  }
+
   useEffect(() => {
     if (!getToken()) return router.replace('/login')
     ;(async () => {
@@ -91,10 +124,20 @@ export default function ClientsPage() {
     })()
   }, [router])
 
+  useEffect(() => {
+    void load()
+  }, [includeArchived])
+
   return (
     <main className="page">
       <Topbar tenants={tenants} />
-      <h1 className="mb-4 text-2xl font-bold">Курьеры</h1>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">Курьеры</h1>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={includeArchived} onChange={(e) => setIncludeArchived(e.target.checked)} />
+          Показать архив
+        </label>
+      </div>
 
       <form onSubmit={createClient} className="panel mb-6 grid gap-2 md:grid-cols-3">
         <input className="input" placeholder="ФИО" value={fullName} onChange={(e) => setFullName(e.target.value)} />
@@ -115,20 +158,29 @@ export default function ClientsPage() {
 
       <div className="space-y-3">
         {clients.map((c) => {
-          const e = editMap[c.id] ?? c
+          const e = editMap[c.id] ?? toClientForm(c)
+          const archived = c.isActive === false
           return (
             <div key={c.id} className="panel text-sm">
+              {archived && <div className="mb-2"><span className="badge badge-muted">АРХИВ</span></div>}
               <div className="grid gap-2 md:grid-cols-3">
-                <input className="input" value={e.fullName ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], fullName: ev.target.value } }))} />
-                <input className="input" value={e.phone ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], phone: ev.target.value } }))} />
-                <input className="input" value={e.address ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], address: ev.target.value } }))} />
-                <input className="input" value={e.passportSeries ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], passportSeries: ev.target.value } }))} />
-                <input className="input" value={e.passportNumber ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], passportNumber: ev.target.value } }))} />
-                <input className="input" value={e.notes ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], notes: ev.target.value } }))} />
+                <input disabled={archived} className="input" value={e.fullName ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], fullName: ev.target.value } }))} />
+                <input disabled={archived} className="input" value={e.phone ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], phone: ev.target.value } }))} />
+                <input disabled={archived} className="input" value={e.address ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], address: ev.target.value } }))} />
+                <input disabled={archived} className="input" value={e.passportSeries ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], passportSeries: ev.target.value } }))} />
+                <input disabled={archived} className="input" value={e.passportNumber ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], passportNumber: ev.target.value } }))} />
+                <input disabled={archived} className="input" value={e.notes ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], notes: ev.target.value } }))} />
               </div>
-              <div className="mt-3 flex gap-2">
-                <button className="btn" onClick={() => saveClient(c.id)}>Сохранить карточку курьера</button>
-                <button className="btn border-red-300 text-red-700" onClick={() => removeClient(c.id)}>Удалить курьера</button>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {!archived ? (
+                  <>
+                    <button className="btn" onClick={() => saveClient(c.id)}>Сохранить карточку</button>
+                    <button className="btn" onClick={() => cancelChanges(c.id)}>Отменить изменения</button>
+                    <button className="btn border-red-300 text-red-700" onClick={() => removeClient(c.id)}>В архив</button>
+                  </>
+                ) : (
+                  <button className="btn" onClick={() => restoreClient(c.id)}>Восстановить из архива</button>
+                )}
               </div>
             </div>
           )

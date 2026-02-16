@@ -36,10 +36,12 @@ export class ClientsController {
   async list(@Req() req: Request, @Query() query: ListClientsQueryDto) {
     const tenantId = req.tenantId!
     const q = query.q?.trim()
+    const includeArchived = query.includeArchived === 'true'
 
     return this.prisma.client.findMany({
       where: {
         tenantId,
+        ...(includeArchived ? {} : { isActive: true }),
         ...(q
           ? {
               OR: [
@@ -65,23 +67,36 @@ export class ClientsController {
     })
 
     if (activeRental) {
-      throw new NotFoundException('Нельзя удалить курьера с активной арендой')
+      throw new NotFoundException('Нельзя архивировать курьера с активной арендой')
     }
 
-    const deleted = await this.prisma.client.deleteMany({ where: { id, tenantId } })
-    if (deleted.count === 0) throw new NotFoundException('Client not found')
+    const existing = await this.prisma.client.findFirst({ where: { id, tenantId }, select: { id: true, isActive: true } })
+    if (!existing) throw new NotFoundException('Client not found')
+    if (!existing.isActive) return { id, deleted: true }
+
+    await this.prisma.client.updateMany({ where: { id, tenantId }, data: { isActive: false } })
     return { id, deleted: true }
+  }
+
+  @Post(':id/restore')
+  async restore(@Req() req: Request, @Param('id') id: string) {
+    const tenantId = req.tenantId!
+    const existing = await this.prisma.client.findFirst({ where: { id, tenantId }, select: { id: true } })
+    if (!existing) throw new NotFoundException('Client not found')
+
+    await this.prisma.client.updateMany({ where: { id, tenantId }, data: { isActive: true } })
+    return { id, restored: true }
   }
 
   @Patch(':id')
   async update(@Req() req: Request, @Param('id') id: string, @Body() dto: UpdateClientDto) {
     const tenantId = req.tenantId!
 
-    const existing = await this.prisma.client.findFirst({ where: { id, tenantId }, select: { id: true } })
+    const existing = await this.prisma.client.findFirst({ where: { id, tenantId, isActive: true }, select: { id: true } })
     if (!existing) throw new NotFoundException('Client not found')
 
     await this.prisma.client.updateMany({
-      where: { id, tenantId },
+      where: { id, tenantId, isActive: true },
       data: {
         ...(dto.fullName !== undefined && { fullName: dto.fullName }),
         ...(dto.phone !== undefined && { phone: dto.phone }),
@@ -92,6 +107,6 @@ export class ClientsController {
       },
     })
 
-    return this.prisma.client.findFirst({ where: { id, tenantId } })
+    return this.prisma.client.findFirst({ where: { id, tenantId, isActive: true } })
   }
 }

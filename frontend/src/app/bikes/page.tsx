@@ -8,6 +8,26 @@ import { getTenantId, getToken, setTenantId } from '@/lib/auth'
 
 const BIKE_STATUSES = ['AVAILABLE', 'RENTED', 'MAINTENANCE', 'BLOCKED', 'LOST'] as const
 
+type BikeForm = {
+  code: string
+  model: string
+  frameNumber: string
+  motorWheelNumber: string
+  simCardNumber: string
+  status: string
+}
+
+function toBikeForm(b: Bike): BikeForm {
+  return {
+    code: b.code ?? '',
+    model: b.model ?? '',
+    frameNumber: b.frameNumber ?? '',
+    motorWheelNumber: b.motorWheelNumber ?? '',
+    simCardNumber: b.simCardNumber ?? '',
+    status: b.status,
+  }
+}
+
 function statusBadge(status: string) {
   if (status === 'AVAILABLE') return 'badge-ok'
   if (status === 'RENTED') return 'badge-warn'
@@ -20,28 +40,19 @@ export default function BikesPage() {
   const [tenants, setTenants] = useState<any[]>([])
   const [bikes, setBikes] = useState<Bike[]>([])
   const [error, setError] = useState('')
-  const [formMap, setFormMap] = useState<Record<string, any>>({})
+  const [includeArchived, setIncludeArchived] = useState(false)
+  const [formMap, setFormMap] = useState<Record<string, BikeForm>>({})
+  const [originalMap, setOriginalMap] = useState<Record<string, BikeForm>>({})
 
   async function load() {
     setError('')
     try {
-      const rows = await api.bikes()
+      const query = includeArchived ? 'includeArchived=true' : ''
+      const rows = await api.bikes(query)
       setBikes(rows)
-      setFormMap(
-        Object.fromEntries(
-          rows.map((b) => [
-            b.id,
-            {
-              code: b.code ?? '',
-              model: b.model ?? '',
-              frameNumber: b.frameNumber ?? '',
-              motorWheelNumber: b.motorWheelNumber ?? '',
-              simCardNumber: b.simCardNumber ?? '',
-              status: b.status,
-            },
-          ]),
-        ),
-      )
+      const mapped = Object.fromEntries(rows.map((b) => [b.id, toBikeForm(b)])) as Record<string, BikeForm>
+      setFormMap(mapped)
+      setOriginalMap(mapped)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки велосипедов')
     }
@@ -51,14 +62,7 @@ export default function BikesPage() {
     setError('')
     try {
       const f = formMap[bikeId]
-      await api.updateBike(bikeId, {
-        code: f.code,
-        model: f.model,
-        frameNumber: f.frameNumber,
-        motorWheelNumber: f.motorWheelNumber,
-        simCardNumber: f.simCardNumber,
-        status: f.status,
-      })
+      await api.updateBike(bikeId, f)
       await load()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка обновления карточки велосипеда')
@@ -75,6 +79,20 @@ export default function BikesPage() {
     }
   }
 
+  async function restoreBike(bikeId: string) {
+    setError('')
+    try {
+      await api.restoreBike(bikeId)
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка восстановления велосипеда')
+    }
+  }
+
+  function cancelChanges(bikeId: string) {
+    setFormMap((p) => ({ ...p, [bikeId]: { ...originalMap[bikeId] } }))
+  }
+
   useEffect(() => {
     if (!getToken()) return router.replace('/login')
     ;(async () => {
@@ -85,36 +103,57 @@ export default function BikesPage() {
     })()
   }, [router])
 
+  useEffect(() => {
+    void load()
+  }, [includeArchived])
+
   return (
     <main className="page">
       <Topbar tenants={tenants} />
-      <h1 className="mb-4 text-2xl font-bold">Велосипеды и статусы</h1>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">Велосипеды и статусы</h1>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={includeArchived} onChange={(e) => setIncludeArchived(e.target.checked)} />
+          Показать архив
+        </label>
+      </div>
       {error && <p className="alert">{error}</p>}
 
       <div className="space-y-3">
         {bikes.map((b) => {
-          const f = formMap[b.id] ?? {}
+          const f = formMap[b.id] ?? toBikeForm(b)
+          const archived = b.isActive === false
           return (
             <div key={b.id} className="panel text-sm">
               <div className="mb-2 flex items-center justify-between">
                 <div className="font-semibold">{b.code}</div>
-                <span className={`badge ${statusBadge(f.status ?? b.status)}`}>{f.status ?? b.status}</span>
+                <div className="flex items-center gap-2">
+                  {archived && <span className="badge badge-muted">АРХИВ</span>}
+                  <span className={`badge ${statusBadge(f.status ?? b.status)}`}>{f.status ?? b.status}</span>
+                </div>
               </div>
 
               <div className="grid gap-2 md:grid-cols-3">
-                <input className="input" value={f.code ?? ''} placeholder="Код" onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], code: e.target.value } }))} />
-                <input className="input" value={f.model ?? ''} placeholder="Модель" onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], model: e.target.value } }))} />
-                <select className="select" value={f.status ?? b.status} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], status: e.target.value } }))}>
+                <input disabled={archived} className="input" value={f.code ?? ''} placeholder="Код" onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], code: e.target.value } }))} />
+                <input disabled={archived} className="input" value={f.model ?? ''} placeholder="Модель" onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], model: e.target.value } }))} />
+                <select disabled={archived} className="select" value={f.status ?? b.status} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], status: e.target.value } }))}>
                   {BIKE_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
-                <input className="input" value={f.frameNumber ?? ''} placeholder="Номер рамы" onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], frameNumber: e.target.value } }))} />
-                <input className="input" value={f.motorWheelNumber ?? ''} placeholder="Номер мотор-колеса" onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], motorWheelNumber: e.target.value } }))} />
-                <input className="input" value={f.simCardNumber ?? ''} placeholder="Номер сим-карты" onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], simCardNumber: e.target.value } }))} />
+                <input disabled={archived} className="input" value={f.frameNumber ?? ''} placeholder="Номер рамы" onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], frameNumber: e.target.value } }))} />
+                <input disabled={archived} className="input" value={f.motorWheelNumber ?? ''} placeholder="Номер мотор-колеса" onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], motorWheelNumber: e.target.value } }))} />
+                <input disabled={archived} className="input" value={f.simCardNumber ?? ''} placeholder="Номер сим-карты" onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], simCardNumber: e.target.value } }))} />
               </div>
 
-              <div className="mt-3 flex gap-2">
-                <button className="btn" onClick={() => saveBike(b.id)}>Сохранить карточку велосипеда</button>
-                <button className="btn border-red-300 text-red-700" onClick={() => removeBike(b.id)}>Удалить велосипед</button>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {!archived ? (
+                  <>
+                    <button className="btn" onClick={() => saveBike(b.id)}>Сохранить карточку</button>
+                    <button className="btn" onClick={() => cancelChanges(b.id)}>Отменить изменения</button>
+                    <button className="btn border-red-300 text-red-700" onClick={() => removeBike(b.id)}>В архив</button>
+                  </>
+                ) : (
+                  <button className="btn" onClick={() => restoreBike(b.id)}>Восстановить из архива</button>
+                )}
               </div>
             </div>
           )

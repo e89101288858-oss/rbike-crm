@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common'
@@ -21,6 +22,7 @@ import { RolesGuard } from '../common/guards/roles.guard'
 import { TenantGuard } from '../common/guards/tenant.guard'
 import { PrismaService } from '../prisma/prisma.service'
 import { CreateBikeDto } from './dto/create-bike.dto'
+import { ListBikesQueryDto } from './dto/list-bikes.query.dto'
 import { UpdateBikeDto } from './dto/update-bike.dto'
 
 @Controller('bikes')
@@ -47,10 +49,11 @@ export class BikesController {
   }
 
   @Get()
-  async list(@Req() req: Request) {
+  async list(@Req() req: Request, @Query() query: ListBikesQueryDto) {
     const tenantId = req.tenantId!
+    const includeArchived = query.includeArchived === 'true'
     return this.prisma.bike.findMany({
-      where: { tenantId },
+      where: { tenantId, ...(includeArchived ? {} : { isActive: true }) },
       orderBy: { createdAt: 'asc' },
     })
   }
@@ -65,9 +68,9 @@ export class BikesController {
     const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0))
 
     const [available, rented, maintenance, todayAgg, monthAgg] = await Promise.all([
-      this.prisma.bike.count({ where: { tenantId, status: BikeStatus.AVAILABLE } }),
-      this.prisma.bike.count({ where: { tenantId, status: BikeStatus.RENTED } }),
-      this.prisma.bike.count({ where: { tenantId, status: BikeStatus.MAINTENANCE } }),
+      this.prisma.bike.count({ where: { tenantId, isActive: true, status: BikeStatus.AVAILABLE } }),
+      this.prisma.bike.count({ where: { tenantId, isActive: true, status: BikeStatus.RENTED } }),
+      this.prisma.bike.count({ where: { tenantId, isActive: true, status: BikeStatus.MAINTENANCE } }),
       this.prisma.payment.aggregate({
         where: {
           tenantId,
@@ -104,7 +107,7 @@ export class BikesController {
   async getOne(@Req() req: Request, @Param('id') id: string) {
     const tenantId = req.tenantId!
     const bike = await this.prisma.bike.findFirst({
-      where: { id, tenantId },
+      where: { id, tenantId, isActive: true },
     })
     if (!bike) {
       throw new NotFoundException('Bike not found')
@@ -119,16 +122,28 @@ export class BikesController {
 
     const bike = await this.prisma.bike.findFirst({
       where: { id, tenantId },
-      select: { id: true, status: true },
+      select: { id: true, status: true, isActive: true },
     })
 
     if (!bike) throw new NotFoundException('Bike not found')
+    if (!bike.isActive) return { id, deleted: true }
     if (bike.status === BikeStatus.RENTED) {
-      throw new ForbiddenException('Нельзя удалить велосипед со статусом RENTED')
+      throw new ForbiddenException('Нельзя архивировать велосипед со статусом RENTED')
     }
 
-    await this.prisma.bike.deleteMany({ where: { id, tenantId } })
+    await this.prisma.bike.updateMany({ where: { id, tenantId }, data: { isActive: false } })
     return { id, deleted: true }
+  }
+
+  @Post(':id/restore')
+  @Roles('OWNER', 'FRANCHISEE', 'MANAGER')
+  async restore(@Req() req: Request, @Param('id') id: string) {
+    const tenantId = req.tenantId!
+    const existing = await this.prisma.bike.findFirst({ where: { id, tenantId }, select: { id: true } })
+    if (!existing) throw new NotFoundException('Bike not found')
+
+    await this.prisma.bike.updateMany({ where: { id, tenantId }, data: { isActive: true } })
+    return { id, restored: true }
   }
 
   @Patch(':id')
@@ -153,7 +168,7 @@ export class BikesController {
     }
 
     const bike = await this.prisma.bike.findFirst({
-      where: { id, tenantId },
+      where: { id, tenantId, isActive: true },
     })
     if (!bike) {
       throw new NotFoundException('Bike not found')

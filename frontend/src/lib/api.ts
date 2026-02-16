@@ -29,6 +29,7 @@ export type Client = {
   passportSeries?: string | null
   passportNumber?: string | null
   notes?: string | null
+  isActive?: boolean
 }
 
 export type Bike = {
@@ -39,6 +40,7 @@ export type Bike = {
   motorWheelNumber?: string | null
   simCardNumber?: string | null
   status: string
+  isActive?: boolean
 }
 
 export type Rental = {
@@ -86,8 +88,10 @@ export const api = {
     }, true),
 
   deleteClient: (clientId: string) => request<any>(`/clients/${clientId}`, { method: 'DELETE' }, true),
+  restoreClient: (clientId: string) =>
+    request<any>(`/clients/${clientId}/restore`, { method: 'POST' }, true),
 
-  bikes: () => request<Bike[]>('/bikes', undefined, true),
+  bikes: (query = '') => request<Bike[]>(`/bikes${query ? `?${query}` : ''}`, undefined, true),
 
   bikeSummary: () =>
     request<{
@@ -116,6 +120,7 @@ export const api = {
     }, true),
 
   deleteBike: (bikeId: string) => request<any>(`/bikes/${bikeId}`, { method: 'DELETE' }, true),
+  restoreBike: (bikeId: string) => request<any>(`/bikes/${bikeId}/restore`, { method: 'POST' }, true),
 
   activeRentals: () => request<Rental[]>('/rentals/active', undefined, true),
 
