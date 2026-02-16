@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { ChangeEvent, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'
@@ -14,11 +14,17 @@ function parseCsv(text: string): string[][] {
     .map((line) => line.split(';').map((c) => c.trim()))
 }
 
+async function readFileAsText(file: File): Promise<string> {
+  return await file.text()
+}
+
 export default function ImportPage() {
   const router = useRouter()
   const [tenants, setTenants] = useState<any[]>([])
   const [bikeCsv, setBikeCsv] = useState('code;model;frameNumber;motorWheelNumber;simCardNumber;status\nКГ0001;;;;;AVAILABLE')
   const [clientCsv, setClientCsv] = useState('fullName;phone;address;passportSeries;passportNumber;notes\nКурьер 1;;;;;')
+  const [bikeFileName, setBikeFileName] = useState('')
+  const [clientFileName, setClientFileName] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
@@ -68,6 +74,34 @@ export default function ImportPage() {
     }
   }
 
+  async function onBikeFileChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const text = await readFileAsText(file)
+      setBikeCsv(text)
+      setBikeFileName(file.name)
+      setSuccess(`Файл велосипедов загружен: ${file.name}`)
+      setError('')
+    } catch {
+      setError('Не удалось прочитать CSV файл велосипедов')
+    }
+  }
+
+  async function onClientFileChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const text = await readFileAsText(file)
+      setClientCsv(text)
+      setClientFileName(file.name)
+      setSuccess(`Файл курьеров загружен: ${file.name}`)
+      setError('')
+    } catch {
+      setError('Не удалось прочитать CSV файл курьеров')
+    }
+  }
+
   useEffect(() => {
     if (!getToken()) return router.replace('/login')
     ;(async () => {
@@ -87,6 +121,10 @@ export default function ImportPage() {
       <section className="panel mb-6">
         <h2 className="mb-2 font-semibold">Велосипеды</h2>
         <p className="mb-2 text-sm text-gray-600">Колонки: code;model;frameNumber;motorWheelNumber;simCardNumber;status</p>
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <input type="file" accept=".csv,text/csv" className="input max-w-sm" onChange={onBikeFileChange} />
+          {bikeFileName && <span className="text-sm text-gray-600">Файл: {bikeFileName}</span>}
+        </div>
         <textarea className="input min-h-44 w-full" value={bikeCsv} onChange={(e) => setBikeCsv(e.target.value)} />
         <button className="btn-primary mt-3" onClick={importBikes}>Импортировать велосипеды</button>
       </section>
@@ -94,6 +132,10 @@ export default function ImportPage() {
       <section className="panel">
         <h2 className="mb-2 font-semibold">Курьеры</h2>
         <p className="mb-2 text-sm text-gray-600">Колонки: fullName;phone;address;passportSeries;passportNumber;notes</p>
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <input type="file" accept=".csv,text/csv" className="input max-w-sm" onChange={onClientFileChange} />
+          {clientFileName && <span className="text-sm text-gray-600">Файл: {clientFileName}</span>}
+        </div>
         <textarea className="input min-h-44 w-full" value={clientCsv} onChange={(e) => setClientCsv(e.target.value)} />
         <button className="btn-primary mt-3" onClick={importClients}>Импортировать курьеров</button>
       </section>
