@@ -59,8 +59,23 @@ export default function BikesPage() {
       <h1 className="mb-4 text-2xl font-bold">Велосипеды и статусы</h1>
       {error && <p className="alert">{error}</p>}
 
-      <div className="table-wrap">
-        <table className="table">
+      <div className="space-y-2 md:hidden">
+        {bikes.map((b) => (
+          <div key={b.id} className="panel text-sm">
+            <div className="font-semibold">{b.code}</div>
+            <div>Модель: {b.model || '—'}</div>
+            <div className="mb-2"><span className={`badge ${statusBadge(b.status)}`}>{b.status}</span></div>
+            <select className="select w-full" value={statusMap[b.id] ?? b.status} onChange={(e) => setStatusMap((p) => ({ ...p, [b.id]: e.target.value }))}>
+              {BIKE_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <button className="btn mt-2" onClick={() => saveStatus(b.id)}>Сохранить</button>
+          </div>
+        ))}
+        {!bikes.length && <p className="text-sm text-gray-600">Велосипедов пока нет</p>}
+      </div>
+
+      <div className="table-wrap hidden md:block">
+        <table className="table table-sticky">
           <thead>
             <tr>
               <th>Код</th>

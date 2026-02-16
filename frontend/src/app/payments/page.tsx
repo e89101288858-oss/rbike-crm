@@ -53,8 +53,22 @@ export default function PaymentsPage() {
 
       {error && <p className="alert">{error}</p>}
 
-      <div className="table-wrap">
-        <table className="table">
+      <div className="space-y-2 md:hidden">
+        {items.map((p) => (
+          <div key={p.id} className="panel text-sm">
+            <div className="font-semibold">{p.rental?.client?.fullName || '—'}</div>
+            <div>Велосипед: {p.rental?.bike?.code || '—'}</div>
+            <div>Сумма: <span className={Number(p.amount) < 0 ? 'text-red-700' : ''}>{formatRub(Number(p.amount ?? 0))}</span></div>
+            <div>Период: {formatDate(p.periodStart)} → {formatDate(p.periodEnd)}</div>
+            <div>Оплата: {formatDateTime(p.paidAt)}</div>
+            <div><span className={`badge ${p.status === 'PAID' ? 'badge-ok' : 'badge-warn'}`}>{p.status === 'PAID' ? 'Оплачен' : 'Плановый'}</span></div>
+          </div>
+        ))}
+        {!items.length && <p className="text-sm text-gray-600">Нет платежей в этом статусе</p>}
+      </div>
+
+      <div className="table-wrap hidden md:block">
+        <table className="table table-sticky">
           <thead>
             <tr>
               <th>Курьер</th>

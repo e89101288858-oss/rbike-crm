@@ -48,6 +48,12 @@ body {
   @apply bg-gray-50 px-3 py-2 text-left font-semibold text-gray-700;
 }
 
+.table-sticky thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
 .table td {
   @apply border-t border-gray-100 px-3 py-2;
 }

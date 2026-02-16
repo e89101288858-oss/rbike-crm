@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'
@@ -17,6 +17,11 @@ export default function FinancePage() {
   const [days, setDays] = useState<any[]>([])
   const [byBike, setByBike] = useState<any[]>([])
   const [error, setError] = useState('')
+
+  const maxDayRevenue = useMemo(
+    () => Math.max(1, ...days.map((d: any) => Number(d.revenueRub ?? 0))),
+    [days],
+  )
 
   async function load() {
     setError('')
@@ -41,11 +46,7 @@ export default function FinancePage() {
   }
 
   useEffect(() => {
-    if (!getToken()) {
-      router.replace('/login')
-      return
-    }
-
+    if (!getToken()) return router.replace('/login')
     ;(async () => {
       const myTenants = await api.myTenants()
       setTenants(myTenants)
@@ -55,39 +56,69 @@ export default function FinancePage() {
   }, [router])
 
   return (
-    <main className="mx-auto max-w-6xl p-6">
+    <main className="page">
       <Topbar tenants={tenants} />
-      <h1 className="mb-4 text-2xl font-semibold">Финансы / Выручка</h1>
+      <h1 className="mb-4 text-2xl font-bold">Финансы / Выручка</h1>
 
-      <div className="mb-4 grid gap-2 rounded border p-3 md:grid-cols-4">
-        <input type="date" className="rounded border p-2" value={from} onChange={(e) => setFrom(e.target.value)} />
-        <input type="date" className="rounded border p-2" value={to} onChange={(e) => setTo(e.target.value)} />
-        <select className="rounded border p-2" value={bikeId} onChange={(e) => setBikeId(e.target.value)}>
+      <div className="panel mb-4 grid gap-2 md:grid-cols-4">
+        <input type="date" className="input" value={from} onChange={(e) => setFrom(e.target.value)} />
+        <input type="date" className="input" value={to} onChange={(e) => setTo(e.target.value)} />
+        <select className="select" value={bikeId} onChange={(e) => setBikeId(e.target.value)}>
           <option value="">Все велосипеды</option>
           {bikes.map((b) => <option key={b.id} value={b.id}>{b.code}</option>)}
         </select>
-        <button className="rounded bg-black p-2 text-white" onClick={load}>Применить</button>
+        <button className="btn-primary" onClick={load}>Применить</button>
       </div>
 
-      {error && <p className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+      {error && <p className="alert">{error}</p>}
 
-      <section className="mb-6 rounded border p-4">
-        <h2 className="mb-3 font-semibold">Выручка по дням</h2>
+      <section className="panel mb-6">
+        <h2 className="mb-3 text-lg font-semibold">Выручка по дням</h2>
         <div className="space-y-2 text-sm">
-          {days.map((d) => (
-            <div key={d.date} className="rounded border p-2">{formatDate(d.date)} — {formatRub(d.revenueRub)}</div>
-          ))}
+          {days.map((d: any) => {
+            const width = `${Math.max(6, Math.round((Number(d.revenueRub) / maxDayRevenue) * 100))}%`
+            return (
+              <div key={d.date} className="rounded-xl border border-gray-200 p-2">
+                <div className="mb-1 flex items-center justify-between">
+                  <span>{formatDate(d.date)}</span>
+                  <span className="font-semibold">{formatRub(d.revenueRub)}</span>
+                </div>
+                <div className="h-2 rounded bg-gray-100">
+                  <div className="h-2 rounded bg-blue-500" style={{ width }} />
+                </div>
+              </div>
+            )
+          })}
           {!days.length && <p className="text-gray-600">Нет данных за период</p>}
         </div>
       </section>
 
-      <section className="rounded border p-4">
-        <h2 className="mb-3 font-semibold">Выручка по велосипедам</h2>
-        <div className="space-y-2 text-sm">
-          {byBike.map((b) => (
-            <div key={b.bikeId} className="rounded border p-2">{b.bikeCode} — {formatRub(b.revenueRub)} ({b.payments} платежей)</div>
-          ))}
-          {!byBike.length && <p className="text-gray-600">Нет данных по велосипедам</p>}
+      <section className="panel">
+        <h2 className="mb-3 text-lg font-semibold">Выручка по велосипедам</h2>
+        <div className="table-wrap">
+          <table className="table table-sticky">
+            <thead>
+              <tr>
+                <th>Велосипед</th>
+                <th>Выручка</th>
+                <th>Платежей</th>
+              </tr>
+            </thead>
+            <tbody>
+              {byBike.map((b: any) => (
+                <tr key={b.bikeId}>
+                  <td>{b.bikeCode}</td>
+                  <td>{formatRub(b.revenueRub)}</td>
+                  <td>{b.payments}</td>
+                </tr>
+              ))}
+              {!byBike.length && (
+                <tr>
+                  <td colSpan={3} className="text-center text-gray-600">Нет данных по велосипедам</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </section>
     </main>
