@@ -21,6 +21,29 @@ async function request<T>(path: string, init?: RequestInit, tenantScoped = false
   return res.json()
 }
 
+export type Client = {
+  id: string
+  fullName: string
+  phone?: string | null
+  notes?: string | null
+}
+
+export type Bike = {
+  id: string
+  code: string
+  model?: string | null
+  status: string
+}
+
+export type Rental = {
+  id: string
+  startDate: string
+  plannedEndDate: string
+  weeklyRateRub: number
+  client: { id: string; fullName: string; phone?: string | null }
+  bike: { id: string; code: string }
+}
+
 export const api = {
   login: (email: string, password: string) =>
     request<{ accessToken: string }>('/auth/login', {
@@ -35,7 +58,35 @@ export const api = {
       '/my/tenants',
     ),
 
-  activeRentals: () => request<any[]>('/rentals/active', undefined, true),
+  clients: () => request<Client[]>('/clients', undefined, true),
+
+  createClient: (payload: { fullName: string; phone?: string; notes?: string }) =>
+    request<Client>('/clients', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }, true),
+
+  bikes: () => request<Bike[]>('/bikes', undefined, true),
+
+  activeRentals: () => request<Rental[]>('/rentals/active', undefined, true),
+
+  createRental: (payload: {
+    bikeId: string
+    clientId: string
+    startDate: string
+    plannedEndDate: string
+    weeklyRateRub?: number
+  }) =>
+    request<any>('/rentals', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }, true),
+
+  setWeeklyRate: (rentalId: string, weeklyRateRub: number) =>
+    request<any>(`/rentals/${rentalId}/weekly-rate`, {
+      method: 'PATCH',
+      body: JSON.stringify({ weeklyRateRub }),
+    }, true),
 
   payments: (query = '') => request<any[]>(`/payments${query ? `?${query}` : ''}`, undefined, true),
 
