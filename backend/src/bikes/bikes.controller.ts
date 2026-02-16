@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   NotFoundException,
   Param,
@@ -12,17 +13,23 @@ import {
 import { BikeStatus } from '@prisma/client'
 import type { Request } from 'express'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
+import { CurrentUser } from '../common/decorators/current-user.decorator'
+import type { JwtUser } from '../common/decorators/current-user.decorator'
+import { Roles } from '../common/decorators/roles.decorator'
+import { RolesGuard } from '../common/guards/roles.guard'
 import { TenantGuard } from '../common/guards/tenant.guard'
 import { PrismaService } from '../prisma/prisma.service'
 import { CreateBikeDto } from './dto/create-bike.dto'
 import { UpdateBikeDto } from './dto/update-bike.dto'
 
 @Controller('bikes')
-@UseGuards(JwtAuthGuard, TenantGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, TenantGuard)
+@Roles('OWNER', 'FRANCHISEE', 'MANAGER', 'MECHANIC')
 export class BikesController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Post()
+  @Roles('OWNER', 'FRANCHISEE', 'MANAGER')
   async create(@Req() req: Request, @Body() dto: CreateBikeDto) {
     const tenantId = req.tenantId!
     return this.prisma.bike.create({
@@ -57,12 +64,19 @@ export class BikesController {
   }
 
   @Patch(':id')
+  @Roles('OWNER', 'FRANCHISEE', 'MANAGER', 'MECHANIC')
   async update(
     @Req() req: Request,
     @Param('id') id: string,
+    @CurrentUser() user: JwtUser,
     @Body() dto: UpdateBikeDto,
   ) {
     const tenantId = req.tenantId!
+
+    if (user.role === 'MECHANIC' && dto.model !== undefined) {
+      throw new ForbiddenException('MECHANIC can change only bike status')
+    }
+
     const bike = await this.prisma.bike.findFirst({
       where: { id, tenantId },
     })
