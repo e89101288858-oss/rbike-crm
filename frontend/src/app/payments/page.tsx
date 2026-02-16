@@ -53,17 +53,40 @@ export default function PaymentsPage() {
 
       {error && <p className="alert">{error}</p>}
 
-      <div className="space-y-2">
-        {items.map((p) => (
-          <div key={p.id} className="panel text-sm">
-            <div className="font-semibold">{p.rental?.client?.fullName} — {formatRub(Number(p.amount ?? 0))}</div>
-            <div>Велосипед: {p.rental?.bike?.code}</div>
-            <div>Период: {formatDate(p.periodStart)} → {formatDate(p.periodEnd)}</div>
-            <div>Дата и время платежа: {formatDateTime(p.paidAt)}</div>
-            <div>Статус: <span className={p.status === 'PAID' ? 'text-green-700' : 'text-amber-700'}>{p.status === 'PAID' ? 'Оплачен' : 'Плановый'}</span></div>
-          </div>
-        ))}
-        {!items.length && <p className="text-sm text-gray-600">Нет платежей в этом статусе</p>}
+      <div className="table-wrap">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Курьер</th>
+              <th>Велосипед</th>
+              <th>Сумма</th>
+              <th>Период</th>
+              <th>Дата/время оплаты</th>
+              <th>Статус</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((p) => (
+              <tr key={p.id}>
+                <td>{p.rental?.client?.fullName || '—'}</td>
+                <td>{p.rental?.bike?.code || '—'}</td>
+                <td className={Number(p.amount) < 0 ? 'text-red-700' : ''}>{formatRub(Number(p.amount ?? 0))}</td>
+                <td>{formatDate(p.periodStart)} → {formatDate(p.periodEnd)}</td>
+                <td>{formatDateTime(p.paidAt)}</td>
+                <td>
+                  <span className={`badge ${p.status === 'PAID' ? 'badge-ok' : 'badge-warn'}`}>
+                    {p.status === 'PAID' ? 'Оплачен' : 'Плановый'}
+                  </span>
+                </td>
+              </tr>
+            ))}
+            {!items.length && (
+              <tr>
+                <td colSpan={6} className="text-center text-gray-600">Нет платежей в этом статусе</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </main>
   )
