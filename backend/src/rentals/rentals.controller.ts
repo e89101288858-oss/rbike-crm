@@ -34,6 +34,10 @@ function round2(value: number) {
   return Math.round(value * 100) / 100
 }
 
+function diffDaysCeil(from: Date, to: Date) {
+  return Math.max(1, Math.ceil((to.getTime() - from.getTime()) / MS_PER_DAY))
+}
+
 @Controller('rentals')
 @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard)
 @Roles('OWNER', 'FRANCHISEE', 'MANAGER')
@@ -213,7 +217,13 @@ export class RentalsController {
 
     const rental = await this.prisma.rental.findFirst({
       where: { id, tenantId },
-      select: { id: true, status: true, bikeId: true },
+      select: {
+        id: true,
+        status: true,
+        bikeId: true,
+        startDate: true,
+        plannedEndDate: true,
+      },
     })
 
     if (!rental) {
@@ -224,12 +234,14 @@ export class RentalsController {
       throw new BadRequestException('Only ACTIVE rental can be closed')
     }
 
-    await this.prisma.$transaction(async (tx) => {
+    const closedAt = new Date()
+
+    const result = await this.prisma.$transaction(async (tx) => {
       await tx.rental.updateMany({
         where: { id, tenantId },
         data: {
           status: RentalStatus.CLOSED,
-          actualEndDate: new Date(),
+          actualEndDate: closedAt,
         },
       })
 
@@ -237,9 +249,46 @@ export class RentalsController {
         where: { id: rental.bikeId, tenantId },
         data: { status: BikeStatus.AVAILABLE },
       })
+
+      const paid = await tx.payment.aggregate({
+        where: {
+          tenantId,
+          rentalId: rental.id,
+          status: PaymentStatus.PAID,
+        },
+        _sum: { amount: true },
+      })
+
+      const paidRub = round2(paid._sum.amount ?? 0)
+      const actualDays = diffDaysCeil(rental.startDate, closedAt)
+      const shouldPayRub = round2(actualDays * DAILY_RENT_RUB)
+      const refundRub = round2(Math.max(0, paidRub - shouldPayRub))
+
+      if (refundRub > 0) {
+        await tx.payment.create({
+          data: {
+            tenantId,
+            rentalId: rental.id,
+            amount: -refundRub,
+            kind: PaymentKind.MANUAL,
+            status: PaymentStatus.PAID,
+            paidAt: closedAt,
+            dueAt: closedAt,
+            periodStart: closedAt,
+            periodEnd: rental.plannedEndDate,
+          },
+        })
+      }
+
+      return {
+        paidRub,
+        shouldPayRub,
+        refundRub,
+        actualDays,
+      }
     })
 
-    return this.prisma.rental.findFirst({
+    const updated = await this.prisma.rental.findFirst({
       where: { id, tenantId },
       select: {
         id: true,
@@ -249,6 +298,11 @@ export class RentalsController {
         bike: { select: { code: true, status: true } },
       },
     })
+
+    return {
+      ...updated,
+      finance: result,
+    }
   }
 
   @Post(':id/recalculate-weekly-payments')

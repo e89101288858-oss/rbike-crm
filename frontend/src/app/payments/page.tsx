@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'
 import { getTenantId, getToken, setTenantId } from '@/lib/auth'
-import { formatDate, formatRub } from '@/lib/format'
+import { formatDate, formatDateTime, formatRub } from '@/lib/format'
 
 export default function PaymentsPage() {
   const router = useRouter()
@@ -69,6 +69,7 @@ export default function PaymentsPage() {
             <div className="font-medium">{p.rental?.client?.fullName} — {formatRub(Number(p.amount ?? 0))}</div>
             <div>Велосипед: {p.rental?.bike?.code}</div>
             <div>Период: {formatDate(p.periodStart)} → {formatDate(p.periodEnd)}</div>
+            <div>Дата и время платежа: {formatDateTime(p.paidAt)}</div>
             <div>Статус: <span className={p.status === 'PAID' ? 'text-green-700' : 'text-amber-700'}>{p.status}</span></div>
           </div>
         ))}
