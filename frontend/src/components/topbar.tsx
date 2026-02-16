@@ -2,29 +2,45 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { clearTenantId, clearToken, getTenantId, setTenantId } from '@/lib/auth'
+import { api } from '@/lib/api'
 
 type TenantOption = { id: string; name: string; franchisee?: { name: string } }
+type UserRole = 'OWNER' | 'FRANCHISEE' | 'MANAGER' | 'MECHANIC' | ''
 
-const links = [
-  { href: '/dashboard', label: 'Дашборд' },
-  { href: '/clients', label: 'Курьеры' },
-  { href: '/bikes', label: 'Велосипеды' },
-  { href: '/rentals', label: 'Аренды' },
-  { href: '/payments', label: 'Платежи' },
-  { href: '/finance', label: 'Финансы' },
-  { href: '/import', label: 'Импорт CSV' },
+const links: Array<{ href: string; label: string; roles: UserRole[] }> = [
+  { href: '/dashboard', label: 'Дашборд', roles: ['OWNER', 'FRANCHISEE', 'MANAGER', 'MECHANIC'] },
+  { href: '/clients', label: 'Курьеры', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
+  { href: '/bikes', label: 'Велосипеды', roles: ['OWNER', 'FRANCHISEE', 'MANAGER', 'MECHANIC'] },
+  { href: '/rentals', label: 'Аренды', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
+  { href: '/payments', label: 'Платежи', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
+  { href: '/finance', label: 'Финансы', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
+  { href: '/import', label: 'Импорт CSV', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
 ]
 
 export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
   const router = useRouter()
   const pathname = usePathname()
   const [tenantId, setTenantIdState] = useState(getTenantId())
+  const [role, setRole] = useState<UserRole>('')
+
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const me = await api.me()
+        setRole((me.role as UserRole) || '')
+      } catch {
+        setRole('')
+      }
+    })()
+  }, [])
+
+  const visibleLinks = links.filter((l) => !role || l.roles.includes(role))
 
   return (
     <header className="panel mb-6 flex flex-wrap items-center gap-2">
-      {links.map((l) => (
+      {visibleLinks.map((l) => (
         <Link
           key={l.href}
           href={l.href}

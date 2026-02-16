@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api, Bike } from '@/lib/api'
+
+type UserRole = 'OWNER' | 'FRANCHISEE' | 'MANAGER' | 'MECHANIC' | ''
 import { getTenantId, getToken, setTenantId } from '@/lib/auth'
 
 const BIKE_STATUSES = ['AVAILABLE', 'RENTED', 'MAINTENANCE', 'BLOCKED', 'LOST'] as const
@@ -41,6 +43,7 @@ export default function BikesPage() {
   const [bikes, setBikes] = useState<Bike[]>([])
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [role, setRole] = useState<UserRole>('')
   const [includeArchived, setIncludeArchived] = useState(false)
   const [newBike, setNewBike] = useState<BikeForm>({
     code: '',
@@ -134,7 +137,8 @@ export default function BikesPage() {
   useEffect(() => {
     if (!getToken()) return router.replace('/login')
     ;(async () => {
-      const myTenants = await api.myTenants()
+      const [myTenants, me] = await Promise.all([api.myTenants(), api.me()])
+      setRole((me.role as UserRole) || '')
       setTenants(myTenants)
       if (!getTenantId() && myTenants.length > 0) setTenantId(myTenants[0].id)
       await load()
@@ -144,6 +148,8 @@ export default function BikesPage() {
   useEffect(() => {
     void load()
   }, [includeArchived])
+
+  const canManageCards = role !== 'MECHANIC'
 
   return (
     <main className="page">
@@ -158,20 +164,22 @@ export default function BikesPage() {
       {error && <p className="alert">{error}</p>}
       {success && <p className="alert-success">{success}</p>}
 
-      <section className="panel mb-4 text-sm">
-        <h2 className="mb-2 text-base font-semibold">Добавить велосипед</h2>
-        <div className="grid gap-2 md:grid-cols-3">
-          <input className="input" value={newBike.code} placeholder="Код (например КГ0001)" onChange={(e) => setNewBike((p) => ({ ...p, code: e.target.value }))} />
-          <input className="input" value={newBike.model} placeholder="Модель" onChange={(e) => setNewBike((p) => ({ ...p, model: e.target.value }))} />
-          <select className="select" value={newBike.status} onChange={(e) => setNewBike((p) => ({ ...p, status: e.target.value }))}>
-            {BIKE_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-          <input className="input" value={newBike.frameNumber} placeholder="Номер рамы" onChange={(e) => setNewBike((p) => ({ ...p, frameNumber: e.target.value }))} />
-          <input className="input" value={newBike.motorWheelNumber} placeholder="Номер мотор-колеса" onChange={(e) => setNewBike((p) => ({ ...p, motorWheelNumber: e.target.value }))} />
-          <input className="input" value={newBike.simCardNumber} placeholder="Номер сим-карты" onChange={(e) => setNewBike((p) => ({ ...p, simCardNumber: e.target.value }))} />
-        </div>
-        <button className="btn-primary mt-3" onClick={createBike}>Добавить велосипед</button>
-      </section>
+      {canManageCards && (
+        <section className="panel mb-4 text-sm">
+          <h2 className="mb-2 text-base font-semibold">Добавить велосипед</h2>
+          <div className="grid gap-2 md:grid-cols-3">
+            <input className="input" value={newBike.code} placeholder="Код (например КГ0001)" onChange={(e) => setNewBike((p) => ({ ...p, code: e.target.value }))} />
+            <input className="input" value={newBike.model} placeholder="Модель" onChange={(e) => setNewBike((p) => ({ ...p, model: e.target.value }))} />
+            <select className="select" value={newBike.status} onChange={(e) => setNewBike((p) => ({ ...p, status: e.target.value }))}>
+              {BIKE_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <input className="input" value={newBike.frameNumber} placeholder="Номер рамы" onChange={(e) => setNewBike((p) => ({ ...p, frameNumber: e.target.value }))} />
+            <input className="input" value={newBike.motorWheelNumber} placeholder="Номер мотор-колеса" onChange={(e) => setNewBike((p) => ({ ...p, motorWheelNumber: e.target.value }))} />
+            <input className="input" value={newBike.simCardNumber} placeholder="Номер сим-карты" onChange={(e) => setNewBike((p) => ({ ...p, simCardNumber: e.target.value }))} />
+          </div>
+          <button className="btn-primary mt-3" onClick={createBike}>Добавить велосипед</button>
+        </section>
+      )}
 
       <div className="space-y-3">
         {bikes.map((b) => {
@@ -188,25 +196,27 @@ export default function BikesPage() {
               </div>
 
               <div className="grid gap-2 md:grid-cols-3">
-                <input disabled={archived} className="input" value={f.code ?? ''} placeholder="Код" onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], code: e.target.value } }))} />
-                <input disabled={archived} className="input" value={f.model ?? ''} placeholder="Модель" onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], model: e.target.value } }))} />
+                <input disabled={archived || !canManageCards} className="input" value={f.code ?? ''} placeholder="Код" onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], code: e.target.value } }))} />
+                <input disabled={archived || !canManageCards} className="input" value={f.model ?? ''} placeholder="Модель" onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], model: e.target.value } }))} />
                 <select disabled={archived} className="select" value={f.status ?? b.status} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], status: e.target.value } }))}>
                   {BIKE_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
-                <input disabled={archived} className="input" value={f.frameNumber ?? ''} placeholder="Номер рамы" onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], frameNumber: e.target.value } }))} />
-                <input disabled={archived} className="input" value={f.motorWheelNumber ?? ''} placeholder="Номер мотор-колеса" onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], motorWheelNumber: e.target.value } }))} />
-                <input disabled={archived} className="input" value={f.simCardNumber ?? ''} placeholder="Номер сим-карты" onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], simCardNumber: e.target.value } }))} />
+                <input disabled={archived || !canManageCards} className="input" value={f.frameNumber ?? ''} placeholder="Номер рамы" onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], frameNumber: e.target.value } }))} />
+                <input disabled={archived || !canManageCards} className="input" value={f.motorWheelNumber ?? ''} placeholder="Номер мотор-колеса" onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], motorWheelNumber: e.target.value } }))} />
+                <input disabled={archived || !canManageCards} className="input" value={f.simCardNumber ?? ''} placeholder="Номер сим-карты" onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], simCardNumber: e.target.value } }))} />
               </div>
 
               <div className="mt-3 flex flex-wrap gap-2">
                 {!archived ? (
                   <>
-                    <button className="btn" onClick={() => saveBike(b.id)}>Сохранить карточку</button>
-                    <button className="btn" onClick={() => cancelChanges(b.id)}>Отменить изменения</button>
-                    <button className="btn border-red-300 text-red-700" onClick={() => removeBike(b.id)}>В архив</button>
+                    <button className="btn" onClick={() => saveBike(b.id)}>
+                      {canManageCards ? 'Сохранить карточку' : 'Сохранить статус'}
+                    </button>
+                    {canManageCards && <button className="btn" onClick={() => cancelChanges(b.id)}>Отменить изменения</button>}
+                    {canManageCards && <button className="btn border-red-300 text-red-700" onClick={() => removeBike(b.id)}>В архив</button>}
                   </>
                 ) : (
-                  <button className="btn" onClick={() => restoreBike(b.id)}>Восстановить из архива</button>
+                  canManageCards && <button className="btn" onClick={() => restoreBike(b.id)}>Восстановить из архива</button>
                 )}
               </div>
             </div>

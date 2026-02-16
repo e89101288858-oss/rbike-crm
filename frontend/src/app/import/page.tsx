@@ -1,6 +1,8 @@
 'use client'
 
 import { ChangeEvent, useEffect, useMemo, useState } from 'react'
+
+type UserRole = 'OWNER' | 'FRANCHISEE' | 'MANAGER' | 'MECHANIC' | ''
 import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'
@@ -135,6 +137,7 @@ export default function ImportPage() {
   const [clientCsv, setClientCsv] = useState('fullName;phone;address;passportSeries;passportNumber;notes\nКурьер 1;;;;;')
   const [bikeFileName, setBikeFileName] = useState('')
   const [clientFileName, setClientFileName] = useState('')
+  const [role, setRole] = useState<UserRole>('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
@@ -204,7 +207,8 @@ export default function ImportPage() {
   useEffect(() => {
     if (!getToken()) return router.replace('/login')
     ;(async () => {
-      const myTenants = await api.myTenants()
+      const [myTenants, me] = await Promise.all([api.myTenants(), api.me()])
+      setRole((me.role as UserRole) || '')
       setTenants(myTenants)
       if (!getTenantId() && myTenants.length > 0) setTenantId(myTenants[0].id)
     })()
@@ -217,6 +221,10 @@ export default function ImportPage() {
       {error && <p className="alert">{error}</p>}
       {success && <p className="alert-success">{success}</p>}
 
+      {role === 'MECHANIC' ? (
+        <section className="panel text-sm text-gray-700">У вас нет доступа к импорту CSV.</section>
+      ) : (
+        <>
       <section className="panel mb-6">
         <h2 className="mb-2 font-semibold">Велосипеды</h2>
         <p className="mb-2 text-sm text-gray-600">Колонки: code;model;frameNumber;motorWheelNumber;simCardNumber;status</p>
@@ -266,6 +274,8 @@ export default function ImportPage() {
         )}
         <button className="btn-primary mt-3" onClick={importClients}>Импортировать курьеров</button>
       </section>
+        </>
+      )}
     </main>
   )
 }
