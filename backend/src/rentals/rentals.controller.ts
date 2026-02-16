@@ -10,7 +10,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common'
-import { BikeStatus, RentalStatus } from '@prisma/client'
+import { BikeStatus, PaymentKind, PaymentStatus, RentalStatus } from '@prisma/client'
 import type { Request } from 'express'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { Roles } from '../common/decorators/roles.decorator'
@@ -19,6 +19,17 @@ import { TenantGuard } from '../common/guards/tenant.guard'
 import { PrismaService } from '../prisma/prisma.service'
 import { CreateRentalDto } from './dto/create-rental.dto'
 import { UpdateWeeklyRateDto } from './dto/update-weekly-rate.dto'
+
+const MS_PER_DAY = 1000 * 60 * 60 * 24
+const WEEK_DAYS = 7
+
+function addDays(date: Date, days: number) {
+  return new Date(date.getTime() + days * MS_PER_DAY)
+}
+
+function round2(value: number) {
+  return Math.round(value * 100) / 100
+}
 
 @Controller('rentals')
 @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard)
@@ -174,6 +185,84 @@ export class RentalsController {
         bike: { select: { code: true, status: true } },
       },
     })
+  }
+
+  @Post(':id/recalculate-weekly-payments')
+  async recalculateWeeklyPayments(@Req() req: Request, @Param('id') id: string) {
+    const tenantId = req.tenantId!
+
+    const rental = await this.prisma.rental.findFirst({
+      where: { id, tenantId },
+      select: {
+        id: true,
+        tenantId: true,
+        startDate: true,
+        plannedEndDate: true,
+        actualEndDate: true,
+        weeklyRateRub: true,
+        status: true,
+      },
+    })
+
+    if (!rental) {
+      throw new NotFoundException('Rental not found')
+    }
+
+    if (rental.weeklyRateRub <= 0) {
+      throw new BadRequestException('weeklyRateRub must be greater than 0')
+    }
+
+    const rentalStop = rental.actualEndDate ?? rental.plannedEndDate
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      await tx.payment.deleteMany({
+        where: {
+          tenantId,
+          rentalId: rental.id,
+          kind: PaymentKind.WEEKLY_RENT,
+          status: PaymentStatus.PLANNED,
+        },
+      })
+
+      let blockStart = new Date(rental.startDate)
+      let created = 0
+
+      while (blockStart < rentalStop) {
+        const nominalBlockEnd = addDays(blockStart, WEEK_DAYS)
+        const blockEnd = nominalBlockEnd < rentalStop ? nominalBlockEnd : rentalStop
+
+        const daysInBlock = Math.max(
+          1,
+          Math.ceil((blockEnd.getTime() - blockStart.getTime()) / MS_PER_DAY),
+        )
+
+        const amount = round2((rental.weeklyRateRub / 7) * daysInBlock)
+
+        await tx.payment.create({
+          data: {
+            tenantId,
+            rentalId: rental.id,
+            amount,
+            kind: PaymentKind.WEEKLY_RENT,
+            status: PaymentStatus.PLANNED,
+            dueAt: blockStart,
+            periodStart: blockStart,
+            periodEnd: blockEnd,
+          },
+        })
+
+        created += 1
+        blockStart = blockEnd
+      }
+
+      return { created }
+    })
+
+    return {
+      rentalId: rental.id,
+      weeklyRateRub: rental.weeklyRateRub,
+      createdPayments: result.created,
+    }
   }
 
   @Patch(':id/weekly-rate')

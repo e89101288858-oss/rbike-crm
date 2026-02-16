@@ -97,6 +97,9 @@ export const api = {
   closeRental: (rentalId: string) =>
     request<any>(`/rentals/${rentalId}/close`, { method: 'POST' }, true),
 
+  recalculateWeeklyPayments: (rentalId: string) =>
+    request<any>(`/rentals/${rentalId}/recalculate-weekly-payments`, { method: 'POST' }, true),
+
   payments: (query = '') => request<any[]>(`/payments${query ? `?${query}` : ''}`, undefined, true),
 
   revenueByBike: (query = '') =>

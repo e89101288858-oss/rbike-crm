@@ -86,6 +86,16 @@ export default function RentalsPage() {
     }
   }
 
+  async function recalcPayments(rentalId: string) {
+    setError('')
+    try {
+      await api.recalculateWeeklyPayments(rentalId)
+      await loadAll()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка пересчёта начислений')
+    }
+  }
+
   useEffect(() => {
     if (!getToken()) {
       router.replace('/login')
@@ -151,6 +161,7 @@ export default function RentalsPage() {
                 onChange={(e) => setRateMap((prev) => ({ ...prev, [r.id]: e.target.value }))}
               />
               <button className="rounded border px-2 py-1" onClick={() => saveRate(r.id)}>Сохранить weekly rate</button>
+              <button className="rounded border px-2 py-1" onClick={() => recalcPayments(r.id)}>Пересчитать начисления</button>
               <button className="rounded border border-red-300 px-2 py-1 text-red-700" onClick={() => closeRental(r.id)}>Завершить досрочно</button>
             </div>
           </div>
