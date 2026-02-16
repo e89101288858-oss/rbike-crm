@@ -25,6 +25,9 @@ export type Client = {
   id: string
   fullName: string
   phone?: string | null
+  address?: string | null
+  passportSeries?: string | null
+  passportNumber?: string | null
   notes?: string | null
 }
 
@@ -32,6 +35,9 @@ export type Bike = {
   id: string
   code: string
   model?: string | null
+  frameNumber?: string | null
+  motorWheelNumber?: string | null
+  simCardNumber?: string | null
   status: string
 }
 
@@ -58,11 +64,24 @@ export const api = {
       '/my/tenants',
     ),
 
-  clients: () => request<Client[]>('/clients', undefined, true),
+  clients: (query = '') => request<Client[]>(`/clients${query ? `?${query}` : ''}`, undefined, true),
 
-  createClient: (payload: { fullName: string; phone?: string; notes?: string }) =>
+  createClient: (payload: {
+    fullName: string
+    phone?: string
+    address?: string
+    passportSeries?: string
+    passportNumber?: string
+    notes?: string
+  }) =>
     request<Client>('/clients', {
       method: 'POST',
+      body: JSON.stringify(payload),
+    }, true),
+
+  updateClient: (clientId: string, payload: Partial<Client>) =>
+    request<Client>(`/clients/${clientId}`, {
+      method: 'PATCH',
       body: JSON.stringify(payload),
     }, true),
 
@@ -78,7 +97,17 @@ export const api = {
       currency: string
     }>('/bikes/summary', undefined, true),
 
-  updateBike: (bikeId: string, payload: { model?: string; status?: string }) =>
+  updateBike: (
+    bikeId: string,
+    payload: {
+      code?: string
+      model?: string
+      frameNumber?: string
+      motorWheelNumber?: string
+      simCardNumber?: string
+      status?: string
+    },
+  ) =>
     request<any>(`/bikes/${bikeId}`, {
       method: 'PATCH',
       body: JSON.stringify(payload),

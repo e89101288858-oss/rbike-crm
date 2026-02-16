@@ -37,6 +37,9 @@ export class BikesController {
         tenantId,
         code: dto.code,
         model: dto.model ?? undefined,
+        frameNumber: dto.frameNumber ?? undefined,
+        motorWheelNumber: dto.motorWheelNumber ?? undefined,
+        simCardNumber: dto.simCardNumber ?? undefined,
         status: (dto.status as BikeStatus) ?? BikeStatus.AVAILABLE,
       },
     })
@@ -118,7 +121,14 @@ export class BikesController {
   ) {
     const tenantId = req.tenantId!
 
-    if (user.role === 'MECHANIC' && dto.model !== undefined) {
+    if (
+      user.role === 'MECHANIC' &&
+      (dto.model !== undefined ||
+        dto.code !== undefined ||
+        dto.frameNumber !== undefined ||
+        dto.motorWheelNumber !== undefined ||
+        dto.simCardNumber !== undefined)
+    ) {
       throw new ForbiddenException('MECHANIC can change only bike status')
     }
 
@@ -131,7 +141,11 @@ export class BikesController {
     return this.prisma.bike.update({
       where: { id },
       data: {
+        ...(dto.code !== undefined && { code: dto.code }),
         ...(dto.model !== undefined && { model: dto.model }),
+        ...(dto.frameNumber !== undefined && { frameNumber: dto.frameNumber }),
+        ...(dto.motorWheelNumber !== undefined && { motorWheelNumber: dto.motorWheelNumber }),
+        ...(dto.simCardNumber !== undefined && { simCardNumber: dto.simCardNumber }),
         ...(dto.status !== undefined && { status: dto.status }),
       },
     })

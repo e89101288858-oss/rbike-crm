@@ -12,6 +12,18 @@ export class CreateBikeDto {
   model?: string
 
   @IsOptional()
+  @IsString()
+  frameNumber?: string
+
+  @IsOptional()
+  @IsString()
+  motorWheelNumber?: string
+
+  @IsOptional()
+  @IsString()
+  simCardNumber?: string
+
+  @IsOptional()
   @IsIn(BIKE_STATUSES)
   status?: (typeof BIKE_STATUSES)[number]
 }

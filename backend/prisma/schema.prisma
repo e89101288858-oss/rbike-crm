@@ -112,9 +112,12 @@ model Bike {
   tenantId String
   tenant   Tenant @relation(fields: [tenantId], references: [id])
 
-  code   String
-  model  String?
-  status BikeStatus @default(AVAILABLE)
+  code             String
+  model            String?
+  frameNumber      String?
+  motorWheelNumber String?
+  simCardNumber    String?
+  status           BikeStatus @default(AVAILABLE)
 
   rentals Rental[]
   repairs Repair[]
@@ -129,9 +132,12 @@ model Client {
   tenantId String
   tenant   Tenant @relation(fields: [tenantId], references: [id])
 
-  fullName String
-  phone    String?
-  notes    String?
+  fullName       String
+  phone          String?
+  address        String?
+  passportSeries String?
+  passportNumber String?
+  notes          String?
 
   rentals   Rental[]
   documents Document[]
