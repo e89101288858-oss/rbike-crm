@@ -213,7 +213,7 @@ model Payment {
 
   @@index([tenantId, status])
   @@index([tenantId, dueAt])
-  @@index([rentalId, kind, periodStart])
+  @@unique([rentalId, kind, periodStart])
 }
 
 model Repair {

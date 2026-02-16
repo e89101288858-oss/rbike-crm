@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common'
-import { PaymentKind, PaymentStatus, RentalStatus } from '@prisma/client'
+import { PaymentKind, PaymentStatus, Prisma, RentalStatus } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24
@@ -73,20 +73,7 @@ export class WeeklyPaymentsService {
         const intersectsRange = blockEnd > from && blockStart < to
 
         if (intersectsRange) {
-          const existing = await this.prisma.payment.findFirst({
-            where: {
-              tenantId,
-              rentalId: rental.id,
-              kind: PaymentKind.WEEKLY_RENT,
-              periodStart: blockStart,
-            },
-            select: { id: true },
-          })
-
-          if (existing) {
-            skipped += 1
-            localSkipped += 1
-          } else {
+          try {
             await this.prisma.payment.create({
               data: {
                 tenantId,
@@ -101,6 +88,16 @@ export class WeeklyPaymentsService {
             })
             created += 1
             localCreated += 1
+          } catch (error) {
+            if (
+              error instanceof Prisma.PrismaClientKnownRequestError &&
+              error.code === 'P2002'
+            ) {
+              skipped += 1
+              localSkipped += 1
+            } else {
+              throw error
+            }
           }
         }
 
@@ -123,6 +120,46 @@ export class WeeklyPaymentsService {
       created,
       skipped,
       details,
+    }
+  }
+
+  async generateWeeklyForAllTenants(fromRaw: string, toRaw: string) {
+    const tenants = await this.prisma.tenant.findMany({
+      select: { id: true, name: true, franchiseeId: true },
+      orderBy: { createdAt: 'asc' },
+    })
+
+    const perTenant = [] as Array<{
+      tenantId: string
+      tenantName: string
+      franchiseeId: string
+      rentalsChecked: number
+      created: number
+      skipped: number
+    }>
+
+    let totalCreated = 0
+    let totalSkipped = 0
+
+    for (const tenant of tenants) {
+      const result = await this.generateWeekly(tenant.id, fromRaw, toRaw)
+      totalCreated += result.created
+      totalSkipped += result.skipped
+      perTenant.push({
+        tenantId: tenant.id,
+        tenantName: tenant.name,
+        franchiseeId: tenant.franchiseeId,
+        rentalsChecked: result.rentalsChecked,
+        created: result.created,
+        skipped: result.skipped,
+      })
+    }
+
+    return {
+      tenants: tenants.length,
+      totalCreated,
+      totalSkipped,
+      perTenant,
     }
   }
 
@@ -161,20 +198,70 @@ export class WeeklyPaymentsService {
       overdueOnly,
       count: planned.length,
       totalDebtRub,
-      items: planned.map((p) => ({
-        paymentId: p.id,
-        rentalId: p.rentalId,
-        clientId: p.rental.client.id,
-        clientName: p.rental.client.fullName,
-        clientPhone: p.rental.client.phone,
-        bikeCode: p.rental.bike.code,
-        amountRub: round2(p.amount),
-        kind: p.kind,
-        dueAt: p.dueAt,
-        periodStart: p.periodStart,
-        periodEnd: p.periodEnd,
-        createdAt: p.createdAt,
-      })),
+      items: planned.map((p) => {
+        const overdueDays = p.dueAt
+          ? Math.max(0, Math.floor((now.getTime() - p.dueAt.getTime()) / MS_PER_DAY))
+          : 0
+
+        return {
+          paymentId: p.id,
+          rentalId: p.rentalId,
+          clientId: p.rental.client.id,
+          clientName: p.rental.client.fullName,
+          clientPhone: p.rental.client.phone,
+          bikeCode: p.rental.bike.code,
+          amountRub: round2(p.amount),
+          kind: p.kind,
+          dueAt: p.dueAt,
+          overdueDays,
+          periodStart: p.periodStart,
+          periodEnd: p.periodEnd,
+          createdAt: p.createdAt,
+        }
+      }),
+    }
+  }
+
+  async debtSummaryByClient(tenantId: string, overdueOnly = true) {
+    const debts = await this.debts(tenantId, overdueOnly)
+
+    const grouped = new Map<
+      string,
+      {
+        clientId: string
+        clientName: string
+        clientPhone: string | null
+        items: number
+        debtRub: number
+        maxOverdueDays: number
+      }
+    >()
+
+    for (const item of debts.items) {
+      const current = grouped.get(item.clientId) ?? {
+        clientId: item.clientId,
+        clientName: item.clientName,
+        clientPhone: item.clientPhone,
+        items: 0,
+        debtRub: 0,
+        maxOverdueDays: 0,
+      }
+
+      current.items += 1
+      current.debtRub = round2(current.debtRub + item.amountRub)
+      current.maxOverdueDays = Math.max(current.maxOverdueDays, item.overdueDays)
+      grouped.set(item.clientId, current)
+    }
+
+    const clients = Array.from(grouped.values()).sort((a, b) => b.debtRub - a.debtRub)
+
+    return {
+      tenantId,
+      currency: 'RUB',
+      overdueOnly,
+      clientsCount: clients.length,
+      totalDebtRub: debts.totalDebtRub,
+      clients,
     }
   }
 }

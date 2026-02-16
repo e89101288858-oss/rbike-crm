@@ -25,4 +25,13 @@ export class WeeklyPaymentsController {
     const tenantId = req.tenantId!
     return this.weeklyPaymentsService.debts(tenantId, query.overdueOnly ?? true)
   }
+
+  @Get('debts/summary-by-client')
+  async debtsSummaryByClient(@Req() req: Request, @Query() query: DebtsQueryDto) {
+    const tenantId = req.tenantId!
+    return this.weeklyPaymentsService.debtSummaryByClient(
+      tenantId,
+      query.overdueOnly ?? true,
+    )
+  }
 }
