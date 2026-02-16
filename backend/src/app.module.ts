@@ -7,6 +7,7 @@ import { PrismaModule } from './prisma/prisma.module'
 import { UsersModule } from './users/users.module'
 import { FranchiseBillingModule } from './franchise-billing/franchise-billing.module'
 import { WeeklyPaymentsModule } from './weekly-payments/weekly-payments.module'
+import { RentalsModule } from './rentals/rentals.module'
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { WeeklyPaymentsModule } from './weekly-payments/weekly-payments.module'
     BikesModule,
     FranchiseBillingModule,
     WeeklyPaymentsModule,
+    RentalsModule,
   ],
 })
 export class AppModule {}
