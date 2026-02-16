@@ -68,11 +68,11 @@ body {
 .badge-danger { @apply bg-red-100 text-red-700; }
 
 .btn {
-  @apply rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm transition hover:bg-gray-50;
+  @apply rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm transition duration-150 hover:-translate-y-0.5 hover:bg-gray-50 active:translate-y-0 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50;
 }
 
 .btn-primary {
-  @apply rounded-lg border border-gray-900 bg-gray-900 px-3 py-2 text-sm text-white transition hover:bg-black disabled:opacity-50;
+  @apply rounded-lg border border-gray-900 bg-gray-900 px-3 py-2 text-sm text-white transition duration-150 hover:-translate-y-0.5 hover:bg-black active:translate-y-0 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50;
 }
 
 .input,
@@ -82,4 +82,8 @@ body {
 
 .alert {
   @apply mb-4 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-700;
+}
+
+.alert-success {
+  @apply mb-4 rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-700;
 }

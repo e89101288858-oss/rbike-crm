@@ -40,6 +40,7 @@ export default function BikesPage() {
   const [tenants, setTenants] = useState<any[]>([])
   const [bikes, setBikes] = useState<Bike[]>([])
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [includeArchived, setIncludeArchived] = useState(false)
   const [formMap, setFormMap] = useState<Record<string, BikeForm>>({})
   const [originalMap, setOriginalMap] = useState<Record<string, BikeForm>>({})
@@ -60,37 +61,45 @@ export default function BikesPage() {
 
   async function saveBike(bikeId: string) {
     setError('')
+    setSuccess('')
     try {
       const f = formMap[bikeId]
       await api.updateBike(bikeId, f)
       await load()
+      setSuccess('Сохранено')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка обновления карточки велосипеда')
+      setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка обновления карточки велосипеда'}`)
     }
   }
 
   async function removeBike(bikeId: string) {
     setError('')
+    setSuccess('')
     try {
       await api.deleteBike(bikeId)
       await load()
+      setSuccess('Сохранено')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка удаления велосипеда')
+      setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка удаления велосипеда'}`)
     }
   }
 
   async function restoreBike(bikeId: string) {
     setError('')
+    setSuccess('')
     try {
       await api.restoreBike(bikeId)
       await load()
+      setSuccess('Сохранено')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка восстановления велосипеда')
+      setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка восстановления велосипеда'}`)
     }
   }
 
   function cancelChanges(bikeId: string) {
     setFormMap((p) => ({ ...p, [bikeId]: { ...originalMap[bikeId] } }))
+    setError('')
+    setSuccess('Сохранено')
   }
 
   useEffect(() => {
@@ -118,6 +127,7 @@ export default function BikesPage() {
         </label>
       </div>
       {error && <p className="alert">{error}</p>}
+      {success && <p className="alert-success">{success}</p>}
 
       <div className="space-y-3">
         {bikes.map((b) => {

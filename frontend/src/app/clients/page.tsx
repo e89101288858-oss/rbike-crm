@@ -34,6 +34,7 @@ export default function ClientsPage() {
   const [editMap, setEditMap] = useState<Record<string, ClientForm>>({})
   const [originalMap, setOriginalMap] = useState<Record<string, ClientForm>>({})
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
 
   async function load() {
@@ -58,6 +59,7 @@ export default function ClientsPage() {
   async function createClient(e: FormEvent) {
     e.preventDefault()
     setError('')
+    setSuccess('')
     try {
       if (!fullName.trim()) throw new Error('Укажи ФИО')
       await api.createClient({
@@ -75,43 +77,52 @@ export default function ClientsPage() {
       setPassportNumber('')
       setNotes('')
       await load()
+      setSuccess('Сохранено')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка создания')
+      setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка создания'}`)
     }
   }
 
   async function saveClient(id: string) {
     setError('')
+    setSuccess('')
     try {
       await api.updateClient(id, editMap[id])
       await load()
+      setSuccess('Сохранено')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка обновления карточки курьера')
+      setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка обновления карточки курьера'}`)
     }
   }
 
   async function removeClient(id: string) {
     setError('')
+    setSuccess('')
     try {
       await api.deleteClient(id)
       await load()
+      setSuccess('Сохранено')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка удаления курьера')
+      setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка удаления курьера'}`)
     }
   }
 
   async function restoreClient(id: string) {
     setError('')
+    setSuccess('')
     try {
       await api.restoreClient(id)
       await load()
+      setSuccess('Сохранено')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка восстановления курьера')
+      setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка восстановления курьера'}`)
     }
   }
 
   function cancelChanges(id: string) {
     setEditMap((p) => ({ ...p, [id]: { ...originalMap[id] } }))
+    setError('')
+    setSuccess('Сохранено')
   }
 
   useEffect(() => {
@@ -155,6 +166,7 @@ export default function ClientsPage() {
       </div>
 
       {error && <p className="alert">{error}</p>}
+      {success && <p className="alert-success">{success}</p>}
 
       <div className="space-y-3">
         {clients.map((c) => {
