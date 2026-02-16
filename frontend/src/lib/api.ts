@@ -69,11 +69,14 @@ export const api = {
   bikes: () => request<Bike[]>('/bikes', undefined, true),
 
   bikeSummary: () =>
-    request<{ available: number; rented: number; maintenance: number; revenueTodayRub: number; currency: string }>(
-      '/bikes/summary',
-      undefined,
-      true,
-    ),
+    request<{
+      available: number
+      rented: number
+      maintenance: number
+      revenueTodayRub: number
+      revenueMonthRub: number
+      currency: string
+    }>('/bikes/summary', undefined, true),
 
   updateBike: (bikeId: string, payload: { model?: string; status?: string }) =>
     request<any>(`/bikes/${bikeId}`, {

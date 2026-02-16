@@ -10,7 +10,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common'
-import { BikeStatus } from '@prisma/client'
+import { BikeStatus, PaymentStatus } from '@prisma/client'
 import type { Request } from 'express'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
@@ -55,13 +55,35 @@ export class BikesController {
   async summary(@Req() req: Request) {
     const tenantId = req.tenantId!
 
-    const [available, rented, maintenance] = await Promise.all([
+    const now = new Date()
+    const startOfToday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0))
+    const startOfTomorrow = new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000)
+    const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0))
+
+    const [available, rented, maintenance, todayAgg, monthAgg] = await Promise.all([
       this.prisma.bike.count({ where: { tenantId, status: BikeStatus.AVAILABLE } }),
       this.prisma.bike.count({ where: { tenantId, status: BikeStatus.RENTED } }),
       this.prisma.bike.count({ where: { tenantId, status: BikeStatus.MAINTENANCE } }),
+      this.prisma.payment.aggregate({
+        where: {
+          tenantId,
+          status: PaymentStatus.PAID,
+          paidAt: { gte: startOfToday, lt: startOfTomorrow },
+        },
+        _sum: { amount: true },
+      }),
+      this.prisma.payment.aggregate({
+        where: {
+          tenantId,
+          status: PaymentStatus.PAID,
+          paidAt: { gte: startOfMonth, lt: startOfTomorrow },
+        },
+        _sum: { amount: true },
+      }),
     ])
 
-    const revenueTodayRub = rented * 500
+    const revenueTodayRub = Math.round((todayAgg._sum.amount ?? 0) * 100) / 100
+    const revenueMonthRub = Math.round((monthAgg._sum.amount ?? 0) * 100) / 100
 
     return {
       tenantId,
@@ -69,6 +91,7 @@ export class BikesController {
       rented,
       maintenance,
       revenueTodayRub,
+      revenueMonthRub,
       currency: 'RUB',
     }
   }

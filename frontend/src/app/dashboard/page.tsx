@@ -80,12 +80,19 @@ export default function DashboardPage() {
       {error && <p className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
       <section className="mb-6 rounded border p-4">
-        <h2 className="mb-2 font-semibold">Оперативная сводка</h2>
-        <div className="grid gap-2 text-sm md:grid-cols-2">
+        <h2 className="mb-2 font-semibold">Информация о флоте</h2>
+        <div className="grid gap-2 text-sm md:grid-cols-3">
           <div className="rounded border p-3">Свободных велосипедов: {bikeSummary?.available ?? 0} шт.</div>
-          <div className="rounded border p-3">Велосипедов в аренде: {bikeSummary?.rented ?? 0} шт.</div>
           <div className="rounded border p-3">Велосипедов в ремонте: {bikeSummary?.maintenance ?? 0} шт.</div>
-          <div className="rounded border p-3">Выручка за текущую дату: {formatRub(bikeSummary?.revenueTodayRub ?? 0)}</div>
+          <div className="rounded border p-3">Велосипедов в аренде: {bikeSummary?.rented ?? 0} шт.</div>
+        </div>
+      </section>
+
+      <section className="mb-6 rounded border p-4">
+        <h2 className="mb-2 font-semibold">Финансовые показатели парка</h2>
+        <div className="grid gap-2 text-sm md:grid-cols-2">
+          <div className="rounded border p-3">Выручка за сегодня: {formatRub(bikeSummary?.revenueTodayRub ?? 0)}</div>
+          <div className="rounded border p-3">Выручка за текущий месяц: {formatRub(bikeSummary?.revenueMonthRub ?? 0)}</div>
         </div>
       </section>
 
