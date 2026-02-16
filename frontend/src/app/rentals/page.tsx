@@ -7,6 +7,8 @@ import { api, Bike, Client, Rental } from '@/lib/api'
 import { getToken, getTenantId, setTenantId } from '@/lib/auth'
 import { diffDays, formatDate, formatRub } from '@/lib/format'
 
+const DAILY_RATE_RUB = 500
+
 export default function RentalsPage() {
   const router = useRouter()
   const [tenants, setTenants] = useState<any[]>([])
@@ -18,9 +20,7 @@ export default function RentalsPage() {
   const [bikeId, setBikeId] = useState('')
   const [startDate, setStartDate] = useState('')
   const [plannedEndDate, setPlannedEndDate] = useState('')
-  const [weeklyRateRub, setWeeklyRateRub] = useState('3500')
-
-  const [rateMap, setRateMap] = useState<Record<string, string>>({})
+  const [extendMap, setExtendMap] = useState<Record<string, string>>({})
   const [error, setError] = useState('')
 
   async function loadAll() {
@@ -34,7 +34,6 @@ export default function RentalsPage() {
       setClients(clientsRes)
       setBikes(bikesRes)
       setRentals(rentalsRes)
-      setRateMap(Object.fromEntries(rentalsRes.map((r) => [r.id, String(r.weeklyRateRub ?? 0)])))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки')
     }
@@ -57,7 +56,6 @@ export default function RentalsPage() {
         bikeId,
         startDate: `${startDate}T00:00:00.000Z`,
         plannedEndDate: `${plannedEndDate}T00:00:00.000Z`,
-        weeklyRateRub: Number(weeklyRateRub || 0),
       })
 
       await loadAll()
@@ -66,13 +64,17 @@ export default function RentalsPage() {
     }
   }
 
-  async function saveRate(rentalId: string) {
+  async function extendRental(rentalId: string) {
     setError('')
     try {
-      await api.setWeeklyRate(rentalId, Number(rateMap[rentalId] || 0))
+      const days = Number(extendMap[rentalId] || 0)
+      if (!Number.isInteger(days) || days <= 0) {
+        throw new Error('Введите дни продления (целое > 0)')
+      }
+      await api.extendRental(rentalId, days)
       await loadAll()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка обновления weekly rate')
+      setError(err instanceof Error ? err.message : 'Ошибка продления аренды')
     }
   }
 
@@ -83,16 +85,6 @@ export default function RentalsPage() {
       await loadAll()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка закрытия аренды')
-    }
-  }
-
-  async function recalcPayments(rentalId: string) {
-    setError('')
-    try {
-      await api.recalculateWeeklyPayments(rentalId)
-      await loadAll()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка пересчёта начислений')
     }
   }
 
@@ -113,16 +105,16 @@ export default function RentalsPage() {
   }, [router])
 
   const rentalDays = startDate && plannedEndDate ? diffDays(startDate, plannedEndDate) : 0
-  const projectedTotalRub = Math.round((Number(weeklyRateRub || 0) / 7) * rentalDays)
+  const projectedTotalRub = DAILY_RATE_RUB * rentalDays
 
   return (
     <main className="mx-auto max-w-6xl p-6">
       <Topbar tenants={tenants} />
       <h1 className="mb-4 text-2xl font-semibold">Аренды</h1>
 
-      <form onSubmit={createRental} className="mb-6 grid gap-2 rounded border p-3 md:grid-cols-5">
+      <form onSubmit={createRental} className="mb-6 grid gap-2 rounded border p-3 md:grid-cols-4">
         <select className="rounded border p-2" value={clientId} onChange={(e) => setClientId(e.target.value)}>
-          <option value="">Клиент</option>
+          <option value="">Курьер</option>
           {clients.map((c) => <option key={c.id} value={c.id}>{c.fullName}</option>)}
         </select>
         <select className="rounded border p-2" value={bikeId} onChange={(e) => setBikeId(e.target.value)}>
@@ -131,17 +123,17 @@ export default function RentalsPage() {
         </select>
         <input type="date" className="rounded border p-2" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
         <input type="date" className="rounded border p-2" value={plannedEndDate} onChange={(e) => setPlannedEndDate(e.target.value)} />
-        <input type="number" className="rounded border p-2" value={weeklyRateRub} onChange={(e) => setWeeklyRateRub(e.target.value)} placeholder="Ставка/неделя" />
         <button
           disabled={!clientId || !bikeId || !startDate || !plannedEndDate || rentalDays < 7}
-          className="rounded bg-black p-2 text-white disabled:opacity-50 md:col-span-5"
+          className="rounded bg-black p-2 text-white disabled:opacity-50 md:col-span-4"
         >
           Создать аренду
         </button>
       </form>
+
       {startDate && plannedEndDate && (
         <p className="mb-3 text-sm text-gray-600">
-          Срок аренды: {rentalDays} дн. (минимум 7) · Расчётная сумма: {formatRub(projectedTotalRub)}
+          Тариф: {formatRub(DAILY_RATE_RUB)} / сутки · Срок: {rentalDays} дн. (минимум 7) · Сумма: {formatRub(projectedTotalRub)}
         </p>
       )}
 
@@ -152,16 +144,16 @@ export default function RentalsPage() {
           <div key={r.id} className="rounded border p-3 text-sm">
             <div className="font-medium">{r.client.fullName} — {r.bike.code}</div>
             <div>Период: {formatDate(r.startDate)} → {formatDate(r.plannedEndDate)}</div>
-            <div>Текущая ставка: {formatRub(r.weeklyRateRub ?? 0)} / неделя</div>
+            <div>Тариф: {formatRub(DAILY_RATE_RUB)} / сутки</div>
             <div className="mt-2 flex items-center gap-2">
               <input
                 type="number"
                 className="w-40 rounded border p-1"
-                value={rateMap[r.id] ?? ''}
-                onChange={(e) => setRateMap((prev) => ({ ...prev, [r.id]: e.target.value }))}
+                placeholder="Дней продления"
+                value={extendMap[r.id] ?? ''}
+                onChange={(e) => setExtendMap((prev) => ({ ...prev, [r.id]: e.target.value }))}
               />
-              <button className="rounded border px-2 py-1" onClick={() => saveRate(r.id)}>Сохранить weekly rate</button>
-              <button className="rounded border px-2 py-1" onClick={() => recalcPayments(r.id)}>Пересчитать начисления</button>
+              <button className="rounded border px-2 py-1" onClick={() => extendRental(r.id)}>Продлить</button>
               <button className="rounded border border-red-300 px-2 py-1 text-red-700" onClick={() => closeRental(r.id)}>Завершить досрочно</button>
             </div>
           </div>

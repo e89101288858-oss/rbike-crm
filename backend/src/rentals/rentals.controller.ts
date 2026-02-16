@@ -18,9 +18,12 @@ import { RolesGuard } from '../common/guards/roles.guard'
 import { TenantGuard } from '../common/guards/tenant.guard'
 import { PrismaService } from '../prisma/prisma.service'
 import { CreateRentalDto } from './dto/create-rental.dto'
+import { ExtendRentalDto } from './dto/extend-rental.dto'
 import { UpdateWeeklyRateDto } from './dto/update-weekly-rate.dto'
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24
+const MIN_RENTAL_DAYS = 7
+const DAILY_RENT_RUB = 500
 const WEEK_DAYS = 7
 
 function addDays(date: Date, days: number) {
@@ -49,7 +52,7 @@ export class RentalsController {
     }
 
     const diffDays = Math.ceil((plannedEndDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
-    if (diffDays < 7) {
+    if (diffDays < MIN_RENTAL_DAYS) {
       throw new BadRequestException('Minimum rental duration is 7 days')
     }
 
@@ -96,13 +99,27 @@ export class RentalsController {
           startDate,
           plannedEndDate,
           status: RentalStatus.ACTIVE,
-          weeklyRateRub: dto.weeklyRateRub ?? 0,
+          weeklyRateRub: DAILY_RENT_RUB * 7,
         },
       })
 
       await tx.bike.update({
         where: { id: dto.bikeId },
         data: { status: BikeStatus.RENTED },
+      })
+
+      await tx.payment.create({
+        data: {
+          tenantId,
+          rentalId: created.id,
+          amount: round2(diffDays * DAILY_RENT_RUB),
+          kind: PaymentKind.MANUAL,
+          status: PaymentStatus.PAID,
+          paidAt: new Date(),
+          dueAt: startDate,
+          periodStart: startDate,
+          periodEnd: plannedEndDate,
+        },
       })
 
       return created
@@ -140,6 +157,53 @@ export class RentalsController {
           },
         },
       },
+    })
+  }
+
+  @Post(':id/extend')
+  async extend(@Req() req: Request, @Param('id') id: string, @Body() dto: ExtendRentalDto) {
+    const tenantId = req.tenantId!
+
+    const rental = await this.prisma.rental.findFirst({
+      where: { id, tenantId },
+      select: { id: true, status: true, plannedEndDate: true },
+    })
+
+    if (!rental) {
+      throw new NotFoundException('Rental not found')
+    }
+
+    if (rental.status !== RentalStatus.ACTIVE) {
+      throw new BadRequestException('Only ACTIVE rental can be extended')
+    }
+
+    const days = dto.days
+    const newPlannedEndDate = addDays(rental.plannedEndDate, days)
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.rental.updateMany({
+        where: { id, tenantId },
+        data: { plannedEndDate: newPlannedEndDate },
+      })
+
+      await tx.payment.create({
+        data: {
+          tenantId,
+          rentalId: id,
+          amount: round2(days * DAILY_RENT_RUB),
+          kind: PaymentKind.MANUAL,
+          status: PaymentStatus.PAID,
+          paidAt: new Date(),
+          dueAt: rental.plannedEndDate,
+          periodStart: rental.plannedEndDate,
+          periodEnd: newPlannedEndDate,
+        },
+      })
+    })
+
+    return this.prisma.rental.findFirst({
+      where: { id, tenantId },
+      select: { id: true, status: true, plannedEndDate: true },
     })
   }
 

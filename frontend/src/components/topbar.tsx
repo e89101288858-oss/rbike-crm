@@ -13,11 +13,11 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
 
   return (
     <header className="mb-6 flex flex-wrap items-center gap-3 border-b pb-3">
-      <Link href="/dashboard" className="font-semibold">Dashboard</Link>
-      <Link href="/clients">Clients</Link>
-      <Link href="/bikes">Bikes</Link>
-      <Link href="/rentals">Rentals</Link>
-      <Link href="/payments">Payments</Link>
+      <Link href="/dashboard" className="font-semibold">Дашборд</Link>
+      <Link href="/clients">Курьеры</Link>
+      <Link href="/bikes">Велосипеды</Link>
+      <Link href="/rentals">Аренды</Link>
+      <Link href="/payments">Платежи</Link>
 
       {tenants.length > 0 ? (
         <select

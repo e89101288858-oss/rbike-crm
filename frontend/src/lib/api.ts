@@ -68,6 +68,13 @@ export const api = {
 
   bikes: () => request<Bike[]>('/bikes', undefined, true),
 
+  bikeSummary: () =>
+    request<{ available: number; rented: number; maintenance: number; revenueTodayRub: number; currency: string }>(
+      '/bikes/summary',
+      undefined,
+      true,
+    ),
+
   updateBike: (bikeId: string, payload: { model?: string; status?: string }) =>
     request<any>(`/bikes/${bikeId}`, {
       method: 'PATCH',
@@ -94,11 +101,14 @@ export const api = {
       body: JSON.stringify({ weeklyRateRub }),
     }, true),
 
+  extendRental: (rentalId: string, days: number) =>
+    request<any>(`/rentals/${rentalId}/extend`, {
+      method: 'POST',
+      body: JSON.stringify({ days }),
+    }, true),
+
   closeRental: (rentalId: string) =>
     request<any>(`/rentals/${rentalId}/close`, { method: 'POST' }, true),
-
-  recalculateWeeklyPayments: (rentalId: string) =>
-    request<any>(`/rentals/${rentalId}/recalculate-weekly-payments`, { method: 'POST' }, true),
 
   payments: (query = '') => request<any[]>(`/payments${query ? `?${query}` : ''}`, undefined, true),
 

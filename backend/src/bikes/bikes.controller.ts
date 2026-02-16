@@ -51,6 +51,28 @@ export class BikesController {
     })
   }
 
+  @Get('summary')
+  async summary(@Req() req: Request) {
+    const tenantId = req.tenantId!
+
+    const [available, rented, maintenance] = await Promise.all([
+      this.prisma.bike.count({ where: { tenantId, status: BikeStatus.AVAILABLE } }),
+      this.prisma.bike.count({ where: { tenantId, status: BikeStatus.RENTED } }),
+      this.prisma.bike.count({ where: { tenantId, status: BikeStatus.MAINTENANCE } }),
+    ])
+
+    const revenueTodayRub = rented * 500
+
+    return {
+      tenantId,
+      available,
+      rented,
+      maintenance,
+      revenueTodayRub,
+      currency: 'RUB',
+    }
+  }
+
   @Get(':id')
   async getOne(@Req() req: Request, @Param('id') id: string) {
     const tenantId = req.tenantId!

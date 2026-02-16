@@ -19,6 +19,7 @@ export default function DashboardPage() {
   const [debts, setDebts] = useState<any>(null)
   const [billing, setBilling] = useState<any>(null)
   const [revenueByBike, setRevenueByBike] = useState<any>(null)
+  const [bikeSummary, setBikeSummary] = useState<any>(null)
   const [tenants, setTenants] = useState<any[]>([])
   const [error, setError] = useState('')
   const month = useMemo(() => currentMonth(), [])
@@ -46,14 +47,16 @@ export default function DashboardPage() {
           return
         }
 
-        const [rentalsRes, debtsRes, revenueByBikeRes] = await Promise.all([
+        const [rentalsRes, debtsRes, revenueByBikeRes, bikeSummaryRes] = await Promise.all([
           api.activeRentals(),
           api.debts(false),
           api.revenueByBike(),
+          api.bikeSummary(),
         ])
         setActiveRentals(rentalsRes)
         setDebts(debtsRes)
         setRevenueByBike(revenueByBikeRes)
+        setBikeSummary(bikeSummaryRes)
 
         const billingRes =
           me.role === 'OWNER' ? await api.franchiseOwnerMonthly(month) : await api.franchiseMyMonthly(month)
@@ -72,13 +75,18 @@ export default function DashboardPage() {
   return (
     <main className="mx-auto max-w-5xl p-6">
       <Topbar tenants={tenants} />
-      <h1 className="mb-4 text-2xl font-semibold">Dashboard</h1>
-      <p className="mb-6 text-sm text-gray-600">Role: {role || '...'}</p>
+      <h1 className="mb-4 text-2xl font-semibold">Дашборд</h1>
+      <p className="mb-6 text-sm text-gray-600">Роль: {role || '...'}</p>
       {error && <p className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
       <section className="mb-6 rounded border p-4">
-        <h2 className="mb-2 font-semibold">Активные аренды</h2>
-        <p>Количество: {activeRentals.length}</p>
+        <h2 className="mb-2 font-semibold">Оперативная сводка</h2>
+        <div className="grid gap-2 text-sm md:grid-cols-2">
+          <div className="rounded border p-3">Свободных велосипедов: {bikeSummary?.available ?? 0} шт.</div>
+          <div className="rounded border p-3">Велосипедов в аренде: {bikeSummary?.rented ?? 0} шт.</div>
+          <div className="rounded border p-3">Велосипедов в ремонте: {bikeSummary?.maintenance ?? 0} шт.</div>
+          <div className="rounded border p-3">Выручка за текущую дату: {formatRub(bikeSummary?.revenueTodayRub ?? 0)}</div>
+        </div>
       </section>
 
       <section className="mb-6 rounded border p-4">
