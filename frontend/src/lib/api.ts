@@ -68,6 +68,12 @@ export const api = {
 
   bikes: () => request<Bike[]>('/bikes', undefined, true),
 
+  updateBike: (bikeId: string, payload: { model?: string; status?: string }) =>
+    request<any>(`/bikes/${bikeId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }, true),
+
   activeRentals: () => request<Rental[]>('/rentals/active', undefined, true),
 
   createRental: (payload: {
