@@ -63,6 +63,68 @@ export class PaymentsService {
     })
   }
 
+  async revenueByBike(tenantId: string, from?: string, to?: string) {
+    const fromDate = toDate(from)
+    const toDateValue = toDate(to)
+
+    const rows = await this.prisma.payment.findMany({
+      where: {
+        tenantId,
+        status: PaymentStatus.PAID,
+        ...(fromDate || toDateValue
+          ? {
+              paidAt: {
+                ...(fromDate ? { gte: fromDate } : {}),
+                ...(toDateValue ? { lte: toDateValue } : {}),
+              },
+            }
+          : {}),
+      },
+      select: {
+        amount: true,
+        rental: {
+          select: {
+            bike: {
+              select: {
+                id: true,
+                code: true,
+                model: true,
+              },
+            },
+          },
+        },
+      },
+    })
+
+    const map = new Map<string, { bikeId: string; bikeCode: string; model: string | null; revenueRub: number; payments: number }>()
+
+    for (const row of rows) {
+      const bike = row.rental.bike
+      const current = map.get(bike.id) ?? {
+        bikeId: bike.id,
+        bikeCode: bike.code,
+        model: bike.model,
+        revenueRub: 0,
+        payments: 0,
+      }
+      current.revenueRub = Math.round((current.revenueRub + row.amount) * 100) / 100
+      current.payments += 1
+      map.set(bike.id, current)
+    }
+
+    const items = Array.from(map.values()).sort((a, b) => b.revenueRub - a.revenueRub)
+    const totalRevenueRub = Math.round(items.reduce((sum, i) => sum + i.revenueRub, 0) * 100) / 100
+
+    return {
+      tenantId,
+      currency: 'RUB',
+      from: fromDate ?? null,
+      to: toDateValue ?? null,
+      bikes: items,
+      totalRevenueRub,
+    }
+  }
+
   async markPaid(tenantId: string, id: string, userId: string) {
     const result = await this.prisma.payment.updateMany({
       where: { id, tenantId },

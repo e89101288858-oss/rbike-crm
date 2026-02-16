@@ -18,6 +18,7 @@ export default function DashboardPage() {
   const [activeRentals, setActiveRentals] = useState<any[]>([])
   const [debts, setDebts] = useState<any>(null)
   const [billing, setBilling] = useState<any>(null)
+  const [revenueByBike, setRevenueByBike] = useState<any>(null)
   const [tenants, setTenants] = useState<any[]>([])
   const [error, setError] = useState('')
   const month = useMemo(() => currentMonth(), [])
@@ -45,9 +46,14 @@ export default function DashboardPage() {
           return
         }
 
-        const [rentalsRes, debtsRes] = await Promise.all([api.activeRentals(), api.debts(false)])
+        const [rentalsRes, debtsRes, revenueByBikeRes] = await Promise.all([
+          api.activeRentals(),
+          api.debts(false),
+          api.revenueByBike(),
+        ])
         setActiveRentals(rentalsRes)
         setDebts(debtsRes)
+        setRevenueByBike(revenueByBikeRes)
 
         const billingRes =
           me.role === 'OWNER' ? await api.franchiseOwnerMonthly(month) : await api.franchiseMyMonthly(month)
@@ -79,6 +85,18 @@ export default function DashboardPage() {
         <h2 className="mb-2 font-semibold">Долги</h2>
         <p>Платежей: {debts?.count ?? 0}</p>
         <p>Сумма: {formatRub(debts?.totalDebtRub ?? 0)}</p>
+      </section>
+
+      <section className="mb-6 rounded border p-4">
+        <h2 className="mb-2 font-semibold">Выручка по велосипедам (PAID)</h2>
+        <div className="space-y-2 text-sm">
+          {(revenueByBike?.bikes ?? []).slice(0, 5).map((b: any) => (
+            <div key={b.bikeId} className="rounded border p-2">
+              {b.bikeCode} — {formatRub(b.revenueRub)} ({b.payments} платежей)
+            </div>
+          ))}
+          {!revenueByBike?.bikes?.length && <p className="text-gray-600">Пока нет оплаченной выручки по велосипедам</p>}
+        </div>
       </section>
 
       <section className="rounded border p-4">

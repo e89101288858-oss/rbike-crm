@@ -76,6 +76,16 @@ export default function RentalsPage() {
     }
   }
 
+  async function closeRental(rentalId: string) {
+    setError('')
+    try {
+      await api.closeRental(rentalId)
+      await loadAll()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка закрытия аренды')
+    }
+  }
+
   useEffect(() => {
     if (!getToken()) {
       router.replace('/login')
@@ -93,6 +103,7 @@ export default function RentalsPage() {
   }, [router])
 
   const rentalDays = startDate && plannedEndDate ? diffDays(startDate, plannedEndDate) : 0
+  const projectedTotalRub = Math.round((Number(weeklyRateRub || 0) / 7) * rentalDays)
 
   return (
     <main className="mx-auto max-w-6xl p-6">
@@ -119,7 +130,9 @@ export default function RentalsPage() {
         </button>
       </form>
       {startDate && plannedEndDate && (
-        <p className="mb-3 text-sm text-gray-600">Срок аренды: {rentalDays} дн. (минимум 7)</p>
+        <p className="mb-3 text-sm text-gray-600">
+          Срок аренды: {rentalDays} дн. (минимум 7) · Расчётная сумма: {formatRub(projectedTotalRub)}
+        </p>
       )}
 
       {error && <p className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
@@ -138,6 +151,7 @@ export default function RentalsPage() {
                 onChange={(e) => setRateMap((prev) => ({ ...prev, [r.id]: e.target.value }))}
               />
               <button className="rounded border px-2 py-1" onClick={() => saveRate(r.id)}>Сохранить weekly rate</button>
+              <button className="rounded border border-red-300 px-2 py-1 text-red-700" onClick={() => closeRental(r.id)}>Завершить досрочно</button>
             </div>
           </div>
         ))}

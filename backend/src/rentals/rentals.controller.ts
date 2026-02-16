@@ -63,6 +63,19 @@ export class RentalsController {
       throw new BadRequestException('Client not found for current tenant')
     }
 
+    const existingActiveRental = await this.prisma.rental.findFirst({
+      where: {
+        tenantId,
+        clientId: dto.clientId,
+        status: RentalStatus.ACTIVE,
+      },
+      select: { id: true },
+    })
+
+    if (existingActiveRental) {
+      throw new BadRequestException('Client already has an ACTIVE rental')
+    }
+
     const rental = await this.prisma.$transaction(async (tx) => {
       const created = await tx.rental.create({
         data: {
@@ -115,6 +128,43 @@ export class RentalsController {
             code: true,
           },
         },
+      },
+    })
+  }
+
+  @Post(':id/close')
+  async close(@Req() req: Request, @Param('id') id: string) {
+    const tenantId = req.tenantId!
+
+    const rental = await this.prisma.rental.findFirst({
+      where: { id, tenantId },
+      select: { id: true, status: true },
+    })
+
+    if (!rental) {
+      throw new NotFoundException('Rental not found')
+    }
+
+    if (rental.status !== RentalStatus.ACTIVE) {
+      throw new BadRequestException('Only ACTIVE rental can be closed')
+    }
+
+    await this.prisma.rental.updateMany({
+      where: { id, tenantId },
+      data: {
+        status: RentalStatus.CLOSED,
+        actualEndDate: new Date(),
+      },
+    })
+
+    return this.prisma.rental.findFirst({
+      where: { id, tenantId },
+      select: {
+        id: true,
+        status: true,
+        actualEndDate: true,
+        client: { select: { fullName: true } },
+        bike: { select: { code: true } },
       },
     })
   }

@@ -68,17 +68,25 @@ export class WeeklyPaymentsService {
       const rentalStop = rental.actualEndDate ?? rental.plannedEndDate
 
       while (blockStart < to && blockStart < rentalStop) {
-        const blockEnd = addDays(blockStart, WEEK_DAYS)
+        const nominalBlockEnd = addDays(blockStart, WEEK_DAYS)
+        const blockEnd = nominalBlockEnd < rentalStop ? nominalBlockEnd : rentalStop
 
         const intersectsRange = blockEnd > from && blockStart < to
 
         if (intersectsRange) {
+          const daysInBlock = Math.max(
+            1,
+            Math.ceil((blockEnd.getTime() - blockStart.getTime()) / MS_PER_DAY),
+          )
+          const dailyRate = rental.weeklyRateRub / 7
+          const amount = round2(dailyRate * daysInBlock)
+
           try {
             await this.prisma.payment.create({
               data: {
                 tenantId,
                 rentalId: rental.id,
-                amount: round2(rental.weeklyRateRub),
+                amount,
                 kind: PaymentKind.WEEKLY_RENT,
                 status: PaymentStatus.PLANNED,
                 dueAt: blockStart,

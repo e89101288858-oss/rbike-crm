@@ -88,7 +88,13 @@ export const api = {
       body: JSON.stringify({ weeklyRateRub }),
     }, true),
 
+  closeRental: (rentalId: string) =>
+    request<any>(`/rentals/${rentalId}/close`, { method: 'POST' }, true),
+
   payments: (query = '') => request<any[]>(`/payments${query ? `?${query}` : ''}`, undefined, true),
+
+  revenueByBike: (query = '') =>
+    request<any>(`/payments/revenue-by-bike${query ? `?${query}` : ''}`, undefined, true),
 
   markPaid: (paymentId: string) =>
     request<any>(`/payments/${paymentId}/mark-paid`, { method: 'POST' }, true),
