@@ -138,7 +138,7 @@ export class RentalsController {
 
     const rental = await this.prisma.rental.findFirst({
       where: { id, tenantId },
-      select: { id: true, status: true },
+      select: { id: true, status: true, bikeId: true },
     })
 
     if (!rental) {
@@ -149,12 +149,19 @@ export class RentalsController {
       throw new BadRequestException('Only ACTIVE rental can be closed')
     }
 
-    await this.prisma.rental.updateMany({
-      where: { id, tenantId },
-      data: {
-        status: RentalStatus.CLOSED,
-        actualEndDate: new Date(),
-      },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.rental.updateMany({
+        where: { id, tenantId },
+        data: {
+          status: RentalStatus.CLOSED,
+          actualEndDate: new Date(),
+        },
+      })
+
+      await tx.bike.updateMany({
+        where: { id: rental.bikeId, tenantId },
+        data: { status: BikeStatus.AVAILABLE },
+      })
     })
 
     return this.prisma.rental.findFirst({
@@ -164,7 +171,7 @@ export class RentalsController {
         status: true,
         actualEndDate: true,
         client: { select: { fullName: true } },
-        bike: { select: { code: true } },
+        bike: { select: { code: true, status: true } },
       },
     })
   }
