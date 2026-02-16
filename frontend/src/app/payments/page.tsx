@@ -19,54 +19,44 @@ export default function PaymentsPage() {
     setLoading(true)
     setError('')
     try {
-      if (!getTenantId()) {
-        throw new Error('Не выбран tenant')
-      }
-      const data = await api.payments(`status=${status}`)
-      setItems(data)
+      if (!getTenantId()) throw new Error('Не выбран tenant')
+      setItems(await api.payments(`status=${status}`))
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Ошибка загрузки платежей'
-      setError(msg)
+      setError(err instanceof Error ? err.message : 'Ошибка загрузки платежей')
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    if (!getToken()) {
-      router.replace('/login')
-      return
-    }
-
+    if (!getToken()) return router.replace('/login')
     ;(async () => {
       const myTenants = await api.myTenants()
       setTenants(myTenants)
-      if (!getTenantId() && myTenants.length > 0) {
-        setTenantId(myTenants[0].id)
-      }
+      if (!getTenantId() && myTenants.length > 0) setTenantId(myTenants[0].id)
       await load()
     })()
   }, [router, status])
 
   return (
-    <main className="mx-auto max-w-6xl p-6">
+    <main className="page">
       <Topbar tenants={tenants} />
-      <h1 className="mb-4 text-2xl font-semibold">Платежи</h1>
+      <h1 className="mb-4 text-2xl font-bold">Платежи</h1>
+
       <div className="mb-4 flex items-center gap-2">
-        <button className="rounded border px-3 py-1" onClick={load} disabled={loading}>
-          {loading ? 'Обновление…' : 'Обновить'}
-        </button>
-        <select className="rounded border px-2 py-1" value={status} onChange={(e) => setStatus(e.target.value as 'PLANNED' | 'PAID')}>
+        <button className="btn" onClick={load} disabled={loading}>{loading ? 'Обновление…' : 'Обновить'}</button>
+        <select className="select" value={status} onChange={(e) => setStatus(e.target.value as 'PLANNED' | 'PAID')}>
           <option value="PAID">Оплаченные</option>
           <option value="PLANNED">Плановые</option>
         </select>
       </div>
-      {error && <p className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+
+      {error && <p className="alert">{error}</p>}
 
       <div className="space-y-2">
         {items.map((p) => (
-          <div key={p.id} className="rounded border p-3 text-sm">
-            <div className="font-medium">{p.rental?.client?.fullName} — {formatRub(Number(p.amount ?? 0))}</div>
+          <div key={p.id} className="panel text-sm">
+            <div className="font-semibold">{p.rental?.client?.fullName} — {formatRub(Number(p.amount ?? 0))}</div>
             <div>Велосипед: {p.rental?.bike?.code}</div>
             <div>Период: {formatDate(p.periodStart)} → {formatDate(p.periodEnd)}</div>
             <div>Дата и время платежа: {formatDateTime(p.paidAt)}</div>

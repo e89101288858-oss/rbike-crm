@@ -1,64 +1,80 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { clearTenantId, clearToken, getTenantId, setTenantId } from '@/lib/auth'
 
 type TenantOption = { id: string; name: string; franchisee?: { name: string } }
 
+const links = [
+  { href: '/dashboard', label: 'Дашборд' },
+  { href: '/clients', label: 'Курьеры' },
+  { href: '/bikes', label: 'Велосипеды' },
+  { href: '/rentals', label: 'Аренды' },
+  { href: '/payments', label: 'Платежи' },
+  { href: '/finance', label: 'Финансы' },
+]
+
 export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
   const router = useRouter()
+  const pathname = usePathname()
   const [tenantId, setTenantIdState] = useState(getTenantId())
 
   return (
-    <header className="mb-6 flex flex-wrap items-center gap-3 border-b pb-3">
-      <Link href="/dashboard" className="font-semibold">Дашборд</Link>
-      <Link href="/clients">Курьеры</Link>
-      <Link href="/bikes">Велосипеды</Link>
-      <Link href="/rentals">Аренды</Link>
-      <Link href="/payments">Платежи</Link>
-      <Link href="/finance">Финансы</Link>
+    <header className="panel mb-6 flex flex-wrap items-center gap-2">
+      {links.map((l) => (
+        <Link
+          key={l.href}
+          href={l.href}
+          className={pathname === l.href ? 'btn-primary' : 'btn'}
+        >
+          {l.label}
+        </Link>
+      ))}
 
-      {tenants.length > 0 ? (
-        <select
-          className="rounded border px-2 py-1 text-sm"
-          value={tenantId}
-          onChange={(e) => {
-            const value = e.target.value
-            setTenantIdState(value)
-            setTenantId(value)
+      <div className="ml-auto flex items-center gap-2">
+        {tenants.length > 0 ? (
+          <select
+            className="select min-w-64"
+            value={tenantId}
+            onChange={(e) => {
+              const value = e.target.value
+              setTenantIdState(value)
+              setTenantId(value)
+              router.refresh()
+            }}
+          >
+            {tenants.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}{t.franchisee?.name ? ` — ${t.franchisee.name}` : ''}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input
+            className="input"
+            value={tenantId}
+            placeholder="Tenant ID"
+            onChange={(e) => {
+              const value = e.target.value
+              setTenantIdState(value)
+              setTenantId(value)
+            }}
+          />
+        )}
+
+        <button
+          className="btn"
+          onClick={() => {
+            clearToken()
+            clearTenantId()
+            router.push('/login')
           }}
         >
-          {tenants.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}{t.franchisee?.name ? ` — ${t.franchisee.name}` : ''}
-            </option>
-          ))}
-        </select>
-      ) : (
-        <input
-          className="rounded border px-2 py-1 text-sm"
-          value={tenantId}
-          placeholder="Tenant ID"
-          onChange={(e) => {
-            const value = e.target.value
-            setTenantIdState(value)
-            setTenantId(value)
-          }}
-        />
-      )}
-
-      <button
-        className="rounded border px-2 py-1 text-sm"
-        onClick={() => {
-          clearToken()
-          clearTenantId()
-          router.push('/login')
-        }}
-      >
-        Выход
-      </button>
+          Выход
+        </button>
+      </div>
     </header>
   )
 }

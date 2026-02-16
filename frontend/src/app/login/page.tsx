@@ -21,14 +21,11 @@ export default function LoginPage() {
       const res = await api.login(email, password)
       setToken(res.accessToken)
 
-      // optional manual override, otherwise auto-pick first available tenant
       if (tenantId.trim()) {
         setTenantId(tenantId.trim())
       } else {
         const tenants = await api.myTenants()
-        if (tenants.length > 0) {
-          setTenantId(tenants[0].id)
-        }
+        if (tenants.length > 0) setTenantId(tenants[0].id)
       }
 
       router.push('/dashboard')
@@ -40,16 +37,15 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="mx-auto max-w-md p-6">
-      <h1 className="mb-4 text-2xl font-semibold">RBike CRM — Вход</h1>
-      <form onSubmit={onSubmit} className="space-y-3 rounded border p-4">
-        <input className="w-full rounded border p-2" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-        <input className="w-full rounded border p-2" placeholder="Пароль" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-        <input className="w-full rounded border p-2" placeholder="Tenant ID (опц., иначе выберем автоматически)" value={tenantId} onChange={(e) => setTenant(e.target.value)} />
-        <button disabled={loading} className="w-full rounded bg-black p-2 text-white disabled:opacity-50">
-          {loading ? 'Входим…' : 'Войти'}
-        </button>
-        {error && <p className="text-sm text-red-600">{error}</p>}
+    <main className="page max-w-md">
+      <h1 className="mb-4 text-3xl font-bold">RBike CRM</h1>
+      <p className="mb-4 text-sm text-gray-600">Вход в систему</p>
+      <form onSubmit={onSubmit} className="panel space-y-3">
+        <input className="input w-full" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <input className="input w-full" placeholder="Пароль" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <input className="input w-full" placeholder="Tenant ID (опционально)" value={tenantId} onChange={(e) => setTenant(e.target.value)} />
+        <button disabled={loading} className="btn-primary w-full">{loading ? 'Входим…' : 'Войти'}</button>
+        {error && <p className="alert">{error}</p>}
       </form>
     </main>
   )

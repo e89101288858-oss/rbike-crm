@@ -1,12 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-
-const BIKE_STATUSES = ['AVAILABLE', 'RENTED', 'MAINTENANCE', 'BLOCKED', 'LOST'] as const
 import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api, Bike } from '@/lib/api'
 import { getTenantId, getToken, setTenantId } from '@/lib/auth'
+
+const BIKE_STATUSES = ['AVAILABLE', 'RENTED', 'MAINTENANCE', 'BLOCKED', 'LOST'] as const
 
 export default function BikesPage() {
   const router = useRouter()
@@ -37,44 +37,31 @@ export default function BikesPage() {
   }
 
   useEffect(() => {
-    if (!getToken()) {
-      router.replace('/login')
-      return
-    }
-
+    if (!getToken()) return router.replace('/login')
     ;(async () => {
       const myTenants = await api.myTenants()
       setTenants(myTenants)
-      if (!getTenantId() && myTenants.length > 0) {
-        setTenantId(myTenants[0].id)
-      }
+      if (!getTenantId() && myTenants.length > 0) setTenantId(myTenants[0].id)
       await load()
     })()
   }, [router])
 
   return (
-    <main className="mx-auto max-w-6xl p-6">
+    <main className="page">
       <Topbar tenants={tenants} />
-      <h1 className="mb-4 text-2xl font-semibold">Велосипеды и статусы</h1>
-      {error && <p className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+      <h1 className="mb-4 text-2xl font-bold">Велосипеды и статусы</h1>
+      {error && <p className="alert">{error}</p>}
+
       <div className="space-y-2">
         {bikes.map((b) => (
-          <div key={b.id} className="rounded border p-3 text-sm">
-            <div className="font-medium">{b.code}</div>
+          <div key={b.id} className="panel text-sm">
+            <div className="font-semibold">{b.code}</div>
             <div>Модель: {b.model || '—'}</div>
             <div className="mt-2 flex items-center gap-2">
-              <select
-                className="rounded border px-2 py-1"
-                value={statusMap[b.id] ?? b.status}
-                onChange={(e) => setStatusMap((prev) => ({ ...prev, [b.id]: e.target.value }))}
-              >
-                {BIKE_STATUSES.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
+              <select className="select" value={statusMap[b.id] ?? b.status} onChange={(e) => setStatusMap((p) => ({ ...p, [b.id]: e.target.value }))}>
+                {BIKE_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
-              <button className="rounded border px-2 py-1" onClick={() => saveStatus(b.id)}>
-                Сохранить статус
-              </button>
+              <button className="btn" onClick={() => saveStatus(b.id)}>Сохранить статус</button>
             </div>
           </div>
         ))}

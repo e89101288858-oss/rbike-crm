@@ -20,8 +20,7 @@ export default function ClientsPage() {
     setLoading(true)
     setError('')
     try {
-      const data = await api.clients()
-      setClients(data)
+      setClients(await api.clients())
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки')
     } finally {
@@ -45,48 +44,39 @@ export default function ClientsPage() {
   }
 
   useEffect(() => {
-    if (!getToken()) {
-      router.replace('/login')
-      return
-    }
-
+    if (!getToken()) return router.replace('/login')
     ;(async () => {
       const myTenants = await api.myTenants()
       setTenants(myTenants)
-      if (!getTenantId() && myTenants.length > 0) {
-        setTenantId(myTenants[0].id)
-      }
+      if (!getTenantId() && myTenants.length > 0) setTenantId(myTenants[0].id)
       await load()
     })()
   }, [router])
 
   return (
-    <main className="mx-auto max-w-6xl p-6">
+    <main className="page">
       <Topbar tenants={tenants} />
-      <h1 className="mb-4 text-2xl font-semibold">Клиенты (курьеры)</h1>
+      <h1 className="mb-4 text-2xl font-bold">Курьеры</h1>
 
-      <form onSubmit={createClient} className="mb-6 grid gap-2 rounded border p-3 md:grid-cols-4">
-        <input className="rounded border p-2" placeholder="ФИО" value={fullName} onChange={(e) => setFullName(e.target.value)} />
-        <input className="rounded border p-2" placeholder="Телефон" value={phone} onChange={(e) => setPhone(e.target.value)} />
-        <input className="rounded border p-2" placeholder="Заметка" value={notes} onChange={(e) => setNotes(e.target.value)} />
-        <button className="rounded bg-black p-2 text-white">Создать</button>
+      <form onSubmit={createClient} className="panel mb-6 grid gap-2 md:grid-cols-4">
+        <input className="input" placeholder="ФИО" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+        <input className="input" placeholder="Телефон" value={phone} onChange={(e) => setPhone(e.target.value)} />
+        <input className="input" placeholder="Заметка" value={notes} onChange={(e) => setNotes(e.target.value)} />
+        <button className="btn-primary">Добавить курьера</button>
       </form>
 
-      <button className="mb-3 rounded border px-3 py-1" onClick={load} disabled={loading}>
-        {loading ? 'Обновление…' : 'Обновить'}
-      </button>
-
-      {error && <p className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+      <button className="btn mb-3" onClick={load} disabled={loading}>{loading ? 'Обновление…' : 'Обновить'}</button>
+      {error && <p className="alert">{error}</p>}
 
       <div className="space-y-2">
         {clients.map((c) => (
-          <div key={c.id} className="rounded border p-3 text-sm">
-            <div className="font-medium">{c.fullName}</div>
+          <div key={c.id} className="panel text-sm">
+            <div className="font-semibold">{c.fullName}</div>
             <div>Телефон: {c.phone || '—'}</div>
             <div>Заметка: {c.notes || '—'}</div>
           </div>
         ))}
-        {!clients.length && <p className="text-sm text-gray-600">Клиентов пока нет</p>}
+        {!clients.length && <p className="text-sm text-gray-600">Курьеров пока нет</p>}
       </div>
     </main>
   )
