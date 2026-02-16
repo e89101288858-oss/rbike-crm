@@ -85,6 +85,8 @@ export const api = {
       body: JSON.stringify(payload),
     }, true),
 
+  deleteClient: (clientId: string) => request<any>(`/clients/${clientId}`, { method: 'DELETE' }, true),
+
   bikes: () => request<Bike[]>('/bikes', undefined, true),
 
   bikeSummary: () =>
@@ -112,6 +114,8 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(payload),
     }, true),
+
+  deleteBike: (bikeId: string) => request<any>(`/bikes/${bikeId}`, { method: 'DELETE' }, true),
 
   activeRentals: () => request<Rental[]>('/rentals/active', undefined, true),
 

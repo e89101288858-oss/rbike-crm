@@ -65,6 +65,16 @@ export default function BikesPage() {
     }
   }
 
+  async function removeBike(bikeId: string) {
+    setError('')
+    try {
+      await api.deleteBike(bikeId)
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка удаления велосипеда')
+    }
+  }
+
   useEffect(() => {
     if (!getToken()) return router.replace('/login')
     ;(async () => {
@@ -102,8 +112,9 @@ export default function BikesPage() {
                 <input className="input" value={f.simCardNumber ?? ''} placeholder="Номер сим-карты" onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], simCardNumber: e.target.value } }))} />
               </div>
 
-              <div className="mt-3">
+              <div className="mt-3 flex gap-2">
                 <button className="btn" onClick={() => saveBike(b.id)}>Сохранить карточку велосипеда</button>
+                <button className="btn border-red-300 text-red-700" onClick={() => removeBike(b.id)}>Удалить велосипед</button>
               </div>
             </div>
           )

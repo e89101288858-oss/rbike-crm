@@ -71,6 +71,16 @@ export default function ClientsPage() {
     }
   }
 
+  async function removeClient(id: string) {
+    setError('')
+    try {
+      await api.deleteClient(id)
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка удаления курьера')
+    }
+  }
+
   useEffect(() => {
     if (!getToken()) return router.replace('/login')
     ;(async () => {
@@ -116,7 +126,10 @@ export default function ClientsPage() {
                 <input className="input" value={e.passportNumber ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], passportNumber: ev.target.value } }))} />
                 <input className="input" value={e.notes ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], notes: ev.target.value } }))} />
               </div>
-              <button className="btn mt-3" onClick={() => saveClient(c.id)}>Сохранить карточку курьера</button>
+              <div className="mt-3 flex gap-2">
+                <button className="btn" onClick={() => saveClient(c.id)}>Сохранить карточку курьера</button>
+                <button className="btn border-red-300 text-red-700" onClick={() => removeClient(c.id)}>Удалить курьера</button>
+              </div>
             </div>
           )
         })}

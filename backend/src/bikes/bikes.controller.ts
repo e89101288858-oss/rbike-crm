@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   NotFoundException,
@@ -109,6 +110,25 @@ export class BikesController {
       throw new NotFoundException('Bike not found')
     }
     return bike
+  }
+
+  @Delete(':id')
+  @Roles('OWNER', 'FRANCHISEE', 'MANAGER')
+  async remove(@Req() req: Request, @Param('id') id: string) {
+    const tenantId = req.tenantId!
+
+    const bike = await this.prisma.bike.findFirst({
+      where: { id, tenantId },
+      select: { id: true, status: true },
+    })
+
+    if (!bike) throw new NotFoundException('Bike not found')
+    if (bike.status === BikeStatus.RENTED) {
+      throw new ForbiddenException('Нельзя удалить велосипед со статусом RENTED')
+    }
+
+    await this.prisma.bike.deleteMany({ where: { id, tenantId } })
+    return { id, deleted: true }
   }
 
   @Patch(':id')

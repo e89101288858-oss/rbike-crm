@@ -1,4 +1,4 @@
-import { Body, Controller, Get, NotFoundException, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common'
+import { Body, Controller, Delete, Get, NotFoundException, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common'
 import type { Request } from 'express'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { Roles } from '../common/decorators/roles.decorator'
@@ -53,6 +53,24 @@ export class ClientsController {
       },
       orderBy: { createdAt: 'desc' },
     })
+  }
+
+  @Delete(':id')
+  async remove(@Req() req: Request, @Param('id') id: string) {
+    const tenantId = req.tenantId!
+
+    const activeRental = await this.prisma.rental.findFirst({
+      where: { tenantId, clientId: id, status: 'ACTIVE' },
+      select: { id: true },
+    })
+
+    if (activeRental) {
+      throw new NotFoundException('Нельзя удалить курьера с активной арендой')
+    }
+
+    const deleted = await this.prisma.client.deleteMany({ where: { id, tenantId } })
+    if (deleted.count === 0) throw new NotFoundException('Client not found')
+    return { id, deleted: true }
   }
 
   @Patch(':id')
