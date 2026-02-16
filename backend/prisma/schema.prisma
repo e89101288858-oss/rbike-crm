@@ -33,6 +33,11 @@ enum PaymentStatus {
   PAID
 }
 
+enum PaymentKind {
+  WEEKLY_RENT
+  MANUAL
+}
+
 enum DocumentType {
   PASSPORT_PHOTO
   CONTRACT
@@ -148,6 +153,7 @@ model Rental {
   startDate      DateTime
   plannedEndDate DateTime
   actualEndDate  DateTime?
+  weeklyRateRub  Float    @default(0)
 
   status RentalStatus @default(ACTIVE)
 
@@ -192,8 +198,12 @@ model Payment {
   rentalId String
   rental   Rental @relation(fields: [rentalId], references: [id])
 
-  amount Float
-  status PaymentStatus @default(PLANNED)
+  amount      Float
+  kind        PaymentKind   @default(WEEKLY_RENT)
+  status      PaymentStatus @default(PLANNED)
+  dueAt       DateTime?
+  periodStart DateTime?
+  periodEnd   DateTime?
 
   markedById String?
   markedBy   User?   @relation("PaymentMarkedBy", fields: [markedById], references: [id])
@@ -202,6 +212,8 @@ model Payment {
   createdAt DateTime  @default(now())
 
   @@index([tenantId, status])
+  @@index([tenantId, dueAt])
+  @@index([rentalId, kind, periodStart])
 }
 
 model Repair {

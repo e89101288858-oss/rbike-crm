@@ -6,6 +6,7 @@ import { BikesModule } from './bikes/bikes.module'
 import { PrismaModule } from './prisma/prisma.module'
 import { UsersModule } from './users/users.module'
 import { FranchiseBillingModule } from './franchise-billing/franchise-billing.module'
+import { WeeklyPaymentsModule } from './weekly-payments/weekly-payments.module'
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { FranchiseBillingModule } from './franchise-billing/franchise-billing.mo
     UsersModule,
     BikesModule,
     FranchiseBillingModule,
+    WeeklyPaymentsModule,
   ],
 })
 export class AppModule {}
