@@ -6,6 +6,7 @@ import { RolesGuard } from '../common/guards/roles.guard'
 import { TenantGuard } from '../common/guards/tenant.guard'
 import { PrismaService } from '../prisma/prisma.service'
 import { CreateClientDto } from './dto/create-client.dto'
+import { ImportClientsDto } from './dto/import-clients.dto'
 import { ListClientsQueryDto } from './dto/list-clients.query.dto'
 import { UpdateClientDto } from './dto/update-client.dto'
 
@@ -30,6 +31,28 @@ export class ClientsController {
         notes: dto.notes ?? undefined,
       },
     })
+  }
+
+  @Post('import')
+  async importRows(@Req() req: Request, @Body() dto: ImportClientsDto) {
+    const tenantId = req.tenantId!
+
+    const rows = (dto.rows || [])
+      .map((r) => ({
+        tenantId,
+        fullName: r.fullName?.trim(),
+        phone: r.phone?.trim() || undefined,
+        address: r.address?.trim() || undefined,
+        passportSeries: r.passportSeries?.trim() || undefined,
+        passportNumber: r.passportNumber?.trim() || undefined,
+        notes: r.notes?.trim() || undefined,
+      }))
+      .filter((r) => r.fullName)
+
+    if (!rows.length) return { created: 0 }
+
+    const result = await this.prisma.client.createMany({ data: rows })
+    return { created: result.count }
   }
 
   @Get()

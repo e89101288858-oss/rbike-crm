@@ -14,6 +14,7 @@ const links = [
   { href: '/rentals', label: 'Аренды' },
   { href: '/payments', label: 'Платежи' },
   { href: '/finance', label: 'Финансы' },
+  { href: '/import', label: 'Импорт CSV' },
 ]
 
 export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {

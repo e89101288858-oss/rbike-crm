@@ -90,6 +90,18 @@ export const api = {
   deleteClient: (clientId: string) => request<any>(`/clients/${clientId}`, { method: 'DELETE' }, true),
   restoreClient: (clientId: string) =>
     request<any>(`/clients/${clientId}/restore`, { method: 'POST' }, true),
+  importClients: (rows: Array<{
+    fullName: string
+    phone?: string
+    address?: string
+    passportSeries?: string
+    passportNumber?: string
+    notes?: string
+  }>) =>
+    request<any>('/clients/import', {
+      method: 'POST',
+      body: JSON.stringify({ rows }),
+    }, true),
 
   bikes: (query = '') => request<Bike[]>(`/bikes${query ? `?${query}` : ''}`, undefined, true),
 
@@ -121,6 +133,18 @@ export const api = {
 
   deleteBike: (bikeId: string) => request<any>(`/bikes/${bikeId}`, { method: 'DELETE' }, true),
   restoreBike: (bikeId: string) => request<any>(`/bikes/${bikeId}/restore`, { method: 'POST' }, true),
+  importBikes: (rows: Array<{
+    code: string
+    model?: string
+    frameNumber?: string
+    motorWheelNumber?: string
+    simCardNumber?: string
+    status?: string
+  }>) =>
+    request<any>('/bikes/import', {
+      method: 'POST',
+      body: JSON.stringify({ rows }),
+    }, true),
 
   activeRentals: () => request<Rental[]>('/rentals/active', undefined, true),
 

@@ -22,6 +22,7 @@ import { RolesGuard } from '../common/guards/roles.guard'
 import { TenantGuard } from '../common/guards/tenant.guard'
 import { PrismaService } from '../prisma/prisma.service'
 import { CreateBikeDto } from './dto/create-bike.dto'
+import { ImportBikesDto } from './dto/import-bikes.dto'
 import { ListBikesQueryDto } from './dto/list-bikes.query.dto'
 import { UpdateBikeDto } from './dto/update-bike.dto'
 
@@ -56,6 +57,29 @@ export class BikesController {
       where: { tenantId, ...(includeArchived ? {} : { isActive: true }) },
       orderBy: { createdAt: 'asc' },
     })
+  }
+
+  @Post('import')
+  @Roles('OWNER', 'FRANCHISEE', 'MANAGER')
+  async importRows(@Req() req: Request, @Body() dto: ImportBikesDto) {
+    const tenantId = req.tenantId!
+
+    const rows = (dto.rows || [])
+      .map((r) => ({
+        tenantId,
+        code: r.code?.trim(),
+        model: r.model?.trim() || undefined,
+        frameNumber: r.frameNumber?.trim() || undefined,
+        motorWheelNumber: r.motorWheelNumber?.trim() || undefined,
+        simCardNumber: r.simCardNumber?.trim() || undefined,
+        status: (r.status as BikeStatus) ?? BikeStatus.AVAILABLE,
+      }))
+      .filter((r) => r.code)
+
+    if (!rows.length) return { created: 0 }
+
+    const result = await this.prisma.bike.createMany({ data: rows, skipDuplicates: true })
+    return { created: result.count }
   }
 
   @Get('summary')
