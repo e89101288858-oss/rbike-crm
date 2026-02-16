@@ -42,6 +42,14 @@ export default function BikesPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [includeArchived, setIncludeArchived] = useState(false)
+  const [newBike, setNewBike] = useState<BikeForm>({
+    code: '',
+    model: '',
+    frameNumber: '',
+    motorWheelNumber: '',
+    simCardNumber: '',
+    status: 'AVAILABLE',
+  })
   const [formMap, setFormMap] = useState<Record<string, BikeForm>>({})
   const [originalMap, setOriginalMap] = useState<Record<string, BikeForm>>({})
 
@@ -56,6 +64,27 @@ export default function BikesPage() {
       setOriginalMap(mapped)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки велосипедов')
+    }
+  }
+
+  async function createBike() {
+    setError('')
+    setSuccess('')
+    try {
+      if (!newBike.code.trim()) throw new Error('Укажи код велосипеда')
+      await api.createBike({
+        code: newBike.code.trim(),
+        model: newBike.model.trim() || undefined,
+        frameNumber: newBike.frameNumber.trim() || undefined,
+        motorWheelNumber: newBike.motorWheelNumber.trim() || undefined,
+        simCardNumber: newBike.simCardNumber.trim() || undefined,
+        status: newBike.status,
+      })
+      setNewBike({ code: '', model: '', frameNumber: '', motorWheelNumber: '', simCardNumber: '', status: 'AVAILABLE' })
+      await load()
+      setSuccess('Сохранено')
+    } catch (err) {
+      setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка добавления велосипеда'}`)
     }
   }
 
@@ -128,6 +157,21 @@ export default function BikesPage() {
       </div>
       {error && <p className="alert">{error}</p>}
       {success && <p className="alert-success">{success}</p>}
+
+      <section className="panel mb-4 text-sm">
+        <h2 className="mb-2 text-base font-semibold">Добавить велосипед</h2>
+        <div className="grid gap-2 md:grid-cols-3">
+          <input className="input" value={newBike.code} placeholder="Код (например КГ0001)" onChange={(e) => setNewBike((p) => ({ ...p, code: e.target.value }))} />
+          <input className="input" value={newBike.model} placeholder="Модель" onChange={(e) => setNewBike((p) => ({ ...p, model: e.target.value }))} />
+          <select className="select" value={newBike.status} onChange={(e) => setNewBike((p) => ({ ...p, status: e.target.value }))}>
+            {BIKE_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <input className="input" value={newBike.frameNumber} placeholder="Номер рамы" onChange={(e) => setNewBike((p) => ({ ...p, frameNumber: e.target.value }))} />
+          <input className="input" value={newBike.motorWheelNumber} placeholder="Номер мотор-колеса" onChange={(e) => setNewBike((p) => ({ ...p, motorWheelNumber: e.target.value }))} />
+          <input className="input" value={newBike.simCardNumber} placeholder="Номер сим-карты" onChange={(e) => setNewBike((p) => ({ ...p, simCardNumber: e.target.value }))} />
+        </div>
+        <button className="btn-primary mt-3" onClick={createBike}>Добавить велосипед</button>
+      </section>
 
       <div className="space-y-3">
         {bikes.map((b) => {

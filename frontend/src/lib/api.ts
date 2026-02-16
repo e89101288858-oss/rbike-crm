@@ -105,6 +105,19 @@ export const api = {
 
   bikes: (query = '') => request<Bike[]>(`/bikes${query ? `?${query}` : ''}`, undefined, true),
 
+  createBike: (payload: {
+    code: string
+    model?: string
+    frameNumber?: string
+    motorWheelNumber?: string
+    simCardNumber?: string
+    status?: string
+  }) =>
+    request<Bike>('/bikes', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }, true),
+
   bikeSummary: () =>
     request<{
       available: number
