@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'
-import { getTenantId, getToken } from '@/lib/auth'
+import { getTenantId, getToken, setTenantId } from '@/lib/auth'
 
 function currentMonth() {
   const d = new Date()
@@ -17,6 +17,7 @@ export default function DashboardPage() {
   const [activeRentals, setActiveRentals] = useState<any[]>([])
   const [debts, setDebts] = useState<any>(null)
   const [billing, setBilling] = useState<any>(null)
+  const [tenants, setTenants] = useState<any[]>([])
   const [error, setError] = useState('')
   const month = useMemo(() => currentMonth(), [])
 
@@ -31,8 +32,15 @@ export default function DashboardPage() {
         const me = await api.me()
         setRole(me.role)
 
+        const myTenants = await api.myTenants()
+        setTenants(myTenants)
+
+        if (!getTenantId() && myTenants.length > 0) {
+          setTenantId(myTenants[0].id)
+        }
+
         if (!getTenantId()) {
-          setError('Укажи Tenant ID в верхней панели (или заново войди с Tenant ID).')
+          setError('Нет доступных tenant для этого пользователя.')
           return
         }
 
@@ -56,7 +64,7 @@ export default function DashboardPage() {
 
   return (
     <main className="mx-auto max-w-5xl p-6">
-      <Topbar />
+      <Topbar tenants={tenants} />
       <h1 className="mb-4 text-2xl font-semibold">Dashboard</h1>
       <p className="mb-6 text-sm text-gray-600">Role: {role || '...'}</p>
       {error && <p className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700">{error}</p>}

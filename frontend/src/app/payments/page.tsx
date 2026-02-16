@@ -4,11 +4,12 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'
-import { getTenantId, getToken } from '@/lib/auth'
+import { getTenantId, getToken, setTenantId } from '@/lib/auth'
 
 export default function PaymentsPage() {
   const router = useRouter()
   const [items, setItems] = useState<any[]>([])
+  const [tenants, setTenants] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -39,12 +40,20 @@ export default function PaymentsPage() {
       router.replace('/login')
       return
     }
-    load()
+
+    ;(async () => {
+      const myTenants = await api.myTenants()
+      setTenants(myTenants)
+      if (!getTenantId() && myTenants.length > 0) {
+        setTenantId(myTenants[0].id)
+      }
+      await load()
+    })()
   }, [router])
 
   return (
     <main className="mx-auto max-w-6xl p-6">
-      <Topbar />
+      <Topbar tenants={tenants} />
       <h1 className="mb-4 text-2xl font-semibold">Платежи</h1>
       <button className="mb-4 rounded border px-3 py-1" onClick={load} disabled={loading}>
         {loading ? 'Обновление…' : 'Обновить'}

@@ -30,6 +30,11 @@ export const api = {
 
   me: () => request<{ userId: string; role: string; franchiseeId: string | null }>('/me'),
 
+  myTenants: () =>
+    request<Array<{ id: string; name: string; franchiseeId: string; franchisee?: { name: string } }>>(
+      '/my/tenants',
+    ),
+
   activeRentals: () => request<any[]>('/rentals/active', undefined, true),
 
   payments: (query = '') => request<any[]>(`/payments${query ? `?${query}` : ''}`, undefined, true),
