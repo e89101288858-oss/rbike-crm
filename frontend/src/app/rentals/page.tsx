@@ -221,9 +221,9 @@ export default function RentalsPage() {
   const canCreate = !!clientId && !!bikeId && !!startDate && !!plannedEndDate && selectedBatteryIds.length === batteryCount && rentalDays >= minRentalDays
 
   function daysHighlightClass(daysLeft: number) {
-    if (daysLeft >= 4) return 'border-green-300 bg-green-50'
-    if (daysLeft === 3 || daysLeft === 2) return 'border-amber-300 bg-amber-50'
-    if (daysLeft === 1) return 'border-red-300 bg-red-50'
+    if (daysLeft >= 4) return 'border-green-300 bg-green-50/80'
+    if (daysLeft === 3 || daysLeft === 2) return 'border-amber-300 bg-amber-50/80'
+    if (daysLeft === 1) return 'border-red-300 bg-red-50/80'
     return 'border-gray-200 bg-white'
   }
 
@@ -299,7 +299,7 @@ export default function RentalsPage() {
           const daysLeft = Math.max(0, diffDays(new Date().toISOString(), r.plannedEndDate))
           const highlight = r.status === 'ACTIVE' ? daysHighlightClass(daysLeft) : 'border-gray-200 bg-white'
           return (
-            <div key={r.id} className={`panel text-sm ${highlight}`}>
+            <div key={r.id} className={`rounded-2xl border p-3 shadow-sm text-sm ${highlight}`}>
               <div className="flex cursor-pointer flex-wrap items-center gap-2 rounded-lg px-1 py-1 hover:bg-gray-50" onClick={() => setExpandedMap((p) => ({ ...p, [r.id]: !expanded }))}>
                 <div className="font-medium min-w-56">{r.client.fullName} — {r.bike.code}</div>
                 <span className={`badge ${r.status === 'ACTIVE' ? 'badge-warn' : 'badge-ok'}`}>{r.status === 'ACTIVE' ? 'Активна' : 'Завершена'}</span>
