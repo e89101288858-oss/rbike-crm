@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import { PaymentKind, PaymentStatus } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 import { ListPaymentsQueryDto } from './dto/list-payments.query.dto'
+import { UpdatePaymentDto } from './dto/update-payment.dto'
 
 function toDate(value?: string) {
   if (!value) return undefined
@@ -170,6 +171,45 @@ export class PaymentsService {
       days,
       totalRevenueRub: Math.round(days.reduce((s, d) => s + d.revenueRub, 0) * 100) / 100,
     }
+  }
+
+  async update(tenantId: string, id: string, dto: UpdatePaymentDto) {
+    const existing = await this.prisma.payment.findFirst({ where: { id, tenantId }, select: { id: true } })
+    if (!existing) throw new NotFoundException('Payment not found')
+
+    const dueAt = dto.dueAt ? new Date(dto.dueAt) : undefined
+    const periodStart = dto.periodStart ? new Date(dto.periodStart) : undefined
+    const periodEnd = dto.periodEnd ? new Date(dto.periodEnd) : undefined
+    const paidAt = dto.paidAt ? new Date(dto.paidAt) : undefined
+
+    if (periodStart && periodEnd && periodStart > periodEnd) {
+      throw new BadRequestException('periodStart must be <= periodEnd')
+    }
+
+    const status = dto.status as PaymentStatus | undefined
+
+    await this.prisma.payment.updateMany({
+      where: { id, tenantId },
+      data: {
+        ...(dto.amount !== undefined && { amount: dto.amount }),
+        ...(dueAt !== undefined && { dueAt }),
+        ...(periodStart !== undefined && { periodStart }),
+        ...(periodEnd !== undefined && { periodEnd }),
+        ...(status !== undefined && { status }),
+        ...(paidAt !== undefined && { paidAt }),
+        ...(status === PaymentStatus.PLANNED ? { paidAt: null, markedById: null } : {}),
+      },
+    })
+
+    return this.prisma.payment.findFirst({ where: { id, tenantId } })
+  }
+
+  async remove(tenantId: string, id: string) {
+    const existing = await this.prisma.payment.findFirst({ where: { id, tenantId }, select: { id: true } })
+    if (!existing) throw new NotFoundException('Payment not found')
+
+    await this.prisma.payment.deleteMany({ where: { id, tenantId } })
+    return { id, deleted: true }
   }
 
   async markPaid(tenantId: string, id: string, userId: string) {

@@ -52,9 +52,9 @@ export class BikesController {
   @Get()
   async list(@Req() req: Request, @Query() query: ListBikesQueryDto) {
     const tenantId = req.tenantId!
-    const includeArchived = query.includeArchived === 'true'
+    const archivedOnly = query.archivedOnly === 'true'
     return this.prisma.bike.findMany({
-      where: { tenantId, ...(includeArchived ? {} : { isActive: true }) },
+      where: { tenantId, isActive: archivedOnly ? false : true },
       orderBy: { createdAt: 'asc' },
     })
   }

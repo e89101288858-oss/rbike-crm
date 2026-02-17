@@ -59,7 +59,7 @@ export default function BikesPage() {
   async function load() {
     setError('')
     try {
-      const query = includeArchived ? 'includeArchived=true' : ''
+      const query = includeArchived ? 'archivedOnly=true' : ''
       const rows = await api.bikes(query)
       setBikes(rows)
       const mapped = Object.fromEntries(rows.map((b) => [b.id, toBikeForm(b)])) as Record<string, BikeForm>

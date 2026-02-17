@@ -13,6 +13,7 @@ export default function PaymentsPage() {
   const [tenants, setTenants] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [status, setStatus] = useState<'PLANNED' | 'PAID'>('PAID')
 
   async function load() {
@@ -22,9 +23,39 @@ export default function PaymentsPage() {
       if (!getTenantId()) throw new Error('Не выбран tenant')
       setItems(await api.payments(`status=${status}`))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка загрузки платежей')
+      setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка загрузки платежей'}`)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function editPayment(p: any) {
+    setError('')
+    setSuccess('')
+    try {
+      const amountRaw = prompt('Новая сумма (RUB):', String(p.amount ?? ''))
+      if (amountRaw === null) return
+      const amount = Number(amountRaw)
+      if (!Number.isFinite(amount)) throw new Error('Сумма должна быть числом')
+
+      await api.updatePayment(p.id, { amount })
+      await load()
+      setSuccess('Сохранено')
+    } catch (err) {
+      setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка редактирования платежа'}`)
+    }
+  }
+
+  async function removePayment(p: any) {
+    if (!confirm(`Удалить платеж ${formatRub(Number(p.amount ?? 0))}?`)) return
+    setError('')
+    setSuccess('')
+    try {
+      await api.deletePayment(p.id)
+      await load()
+      setSuccess('Сохранено')
+    } catch (err) {
+      setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка удаления платежа'}`)
     }
   }
 
@@ -52,6 +83,7 @@ export default function PaymentsPage() {
       </div>
 
       {error && <p className="alert">{error}</p>}
+      {success && <p className="alert-success">{success}</p>}
 
       <div className="space-y-2 md:hidden">
         {items.map((p) => (
@@ -61,7 +93,11 @@ export default function PaymentsPage() {
             <div>Сумма: <span className={Number(p.amount) < 0 ? 'text-red-700' : ''}>{formatRub(Number(p.amount ?? 0))}</span></div>
             <div>Период: {formatDate(p.periodStart)} → {formatDate(p.periodEnd)}</div>
             <div>Оплата: {formatDateTime(p.paidAt)}</div>
-            <div><span className={`badge ${p.status === 'PAID' ? 'badge-ok' : 'badge-warn'}`}>{p.status === 'PAID' ? 'Оплачен' : 'Плановый'}</span></div>
+            <div className="mb-2"><span className={`badge ${p.status === 'PAID' ? 'badge-ok' : 'badge-warn'}`}>{p.status === 'PAID' ? 'Оплачен' : 'Плановый'}</span></div>
+            <div className="flex gap-2">
+              <button className="btn" onClick={() => editPayment(p)}>Редактировать</button>
+              <button className="btn border-red-300 text-red-700" onClick={() => removePayment(p)}>Удалить</button>
+            </div>
           </div>
         ))}
         {!items.length && <p className="text-sm text-gray-600">Нет платежей в этом статусе</p>}
@@ -77,6 +113,7 @@ export default function PaymentsPage() {
               <th>Период</th>
               <th>Дата/время оплаты</th>
               <th>Статус</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -92,11 +129,17 @@ export default function PaymentsPage() {
                     {p.status === 'PAID' ? 'Оплачен' : 'Плановый'}
                   </span>
                 </td>
+                <td>
+                  <div className="flex gap-2">
+                    <button className="btn" onClick={() => editPayment(p)}>Редакт.</button>
+                    <button className="btn border-red-300 text-red-700" onClick={() => removePayment(p)}>Удалить</button>
+                  </div>
+                </td>
               </tr>
             ))}
             {!items.length && (
               <tr>
-                <td colSpan={6} className="text-center text-gray-600">Нет платежей в этом статусе</td>
+                <td colSpan={7} className="text-center text-gray-600">Нет платежей в этом статусе</td>
               </tr>
             )}
           </tbody>

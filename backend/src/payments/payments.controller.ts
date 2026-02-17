@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common'
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common'
 import type { Request } from 'express'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
@@ -9,6 +9,7 @@ import { TenantGuard } from '../common/guards/tenant.guard'
 import { ListPaymentsQueryDto } from './dto/list-payments.query.dto'
 import { RevenueByBikeQueryDto } from './dto/revenue-by-bike.query.dto'
 import { RevenueByDaysQueryDto } from './dto/revenue-by-days.query.dto'
+import { UpdatePaymentDto } from './dto/update-payment.dto'
 import { PaymentsService } from './payments.service'
 
 @Controller('payments')
@@ -33,6 +34,18 @@ export class PaymentsController {
   async revenueByDays(@Req() req: Request, @Query() query: RevenueByDaysQueryDto) {
     const tenantId = req.tenantId!
     return this.paymentsService.revenueByDays(tenantId, query.from, query.to)
+  }
+
+  @Patch(':id')
+  async update(@Req() req: Request, @Param('id') id: string, @Body() dto: UpdatePaymentDto) {
+    const tenantId = req.tenantId!
+    return this.paymentsService.update(tenantId, id, dto)
+  }
+
+  @Delete(':id')
+  async remove(@Req() req: Request, @Param('id') id: string) {
+    const tenantId = req.tenantId!
+    return this.paymentsService.remove(tenantId, id)
   }
 
   @Post(':id/mark-paid')

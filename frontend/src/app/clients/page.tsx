@@ -43,7 +43,7 @@ export default function ClientsPage() {
     try {
       const params = new URLSearchParams()
       if (query.trim()) params.set('q', query.trim())
-      if (includeArchived) params.set('includeArchived', 'true')
+      if (includeArchived) params.set('archivedOnly', 'true')
       const data = await api.clients(params.toString())
       setClients(data)
       const mapped = Object.fromEntries(data.map((c) => [c.id, toClientForm(c)])) as Record<string, ClientForm>

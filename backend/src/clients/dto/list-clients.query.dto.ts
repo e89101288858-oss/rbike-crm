@@ -7,5 +7,5 @@ export class ListClientsQueryDto {
 
   @IsOptional()
   @IsBooleanString()
-  includeArchived?: string
+  archivedOnly?: string
 }

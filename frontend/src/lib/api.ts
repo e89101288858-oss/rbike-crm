@@ -198,6 +198,24 @@ export const api = {
   revenueByDays: (query = '') =>
     request<any>(`/payments/revenue-by-days${query ? `?${query}` : ''}`, undefined, true),
 
+  updatePayment: (
+    paymentId: string,
+    payload: {
+      amount?: number
+      status?: string
+      dueAt?: string
+      periodStart?: string
+      periodEnd?: string
+      paidAt?: string
+    },
+  ) =>
+    request<any>(`/payments/${paymentId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }, true),
+
+  deletePayment: (paymentId: string) => request<any>(`/payments/${paymentId}`, { method: 'DELETE' }, true),
+
   markPaid: (paymentId: string) =>
     request<any>(`/payments/${paymentId}/mark-paid`, { method: 'POST' }, true),
 

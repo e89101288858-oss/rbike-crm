@@ -59,12 +59,12 @@ export class ClientsController {
   async list(@Req() req: Request, @Query() query: ListClientsQueryDto) {
     const tenantId = req.tenantId!
     const q = query.q?.trim()
-    const includeArchived = query.includeArchived === 'true'
+    const archivedOnly = query.archivedOnly === 'true'
 
     return this.prisma.client.findMany({
       where: {
         tenantId,
-        ...(includeArchived ? {} : { isActive: true }),
+        isActive: archivedOnly ? false : true,
         ...(q
           ? {
               OR: [
