@@ -7,8 +7,6 @@ import { api, Bike, Client, Rental } from '@/lib/api'
 import { getToken, getTenantId, setTenantId } from '@/lib/auth'
 import { diffDays, formatDate, formatRub } from '@/lib/format'
 
-const DAILY_RATE_RUB = 500
-
 export default function RentalsPage() {
   const router = useRouter()
   const [tenants, setTenants] = useState<any[]>([])
@@ -22,6 +20,8 @@ export default function RentalsPage() {
   const [plannedEndDate, setPlannedEndDate] = useState('')
   const [extendMap, setExtendMap] = useState<Record<string, string>>({})
   const [journalMap, setJournalMap] = useState<Record<string, any[]>>({})
+  const [dailyRateRub, setDailyRateRub] = useState(500)
+  const [minRentalDays, setMinRentalDays] = useState(7)
   const [error, setError] = useState('')
 
   async function loadAll() {
@@ -48,8 +48,8 @@ export default function RentalsPage() {
         throw new Error('Заполни все поля аренды')
       }
 
-      if (diffDays(startDate, plannedEndDate) < 7) {
-        throw new Error('Минимальный срок аренды — 7 дней')
+      if (diffDays(startDate, plannedEndDate) < minRentalDays) {
+        throw new Error(`Минимальный срок аренды — ${minRentalDays} дней`)
       }
 
       await api.createRental({
@@ -108,15 +108,19 @@ export default function RentalsPage() {
     ;(async () => {
       const myTenants = await api.myTenants()
       setTenants(myTenants)
+      const currentTenantId = getTenantId() || myTenants[0]?.id || ''
       if (!getTenantId() && myTenants.length > 0) {
         setTenantId(myTenants[0].id)
       }
+      const currentTenant = myTenants.find((t) => t.id === currentTenantId)
+      setDailyRateRub(Number(currentTenant?.dailyRateRub ?? 500))
+      setMinRentalDays(Number(currentTenant?.minRentalDays ?? 7))
       await loadAll()
     })()
   }, [router])
 
   const rentalDays = startDate && plannedEndDate ? diffDays(startDate, plannedEndDate) : 0
-  const projectedTotalRub = DAILY_RATE_RUB * rentalDays
+  const projectedTotalRub = dailyRateRub * rentalDays
 
   return (
     <main className="mx-auto max-w-6xl p-6">
@@ -135,7 +139,7 @@ export default function RentalsPage() {
         <input type="date" className="rounded border p-2" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
         <input type="date" className="rounded border p-2" value={plannedEndDate} onChange={(e) => setPlannedEndDate(e.target.value)} />
         <button
-          disabled={!clientId || !bikeId || !startDate || !plannedEndDate || rentalDays < 7}
+          disabled={!clientId || !bikeId || !startDate || !plannedEndDate || rentalDays < minRentalDays}
           className="rounded bg-black p-2 text-white disabled:opacity-50 md:col-span-4"
         >
           Создать аренду
@@ -144,7 +148,7 @@ export default function RentalsPage() {
 
       {startDate && plannedEndDate && (
         <p className="mb-3 text-sm text-gray-600">
-          Тариф: {formatRub(DAILY_RATE_RUB)} / сутки · Срок: {rentalDays} дн. (минимум 7) · Сумма: {formatRub(projectedTotalRub)}
+          Тариф: {formatRub(dailyRateRub)} / сутки · Срок: {rentalDays} дн. (минимум {minRentalDays}) · Сумма: {formatRub(projectedTotalRub)}
         </p>
       )}
 
@@ -155,7 +159,7 @@ export default function RentalsPage() {
           <div key={r.id} className="rounded border p-3 text-sm">
             <div className="font-medium">{r.client.fullName} — {r.bike.code}</div>
             <div>Период: {formatDate(r.startDate)} → {formatDate(r.plannedEndDate)}</div>
-            <div>Тариф: {formatRub(DAILY_RATE_RUB)} / сутки</div>
+            <div>Тариф: {formatRub(dailyRateRub)} / сутки</div>
             <div className="mt-2 flex items-center gap-2">
               <input
                 type="number"

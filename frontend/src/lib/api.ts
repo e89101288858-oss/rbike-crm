@@ -62,9 +62,14 @@ export const api = {
   me: () => request<{ userId: string; role: string; franchiseeId: string | null }>('/me'),
 
   myTenants: () =>
-    request<Array<{ id: string; name: string; franchiseeId: string; franchisee?: { name: string } }>>(
-      '/my/tenants',
-    ),
+    request<Array<{
+      id: string
+      name: string
+      franchiseeId: string
+      franchisee?: { name: string }
+      dailyRateRub?: number
+      minRentalDays?: number
+    }>>('/my/tenants'),
 
   clients: (query = '') => request<Client[]>(`/clients${query ? `?${query}` : ''}`, undefined, true),
 
@@ -249,13 +254,19 @@ export const api = {
 
   adminTenantsByFranchisee: (franchiseeId: string) => request<any[]>(`/franchisees/${franchiseeId}/tenants`),
 
-  adminCreateTenant: (franchiseeId: string, payload: { name: string; isActive?: boolean }) =>
+  adminCreateTenant: (
+    franchiseeId: string,
+    payload: { name: string; isActive?: boolean; dailyRateRub?: number; minRentalDays?: number },
+  ) =>
     request<any>(`/franchisees/${franchiseeId}/tenants`, {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
 
-  adminUpdateTenant: (id: string, payload: { name?: string; isActive?: boolean }) =>
+  adminUpdateTenant: (
+    id: string,
+    payload: { name?: string; isActive?: boolean; dailyRateRub?: number; minRentalDays?: number },
+  ) =>
     request<any>(`/tenants/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(payload),

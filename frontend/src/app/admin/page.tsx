@@ -108,7 +108,11 @@ export default function AdminPage() {
     setError('')
     setSuccess('')
     try {
-      await api.adminUpdateTenant(t.id, { name: t.name })
+      await api.adminUpdateTenant(t.id, {
+        name: t.name,
+        dailyRateRub: Number(t.dailyRateRub),
+        minRentalDays: Number(t.minRentalDays),
+      })
       await loadAll()
       setSuccess('Сохранено')
     } catch (err) {
@@ -184,6 +188,8 @@ export default function AdminPage() {
                     {(tenantMap[f.id] || []).map((t) => (
                       <div key={t.id} className="flex flex-wrap items-center gap-2">
                         <input className="input min-w-72" value={t.name} onChange={(e) => setTenantMap((p) => ({ ...p, [f.id]: (p[f.id] || []).map((x: any) => x.id === t.id ? { ...x, name: e.target.value } : x) }))} />
+                        <input className="input w-32" type="number" min={1} value={t.dailyRateRub ?? 500} onChange={(e) => setTenantMap((p) => ({ ...p, [f.id]: (p[f.id] || []).map((x: any) => x.id === t.id ? { ...x, dailyRateRub: Number(e.target.value) } : x) }))} />
+                        <input className="input w-28" type="number" min={1} value={t.minRentalDays ?? 7} onChange={(e) => setTenantMap((p) => ({ ...p, [f.id]: (p[f.id] || []).map((x: any) => x.id === t.id ? { ...x, minRentalDays: Number(e.target.value) } : x) }))} />
                         <span className={`badge ${t.isActive ? 'badge-ok' : 'badge-muted'}`}>{t.isActive ? 'Активна' : 'Архив'}</span>
                         <button className="btn" onClick={() => saveTenant(t)}>Сохранить</button>
                         <button className="btn" onClick={() => archiveTenant(t)}>{t.isActive ? 'В архив' : 'Восстановить'}</button>

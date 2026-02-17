@@ -1,4 +1,4 @@
-import { IsBoolean, IsOptional, IsString, MinLength } from 'class-validator'
+import { IsBoolean, IsNumber, IsOptional, IsString, Max, Min, MinLength } from 'class-validator'
 
 export class UpdateTenantDto {
   @IsOptional()
@@ -9,4 +9,16 @@ export class UpdateTenantDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(100000)
+  dailyRateRub?: number
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(365)
+  minRentalDays?: number
 }

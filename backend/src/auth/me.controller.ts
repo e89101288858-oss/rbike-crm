@@ -29,6 +29,8 @@ export class MeController {
           name: true,
           franchiseeId: true,
           franchisee: { select: { name: true } },
+          dailyRateRub: true,
+          minRentalDays: true,
         },
       })
     }
@@ -42,6 +44,8 @@ export class MeController {
           name: true,
           franchiseeId: true,
           franchisee: { select: { name: true } },
+          dailyRateRub: true,
+          minRentalDays: true,
         },
       })
     }
@@ -56,6 +60,8 @@ export class MeController {
             name: true,
             franchiseeId: true,
             franchisee: { select: { name: true } },
+            dailyRateRub: true,
+            minRentalDays: true,
           },
         },
       },

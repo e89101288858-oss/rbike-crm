@@ -79,10 +79,12 @@ model Franchisee {
 }
 
 model Tenant {
-  id           String     @id @default(uuid())
-  name         String
-  franchiseeId String
-  franchisee   Franchisee @relation(fields: [franchiseeId], references: [id])
+  id             String     @id @default(uuid())
+  name           String
+  franchiseeId   String
+  franchisee     Franchisee @relation(fields: [franchiseeId], references: [id])
+  dailyRateRub   Float      @default(500)
+  minRentalDays  Int        @default(7)
 
   userTenants UserTenant[]
 

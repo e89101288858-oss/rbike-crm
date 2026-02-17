@@ -105,6 +105,8 @@ export class AdminController {
         franchiseeId,
         name: dto.name,
         isActive: dto.isActive ?? true,
+        dailyRateRub: dto.dailyRateRub ?? 500,
+        minRentalDays: dto.minRentalDays ?? 7,
       },
     })
   }
@@ -159,6 +161,8 @@ export class AdminController {
       data: {
         ...(dto.name !== undefined && { name: dto.name }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
+        ...(dto.dailyRateRub !== undefined && { dailyRateRub: dto.dailyRateRub }),
+        ...(dto.minRentalDays !== undefined && { minRentalDays: Math.trunc(dto.minRentalDays) }),
       },
     })
   }

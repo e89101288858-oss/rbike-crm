@@ -24,8 +24,8 @@ import { ExtendRentalDto } from './dto/extend-rental.dto'
 import { UpdateWeeklyRateDto } from './dto/update-weekly-rate.dto'
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24
-const MIN_RENTAL_DAYS = 7
-const DAILY_RENT_RUB = 500
+const DEFAULT_MIN_RENTAL_DAYS = 7
+const DEFAULT_DAILY_RENT_RUB = 500
 const WEEK_DAYS = 7
 
 function addDays(date: Date, days: number) {
@@ -50,6 +50,13 @@ export class RentalsController {
   async create(@Req() req: Request, @CurrentUser() user: JwtUser, @Body() dto: CreateRentalDto) {
     const tenantId = req.tenantId!
 
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { dailyRateRub: true, minRentalDays: true },
+    })
+    const dailyRateRub = tenant?.dailyRateRub ?? DEFAULT_DAILY_RENT_RUB
+    const minRentalDays = tenant?.minRentalDays ?? DEFAULT_MIN_RENTAL_DAYS
+
     const startDate = new Date(dto.startDate)
     const plannedEndDate = new Date(dto.plannedEndDate)
 
@@ -58,8 +65,8 @@ export class RentalsController {
     }
 
     const diffDays = Math.ceil((plannedEndDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
-    if (diffDays < MIN_RENTAL_DAYS) {
-      throw new BadRequestException('Minimum rental duration is 7 days')
+    if (diffDays < minRentalDays) {
+      throw new BadRequestException(`Minimum rental duration is ${minRentalDays} days`)
     }
 
     const bike = await this.prisma.bike.findFirst({
@@ -105,7 +112,7 @@ export class RentalsController {
           startDate,
           plannedEndDate,
           status: RentalStatus.ACTIVE,
-          weeklyRateRub: DAILY_RENT_RUB * 7,
+          weeklyRateRub: dailyRateRub * 7,
           createdById: user.userId,
         },
       })
@@ -130,7 +137,7 @@ export class RentalsController {
         data: {
           tenantId,
           rentalId: created.id,
-          amount: round2(diffDays * DAILY_RENT_RUB),
+          amount: round2(diffDays * dailyRateRub),
           kind: PaymentKind.MANUAL,
           status: PaymentStatus.PAID,
           paidAt: new Date(),
@@ -188,6 +195,12 @@ export class RentalsController {
   ) {
     const tenantId = req.tenantId!
 
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { dailyRateRub: true },
+    })
+    const dailyRateRub = tenant?.dailyRateRub ?? DEFAULT_DAILY_RENT_RUB
+
     const rental = await this.prisma.rental.findFirst({
       where: { id, tenantId },
       select: { id: true, status: true, plannedEndDate: true },
@@ -214,7 +227,7 @@ export class RentalsController {
         data: {
           tenantId,
           rentalId: id,
-          amount: round2(days * DAILY_RENT_RUB),
+          amount: round2(days * dailyRateRub),
           kind: PaymentKind.MANUAL,
           status: PaymentStatus.PAID,
           paidAt: new Date(),
@@ -329,6 +342,12 @@ export class RentalsController {
       throw new BadRequestException('Only ACTIVE rental can be closed')
     }
 
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { dailyRateRub: true },
+    })
+    const dailyRateRub = tenant?.dailyRateRub ?? DEFAULT_DAILY_RENT_RUB
+
     const closedAt = new Date()
 
     const result = await this.prisma.$transaction(async (tx) => {
@@ -367,7 +386,7 @@ export class RentalsController {
 
       const paidRub = round2(paid._sum.amount ?? 0)
       const actualDays = diffDaysCeil(rental.startDate, closedAt)
-      const shouldPayRub = round2(actualDays * DAILY_RENT_RUB)
+      const shouldPayRub = round2(actualDays * dailyRateRub)
       const refundRub = round2(Math.max(0, paidRub - shouldPayRub))
 
       if (refundRub > 0) {
