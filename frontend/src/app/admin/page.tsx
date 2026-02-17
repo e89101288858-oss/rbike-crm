@@ -22,6 +22,7 @@ export default function AdminPage() {
   const [newTenantDraft, setNewTenantDraft] = useState<Record<string, { name: string; dailyRateRub: number; minRentalDays: number }>>({})
   const [registrationRequests, setRegistrationRequests] = useState<any[]>([])
   const [approveMap, setApproveMap] = useState<Record<string, { franchiseeId: string; tenantId: string }>>({})
+  const [users, setUsers] = useState<any[]>([])
   const [audit, setAudit] = useState<AuditItem[]>([])
   const [auditRows, setAuditRows] = useState<any[]>([])
   const [error, setError] = useState('')
@@ -43,13 +44,14 @@ export default function AdminPage() {
   async function loadAll() {
     setError('')
     try {
-      const [myTenants, me, frs, logs, requests] = await Promise.all([api.myTenants(), api.me(), api.adminFranchisees(), api.adminAudit(), api.adminRegistrationRequests()])
+      const [myTenants, me, frs, logs, requests, adminUsers] = await Promise.all([api.myTenants(), api.me(), api.adminFranchisees(), api.adminAudit(), api.adminRegistrationRequests(), api.adminUsers()])
       setRole((me.role as UserRole) || '')
       setTenants(myTenants)
       if (!getTenantId() && myTenants.length > 0) setTenantId(myTenants[0].id)
       setFranchisees(frs)
       setAuditRows(logs)
       setRegistrationRequests(requests)
+      setUsers(adminUsers)
 
       const entries = await Promise.all(
         frs.map(async (f) => [f.id, await api.adminTenantsByFranchisee(f.id)] as const),
@@ -306,6 +308,35 @@ export default function AdminPage() {
               </section>
             ))}
           </div>
+
+          <section className="panel mt-4 text-sm">
+            <h2 className="mb-2 font-semibold">Пользователи и роли</h2>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="text-left text-gray-500">
+                    <th className="py-1 pr-3">Email</th>
+                    <th className="py-1 pr-3">Роль</th>
+                    <th className="py-1 pr-3">Franchisee ID</th>
+                    <th className="py-1 pr-3">Статус</th>
+                    <th className="py-1">Создан</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map((u) => (
+                    <tr key={u.id} className="border-t">
+                      <td className="py-1 pr-3">{u.email}</td>
+                      <td className="py-1 pr-3">{u.role}</td>
+                      <td className="py-1 pr-3">{u.franchiseeId || '—'}</td>
+                      <td className="py-1 pr-3">{u.isActive ? 'Активен' : 'Выключен'}</td>
+                      <td className="py-1">{new Date(u.createdAt).toLocaleString('ru-RU')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {!users.length && <p className="text-gray-500">Пользователей пока нет</p>}
+            </div>
+          </section>
 
           <section className="panel mt-4 text-sm">
             <h2 className="mb-2 font-semibold">Аудит действий (БД)</h2>

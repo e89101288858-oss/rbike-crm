@@ -332,6 +332,7 @@ export const api = {
 
   adminDeleteTenant: (id: string) => request<any>(`/tenants/${id}`, { method: 'DELETE' }),
 
+  adminUsers: () => request<any[]>('/admin/users'),
   adminAudit: () => request<any[]>('/admin/audit'),
 
   adminRegistrationRequests: () => request<any[]>('/admin/registration-requests'),
