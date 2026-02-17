@@ -245,6 +245,8 @@ export const api = {
       body: JSON.stringify(payload),
     }),
 
+  adminDeleteFranchisee: (id: string) => request<any>(`/franchisees/${id}`, { method: 'DELETE' }),
+
   adminTenantsByFranchisee: (franchiseeId: string) => request<any[]>(`/franchisees/${franchiseeId}/tenants`),
 
   adminCreateTenant: (franchiseeId: string, payload: { name: string; isActive?: boolean }) =>
@@ -258,4 +260,6 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(payload),
     }),
+
+  adminDeleteTenant: (id: string) => request<any>(`/tenants/${id}`, { method: 'DELETE' }),
 }

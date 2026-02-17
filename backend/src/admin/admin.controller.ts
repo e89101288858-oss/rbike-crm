@@ -1,6 +1,8 @@
 import {
+  BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   NotFoundException,
   Param,
@@ -51,6 +53,20 @@ export class AdminController {
       throw new NotFoundException('Franchisee not found')
     }
     return franchisee
+  }
+
+  @Delete('franchisees/:id')
+  async deleteFranchisee(@Param('id') id: string) {
+    const existing = await this.prisma.franchisee.findUnique({ where: { id } })
+    if (!existing) throw new NotFoundException('Franchisee not found')
+
+    const tenantsCount = await this.prisma.tenant.count({ where: { franchiseeId: id } })
+    if (tenantsCount > 0) {
+      throw new BadRequestException('Нельзя удалить франчайзи: сначала удалите или перенесите все точки')
+    }
+
+    await this.prisma.franchisee.delete({ where: { id } })
+    return { id, deleted: true }
   }
 
   @Patch('franchisees/:id')
@@ -105,6 +121,29 @@ export class AdminController {
       where: { franchiseeId },
       orderBy: { createdAt: 'asc' },
     })
+  }
+
+  @Delete('tenants/:id')
+  async deleteTenant(@Param('id') id: string) {
+    const tenant = await this.prisma.tenant.findUnique({ where: { id } })
+    if (!tenant) throw new NotFoundException('Tenant not found')
+
+    const [bikes, clients, rentals, payments, repairs, documents, userTenants] = await Promise.all([
+      this.prisma.bike.count({ where: { tenantId: id } }),
+      this.prisma.client.count({ where: { tenantId: id } }),
+      this.prisma.rental.count({ where: { tenantId: id } }),
+      this.prisma.payment.count({ where: { tenantId: id } }),
+      this.prisma.repair.count({ where: { tenantId: id } }),
+      this.prisma.document.count({ where: { tenantId: id } }),
+      this.prisma.userTenant.count({ where: { tenantId: id } }),
+    ])
+
+    if (bikes + clients + rentals + payments + repairs + documents + userTenants > 0) {
+      throw new BadRequestException('Нельзя удалить точку: есть связанные данные (курьеры/велосипеды/аренды/платежи)')
+    }
+
+    await this.prisma.tenant.delete({ where: { id } })
+    return { id, deleted: true }
   }
 
   @Patch('tenants/:id')

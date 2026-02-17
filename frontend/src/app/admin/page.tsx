@@ -76,6 +76,19 @@ export default function AdminPage() {
     }
   }
 
+  async function deleteFranchisee(f: any) {
+    if (!confirm(`Удалить франчайзи "${f.name}"?`)) return
+    setError('')
+    setSuccess('')
+    try {
+      await api.adminDeleteFranchisee(f.id)
+      await loadAll()
+      setSuccess('Сохранено')
+    } catch (err) {
+      setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка удаления франчайзи'}`)
+    }
+  }
+
   async function createTenant(franchiseeId: string) {
     setError('')
     setSuccess('')
@@ -115,6 +128,19 @@ export default function AdminPage() {
     }
   }
 
+  async function deleteTenant(t: any) {
+    if (!confirm(`Удалить точку "${t.name}"?`)) return
+    setError('')
+    setSuccess('')
+    try {
+      await api.adminDeleteTenant(t.id)
+      await loadAll()
+      setSuccess('Сохранено')
+    } catch (err) {
+      setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка удаления точки'}`)
+    }
+  }
+
   useEffect(() => {
     if (!getToken()) return router.replace('/login')
     void loadAll()
@@ -145,6 +171,7 @@ export default function AdminPage() {
                   <span className={`badge ${f.isActive ? 'badge-ok' : 'badge-muted'}`}>{f.isActive ? 'Активен' : 'Архив'}</span>
                   <button className="btn" onClick={() => saveFranchisee(f)}>Сохранить</button>
                   <button className="btn" onClick={() => archiveFranchisee(f)}>{f.isActive ? 'В архив' : 'Восстановить'}</button>
+                  <button className="btn border-red-300 text-red-700" onClick={() => deleteFranchisee(f)}>Удалить</button>
                 </div>
 
                 <div className="rounded-xl border border-gray-200 p-3">
@@ -160,6 +187,7 @@ export default function AdminPage() {
                         <span className={`badge ${t.isActive ? 'badge-ok' : 'badge-muted'}`}>{t.isActive ? 'Активна' : 'Архив'}</span>
                         <button className="btn" onClick={() => saveTenant(t)}>Сохранить</button>
                         <button className="btn" onClick={() => archiveTenant(t)}>{t.isActive ? 'В архив' : 'Восстановить'}</button>
+                        <button className="btn border-red-300 text-red-700" onClick={() => deleteTenant(t)}>Удалить</button>
                       </div>
                     ))}
                     {!(tenantMap[f.id] || []).length && <p className="text-gray-600">Точек пока нет</p>}
