@@ -23,6 +23,9 @@ export default function AdminPage() {
   const [registrationRequests, setRegistrationRequests] = useState<any[]>([])
   const [approveMap, setApproveMap] = useState<Record<string, { franchiseeId: string; tenantId: string }>>({})
   const [users, setUsers] = useState<any[]>([])
+  const [userTenantMap, setUserTenantMap] = useState<Record<string, string[]>>({})
+  const [tenantPickMap, setTenantPickMap] = useState<Record<string, string>>({})
+  const [newUser, setNewUser] = useState({ email: '', password: '', role: 'MANAGER', franchiseeId: '' })
   const [audit, setAudit] = useState<AuditItem[]>([])
   const [auditRows, setAuditRows] = useState<any[]>([])
   const [error, setError] = useState('')
@@ -56,7 +59,21 @@ export default function AdminPage() {
       const entries = await Promise.all(
         frs.map(async (f) => [f.id, await api.adminTenantsByFranchisee(f.id)] as const),
       )
-      setTenantMap(Object.fromEntries(entries))
+      const nextTenantMap = Object.fromEntries(entries)
+      setTenantMap(nextTenantMap)
+
+      const allTenants = Object.values(nextTenantMap).flat() as any[]
+      const lists = await Promise.all(allTenants.map((t) => api.tenantUsers(t.id)))
+      const nextUserTenantMap: Record<string, string[]> = {}
+      allTenants.forEach((t, idx) => {
+        for (const ut of lists[idx]) {
+          const uid = ut.user?.id
+          if (!uid) continue
+          if (!nextUserTenantMap[uid]) nextUserTenantMap[uid] = []
+          if (!nextUserTenantMap[uid].includes(t.id)) nextUserTenantMap[uid].push(t.id)
+        }
+      })
+      setUserTenantMap(nextUserTenantMap)
     } catch (err) {
       setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка загрузки админки'}`)
     }
@@ -215,6 +232,82 @@ export default function AdminPage() {
     }
   }
 
+  async function createUser(e: FormEvent) {
+    e.preventDefault()
+    setError('')
+    setSuccess('')
+    try {
+      if (!newUser.email.trim() || !newUser.password.trim()) throw new Error('Заполни email и пароль')
+      await api.adminCreateUser({
+        email: newUser.email.trim(),
+        password: newUser.password,
+        role: newUser.role as 'FRANCHISEE' | 'MANAGER' | 'MECHANIC',
+        franchiseeId: newUser.role === 'FRANCHISEE' ? newUser.franchiseeId || undefined : undefined,
+      })
+      setNewUser({ email: '', password: '', role: 'MANAGER', franchiseeId: '' })
+      await loadAll()
+      setSuccess('Сохранено')
+    } catch (err) {
+      setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка создания пользователя'}`)
+    }
+  }
+
+  async function saveUser(u: any) {
+    setError('')
+    setSuccess('')
+    try {
+      await api.adminUpdateUser(u.id, {
+        role: u.role,
+        isActive: u.isActive,
+        franchiseeId: u.role === 'FRANCHISEE' ? u.franchiseeId || undefined : undefined,
+      })
+      await loadAll()
+      setSuccess('Сохранено')
+    } catch (err) {
+      setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка обновления пользователя'}`)
+    }
+  }
+
+  async function deleteUser(u: any) {
+    if (!confirm(`Удалить пользователя ${u.email}?`)) return
+    setError('')
+    setSuccess('')
+    try {
+      await api.adminDeleteUser(u.id)
+      await loadAll()
+      setSuccess('Сохранено')
+    } catch (err) {
+      setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка удаления пользователя'}`)
+    }
+  }
+
+  async function bindTenant(u: any) {
+    setError('')
+    setSuccess('')
+    try {
+      const tenantId = tenantPickMap[u.id]
+      if (!tenantId) throw new Error('Выбери точку')
+      await api.assignUserToTenant(tenantId, u.id)
+      setTenantPickMap((p) => ({ ...p, [u.id]: '' }))
+      await loadAll()
+      setSuccess('Сохранено')
+    } catch (err) {
+      setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка привязки точки'}`)
+    }
+  }
+
+  async function unbindTenant(u: any, tenantId: string) {
+    setError('')
+    setSuccess('')
+    try {
+      await api.removeUserFromTenant(tenantId, u.id)
+      await loadAll()
+      setSuccess('Сохранено')
+    } catch (err) {
+      setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка отвязки точки'}`)
+    }
+  }
+
   useEffect(() => {
     if (!getToken()) return router.replace('/login')
     void loadAll()
@@ -311,29 +404,83 @@ export default function AdminPage() {
 
           <section className="panel mt-4 text-sm">
             <h2 className="mb-2 font-semibold">Пользователи и роли</h2>
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="text-left text-gray-500">
-                    <th className="py-1 pr-3">Email</th>
-                    <th className="py-1 pr-3">Роль</th>
-                    <th className="py-1 pr-3">Franchisee ID</th>
-                    <th className="py-1 pr-3">Статус</th>
-                    <th className="py-1">Создан</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((u) => (
-                    <tr key={u.id} className="border-t">
-                      <td className="py-1 pr-3">{u.email}</td>
-                      <td className="py-1 pr-3">{u.role}</td>
-                      <td className="py-1 pr-3">{u.franchiseeId || '—'}</td>
-                      <td className="py-1 pr-3">{u.isActive ? 'Активен' : 'Выключен'}</td>
-                      <td className="py-1">{new Date(u.createdAt).toLocaleString('ru-RU')}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+
+            <form onSubmit={createUser} className="mb-3 grid gap-2 md:grid-cols-5">
+              <input className="input" placeholder="Email" value={newUser.email} onChange={(e) => setNewUser((p) => ({ ...p, email: e.target.value }))} />
+              <input className="input" type="password" placeholder="Пароль" value={newUser.password} onChange={(e) => setNewUser((p) => ({ ...p, password: e.target.value }))} />
+              <select className="select" value={newUser.role} onChange={(e) => setNewUser((p) => ({ ...p, role: e.target.value }))}>
+                <option value="MANAGER">MANAGER</option>
+                <option value="MECHANIC">MECHANIC</option>
+                <option value="FRANCHISEE">FRANCHISEE</option>
+              </select>
+              <select className="select" value={newUser.franchiseeId} onChange={(e) => setNewUser((p) => ({ ...p, franchiseeId: e.target.value }))} disabled={newUser.role !== 'FRANCHISEE'}>
+                <option value="">Франчайзи (для FRANCHISEE)</option>
+                {franchisees.filter((f) => f.isActive).map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+              </select>
+              <button className="btn-primary">Добавить пользователя</button>
+            </form>
+
+            <div className="space-y-2">
+              {users.map((u) => {
+                const allTenants = Object.values(tenantMap).flat() as any[]
+                const allowedTenants = u.role === 'MANAGER' || u.role === 'MECHANIC'
+                  ? allTenants.filter((t) => t.isActive)
+                  : []
+
+                return (
+                  <div key={u.id} className="rounded border p-2">
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                      <span className="font-medium">{u.email}</span>
+                      <span className="text-xs text-gray-500">{new Date(u.createdAt).toLocaleString('ru-RU')}</span>
+                    </div>
+
+                    <div className="grid gap-2 md:grid-cols-5">
+                      <select className="select" value={u.role} onChange={(e) => setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, role: e.target.value } : x))} disabled={u.role === 'OWNER'}>
+                        <option value="OWNER">OWNER</option>
+                        <option value="FRANCHISEE">FRANCHISEE</option>
+                        <option value="MANAGER">MANAGER</option>
+                        <option value="MECHANIC">MECHANIC</option>
+                      </select>
+
+                      <select className="select" value={u.franchiseeId || ''} onChange={(e) => setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, franchiseeId: e.target.value } : x))} disabled={u.role !== 'FRANCHISEE' || u.role === 'OWNER'}>
+                        <option value="">Франчайзи</option>
+                        {franchisees.filter((f) => f.isActive).map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                      </select>
+
+                      <label className="flex items-center gap-2">
+                        <input type="checkbox" checked={!!u.isActive} onChange={(e) => setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, isActive: e.target.checked } : x))} disabled={u.role === 'OWNER'} />
+                        Активен
+                      </label>
+
+                      <button className="btn" onClick={() => saveUser(u)} disabled={u.role === 'OWNER'}>Сохранить</button>
+                      <button className="btn border-red-300 text-red-700" onClick={() => deleteUser(u)} disabled={u.role === 'OWNER'}>Удалить</button>
+                    </div>
+
+                    <div className="mt-2 rounded border p-2">
+                      <div className="mb-1 text-xs text-gray-600">Привязка точек (только MANAGER/MECHANIC)</div>
+                      <div className="mb-2 flex flex-wrap gap-2">
+                        {(userTenantMap[u.id] || []).map((tenantId) => {
+                          const tenant = (Object.values(tenantMap).flat() as any[]).find((t) => t.id === tenantId)
+                          return (
+                            <span key={tenantId} className="inline-flex items-center gap-1 rounded bg-gray-100 px-2 py-1 text-xs">
+                              {tenant?.name || tenantId}
+                              <button className="text-red-700" onClick={() => unbindTenant(u, tenantId)} disabled={!(u.role === 'MANAGER' || u.role === 'MECHANIC')}>×</button>
+                            </span>
+                          )
+                        })}
+                        {!(userTenantMap[u.id] || []).length && <span className="text-xs text-gray-500">Точек нет</span>}
+                      </div>
+                      <div className="flex gap-2">
+                        <select className="select" value={tenantPickMap[u.id] || ''} onChange={(e) => setTenantPickMap((p) => ({ ...p, [u.id]: e.target.value }))} disabled={!(u.role === 'MANAGER' || u.role === 'MECHANIC')}>
+                          <option value="">Выбери точку</option>
+                          {allowedTenants.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                        </select>
+                        <button className="btn" onClick={() => bindTenant(u)} disabled={!(u.role === 'MANAGER' || u.role === 'MECHANIC')}>Привязать точку</button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
               {!users.length && <p className="text-gray-500">Пользователей пока нет</p>}
             </div>
           </section>

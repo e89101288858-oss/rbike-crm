@@ -333,6 +333,27 @@ export const api = {
   adminDeleteTenant: (id: string) => request<any>(`/tenants/${id}`, { method: 'DELETE' }),
 
   adminUsers: () => request<any[]>('/admin/users'),
+  adminCreateUser: (payload: { email: string; password: string; role: 'FRANCHISEE' | 'MANAGER' | 'MECHANIC'; franchiseeId?: string }) =>
+    request<any>('/admin/users', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  adminUpdateUser: (id: string, payload: { role?: 'FRANCHISEE' | 'MANAGER' | 'MECHANIC'; isActive?: boolean; password?: string; franchiseeId?: string }) =>
+    request<any>(`/admin/users/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  adminDeleteUser: (id: string) => request<any>(`/admin/users/${id}`, { method: 'DELETE' }),
+
+  tenantUsers: (tenantId: string) => request<any[]>(`/tenants/${tenantId}/users`),
+  assignUserToTenant: (tenantId: string, userId: string) =>
+    request<any>(`/tenants/${tenantId}/users`, {
+      method: 'POST',
+      body: JSON.stringify({ userId }),
+    }),
+  removeUserFromTenant: (tenantId: string, userId: string) =>
+    request<any>(`/tenants/${tenantId}/users/${userId}`, { method: 'DELETE' }),
+
   adminAudit: () => request<any[]>('/admin/audit'),
 
   adminRegistrationRequests: () => request<any[]>('/admin/registration-requests'),

@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Delete,
   UseGuards,
 } from '@nestjs/common'
 import * as bcrypt from 'bcrypt'
@@ -121,19 +122,30 @@ export class UsersController {
       throw new BadRequestException('OWNER user cannot be modified')
     }
 
-    const data: Prisma.UserUpdateInput = {}
+    const data: Prisma.UserUncheckedUpdateInput = {}
+
+    const targetRole = dto.role ?? user.role
+
+    if (!ALLOWED_ROLES.includes(targetRole as any)) {
+      throw new BadRequestException('Invalid role')
+    }
+
+    if (targetRole === 'FRANCHISEE') {
+      const franchiseeId = dto.franchiseeId ?? user.franchiseeId
+      if (!franchiseeId) {
+        throw new BadRequestException('franchiseeId is required for FRANCHISEE')
+      }
+      const franchisee = await this.prisma.franchisee.findUnique({ where: { id: franchiseeId } })
+      if (!franchisee) throw new BadRequestException('Franchisee not found')
+      data.franchiseeId = franchiseeId
+    } else {
+      if (dto.franchiseeId) {
+        throw new BadRequestException('franchiseeId can be set only for FRANCHISEE')
+      }
+      data.franchiseeId = null
+    }
 
     if (dto.role !== undefined) {
-      if (!ALLOWED_ROLES.includes(dto.role)) {
-        throw new BadRequestException('Invalid role')
-      }
-
-      if (dto.role === 'FRANCHISEE') {
-        throw new BadRequestException(
-          'Changing role to FRANCHISEE is not supported via update',
-        )
-      }
-
       data.role = dto.role as UserRole
     }
 
@@ -159,5 +171,19 @@ export class UsersController {
     })
 
     return updated
+  }
+
+  @Delete(':id')
+  async delete(@Param('id') id: string) {
+    const user = await this.prisma.user.findUnique({ where: { id }, select: { id: true, role: true } })
+    if (!user) throw new NotFoundException('User not found')
+    if (user.role === 'OWNER') throw new BadRequestException('OWNER user cannot be deleted')
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.userTenant.deleteMany({ where: { userId: id } })
+      await tx.user.delete({ where: { id } })
+    })
+
+    return { id, deleted: true }
   }
 }
