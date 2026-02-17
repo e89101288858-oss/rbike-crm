@@ -56,7 +56,7 @@ export default function FinancePage() {
   }, [router])
 
   return (
-    <main className="page">
+    <main className="page with-sidebar">
       <Topbar tenants={tenants} />
       <h1 className="mb-4 text-2xl font-bold">Финансы / Выручка</h1>
 

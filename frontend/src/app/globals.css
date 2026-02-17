@@ -28,6 +28,37 @@ body {
   @apply mx-auto max-w-6xl p-6;
 }
 
+.with-sidebar {
+  margin-left: 270px;
+}
+
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 250px;
+  background: #fff;
+  border-right: 1px solid #e5e7eb;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  z-index: 40;
+}
+
+.sidebar-head { margin-bottom: 12px; }
+.sidebar-nav { flex: 1; overflow: auto; }
+.sidebar-group { margin-bottom: 12px; }
+.sidebar-group-title { font-size: 11px; color: #6b7280; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .04em; }
+.sidebar-foot { border-top: 1px solid #e5e7eb; padding-top: 10px; display: grid; gap: 8px; }
+.sidebar-toggle { position: fixed; left: 12px; top: 10px; z-index: 50; }
+
+@media (max-width: 767px) {
+  .with-sidebar { margin-left: 0; padding-top: 54px; }
+  .sidebar { transform: translateX(-105%); transition: transform .2s ease; box-shadow: 0 10px 30px rgba(0,0,0,.15); }
+  .sidebar.sidebar-open { transform: translateX(0); }
+}
+
 .panel {
   @apply rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md;
 }

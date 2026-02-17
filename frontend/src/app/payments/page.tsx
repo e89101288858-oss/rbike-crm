@@ -83,7 +83,7 @@ export default function PaymentsPage() {
   }, [router, status])
 
   return (
-    <main className="page">
+    <main className="page with-sidebar">
       <Topbar tenants={tenants} />
       <h1 className="mb-4 text-2xl font-bold">Платежи</h1>
 

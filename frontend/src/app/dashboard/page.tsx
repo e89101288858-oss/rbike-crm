@@ -62,7 +62,7 @@ export default function DashboardPage() {
   }, [month, router])
 
   return (
-    <main className="page">
+    <main className="page with-sidebar">
       <Topbar tenants={tenants} />
       <h1 className="mb-2 text-3xl font-bold">Дашборд</h1>
       <p className="mb-6 text-sm text-gray-600">Роль: {role || '...'}</p>

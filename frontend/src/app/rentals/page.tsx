@@ -123,7 +123,7 @@ export default function RentalsPage() {
   const projectedTotalRub = dailyRateRub * rentalDays
 
   return (
-    <main className="mx-auto max-w-6xl p-6">
+    <main className="mx-auto max-w-6xl p-6 with-sidebar">
       <Topbar tenants={tenants} />
       <h1 className="mb-4 text-2xl font-semibold">Аренды</h1>
 

@@ -152,7 +152,7 @@ export default function BikesPage() {
   const canManageCards = role !== 'MECHANIC'
 
   return (
-    <main className="page">
+    <main className="page with-sidebar">
       <Topbar tenants={tenants} />
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Велосипеды и статусы</h1>

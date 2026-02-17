@@ -140,7 +140,7 @@ export default function ClientsPage() {
   }, [includeArchived])
 
   return (
-    <main className="page">
+    <main className="page with-sidebar">
       <Topbar tenants={tenants} />
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Курьеры</h1>

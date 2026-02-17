@@ -215,7 +215,7 @@ export default function ImportPage() {
   }, [router])
 
   return (
-    <main className="page">
+    <main className="page with-sidebar">
       <Topbar tenants={tenants} />
       <h1 className="mb-4 text-2xl font-bold">Импорт CSV (разделитель ;)</h1>
       {error && <p className="alert">{error}</p>}
