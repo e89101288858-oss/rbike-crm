@@ -45,6 +45,8 @@ export class BikesController {
         motorWheelNumber: dto.motorWheelNumber ?? undefined,
         simCardNumber: dto.simCardNumber ?? undefined,
         status: (dto.status as BikeStatus) ?? BikeStatus.AVAILABLE,
+        repairReason: dto.repairReason ?? undefined,
+        repairEndDate: dto.repairEndDate ? new Date(dto.repairEndDate) : undefined,
       },
     })
   }
@@ -73,6 +75,8 @@ export class BikesController {
         motorWheelNumber: r.motorWheelNumber?.trim() || undefined,
         simCardNumber: r.simCardNumber?.trim() || undefined,
         status: (r.status as BikeStatus) ?? BikeStatus.AVAILABLE,
+        repairReason: undefined,
+        repairEndDate: undefined,
       }))
       .filter((r) => r.code)
 
@@ -206,6 +210,8 @@ export class BikesController {
         ...(dto.motorWheelNumber !== undefined && { motorWheelNumber: dto.motorWheelNumber }),
         ...(dto.simCardNumber !== undefined && { simCardNumber: dto.simCardNumber }),
         ...(dto.status !== undefined && { status: dto.status }),
+        ...(dto.repairReason !== undefined && { repairReason: dto.repairReason || null }),
+        ...(dto.repairEndDate !== undefined && { repairEndDate: dto.repairEndDate ? new Date(dto.repairEndDate) : null }),
       },
     })
   }

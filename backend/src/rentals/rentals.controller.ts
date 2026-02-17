@@ -103,6 +103,28 @@ export class RentalsController {
       throw new BadRequestException('Client already has an ACTIVE rental')
     }
 
+    const batteries = await this.prisma.battery.findMany({
+      where: {
+        tenantId,
+        isActive: true,
+        bikeId: dto.bikeId,
+        id: { in: dto.batteryIds || [] },
+      },
+      select: { id: true, status: true },
+    })
+
+    if (!dto.batteryIds?.length) {
+      throw new BadRequestException('At least one battery is required')
+    }
+
+    if (batteries.length !== dto.batteryIds.length) {
+      throw new BadRequestException('Some selected batteries were not found for this bike')
+    }
+
+    if (batteries.some((b) => b.status !== 'AVAILABLE')) {
+      throw new BadRequestException('All selected batteries must be AVAILABLE')
+    }
+
     const rental = await this.prisma.$transaction(async (tx) => {
       const created = await tx.rental.create({
         data: {
@@ -148,6 +170,15 @@ export class RentalsController {
         },
       })
 
+      await tx.rentalBattery.createMany({
+        data: dto.batteryIds.map((batteryId) => ({ tenantId, rentalId: created.id, batteryId })),
+      })
+
+      await tx.battery.updateMany({
+        where: { tenantId, id: { in: dto.batteryIds } },
+        data: { status: 'RENTED' },
+      })
+
       return created
     })
 
@@ -180,6 +211,11 @@ export class RentalsController {
           select: {
             id: true,
             code: true,
+          },
+        },
+        batteries: {
+          select: {
+            battery: { select: { id: true, code: true } },
           },
         },
       },
@@ -403,6 +439,14 @@ export class RentalsController {
             periodEnd: rental.plannedEndDate,
             markedById: user.userId,
           },
+        })
+      }
+
+      const rentalBatteries = await tx.rentalBattery.findMany({ where: { tenantId, rentalId: rental.id }, select: { batteryId: true } })
+      if (rentalBatteries.length) {
+        await tx.battery.updateMany({
+          where: { tenantId, id: { in: rentalBatteries.map((x) => x.batteryId) } },
+          data: { status: 'AVAILABLE' },
         })
       }
 

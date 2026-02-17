@@ -50,6 +50,13 @@ enum RentalChangeType {
   CLOSE
 }
 
+enum BatteryStatus {
+  AVAILABLE
+  RENTED
+  MAINTENANCE
+  LOST
+}
+
 model User {
   id           String       @id @default(uuid())
   email        String       @unique
@@ -90,8 +97,10 @@ model Tenant {
   userTenants UserTenant[]
 
   bikes         Bike[]
+  batteries     Battery[]
   clients       Client[]
   rentals       Rental[]
+  rentalBatteries RentalBattery[]
   rentalChanges RentalChange[]
   payments      Payment[]
   repairs       Repair[]
@@ -121,14 +130,53 @@ model Bike {
   motorWheelNumber String?
   simCardNumber    String?
   status           BikeStatus @default(AVAILABLE)
+  repairReason     String?
+  repairEndDate    DateTime?
   isActive         Boolean    @default(true)
 
   rentals Rental[]
+  batteries Battery[]
   repairs Repair[]
 
   createdAt DateTime @default(now())
 
   @@unique([tenantId, code])
+}
+
+model Battery {
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  bikeId String?
+  bike   Bike? @relation(fields: [bikeId], references: [id])
+
+  code         String
+  serialNumber String?
+  status       BatteryStatus @default(AVAILABLE)
+  notes        String?
+  isActive     Boolean       @default(true)
+
+  rentals   RentalBattery[]
+  createdAt DateTime @default(now())
+
+  @@unique([tenantId, code])
+  @@index([tenantId, bikeId])
+}
+
+model RentalBattery {
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  rentalId  String
+  rental    Rental   @relation(fields: [rentalId], references: [id])
+  batteryId String
+  battery   Battery  @relation(fields: [batteryId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([rentalId, batteryId])
+  @@index([tenantId, rentalId])
+  @@index([tenantId, batteryId])
 }
 
 model Client {
@@ -170,6 +218,7 @@ model Rental {
 
   changes  RentalChange[]
   payments Payment[]
+  batteries RentalBattery[]
 
   createdById String?
   createdBy   User?   @relation("RentalCreatedBy", fields: [createdById], references: [id])

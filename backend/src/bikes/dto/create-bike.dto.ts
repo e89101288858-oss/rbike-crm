@@ -26,4 +26,12 @@ export class CreateBikeDto {
   @IsOptional()
   @IsIn(BIKE_STATUSES)
   status?: (typeof BIKE_STATUSES)[number]
+
+  @IsOptional()
+  @IsString()
+  repairReason?: string
+
+  @IsOptional()
+  @IsString()
+  repairEndDate?: string
 }

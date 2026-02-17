@@ -1,4 +1,4 @@
-import { IsDateString, IsNumber, IsOptional, IsUUID, Min } from 'class-validator'
+import { ArrayMinSize, IsArray, IsDateString, IsNumber, IsOptional, IsUUID, Min } from 'class-validator'
 
 export class CreateRentalDto {
   @IsUUID()
@@ -17,4 +17,9 @@ export class CreateRentalDto {
   @IsNumber()
   @Min(0)
   weeklyRateRub?: number
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsUUID('4', { each: true })
+  batteryIds!: string[]
 }

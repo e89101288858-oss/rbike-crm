@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config'
 import { AdminModule } from './admin/admin.module'
 import { AuthModule } from './auth/auth.module'
 import { BikesModule } from './bikes/bikes.module'
+import { BatteriesModule } from './batteries/batteries.module'
 import { PrismaModule } from './prisma/prisma.module'
 import { UsersModule } from './users/users.module'
 import { FranchiseBillingModule } from './franchise-billing/franchise-billing.module'
@@ -21,6 +22,7 @@ import { PaymentsModule } from './payments/payments.module'
     AdminModule,
     UsersModule,
     BikesModule,
+    BatteriesModule,
     FranchiseBillingModule,
     WeeklyPaymentsModule,
     RentalsModule,

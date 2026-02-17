@@ -40,6 +40,8 @@ export type Bike = {
   motorWheelNumber?: string | null
   simCardNumber?: string | null
   status: string
+  repairReason?: string | null
+  repairEndDate?: string | null
   isActive?: boolean
 }
 
@@ -50,6 +52,18 @@ export type Rental = {
   weeklyRateRub: number
   client: { id: string; fullName: string; phone?: string | null }
   bike: { id: string; code: string }
+  batteries?: Array<{ battery: { id: string; code: string } }>
+}
+
+export type Battery = {
+  id: string
+  code: string
+  serialNumber?: string | null
+  bikeId?: string | null
+  status: string
+  notes?: string | null
+  isActive?: boolean
+  bike?: { id: string; code: string } | null
 }
 
 export const api = {
@@ -142,6 +156,8 @@ export const api = {
       motorWheelNumber?: string
       simCardNumber?: string
       status?: string
+      repairReason?: string
+      repairEndDate?: string
     },
   ) =>
     request<any>(`/bikes/${bikeId}`, {
@@ -166,12 +182,36 @@ export const api = {
 
   activeRentals: () => request<Rental[]>('/rentals/active', undefined, true),
 
+  batteries: (query = '') => request<Battery[]>(`/batteries${query ? `?${query}` : ''}`, undefined, true),
+
+  createBattery: (payload: {
+    code: string
+    serialNumber?: string
+    bikeId?: string
+    status?: string
+    notes?: string
+  }) =>
+    request<Battery>('/batteries', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }, true),
+
+  updateBattery: (batteryId: string, payload: Partial<Battery> & { clearBike?: boolean }) =>
+    request<Battery>(`/batteries/${batteryId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }, true),
+
+  deleteBattery: (batteryId: string) => request<any>(`/batteries/${batteryId}`, { method: 'DELETE' }, true),
+  restoreBattery: (batteryId: string) => request<any>(`/batteries/${batteryId}/restore`, { method: 'POST' }, true),
+
   createRental: (payload: {
     bikeId: string
     clientId: string
     startDate: string
     plannedEndDate: string
     weeklyRateRub?: number
+    batteryIds: string[]
   }) =>
     request<any>('/rentals', {
       method: 'POST',

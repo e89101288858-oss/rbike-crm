@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
-import { api, Bike, Client, Rental } from '@/lib/api'
+import { api, Battery, Bike, Client, Rental } from '@/lib/api'
 import { getToken, getTenantId, setTenantId } from '@/lib/auth'
 import { diffDays, formatDate, formatRub } from '@/lib/format'
 
@@ -13,11 +13,13 @@ export default function RentalsPage() {
   const [clients, setClients] = useState<Client[]>([])
   const [bikes, setBikes] = useState<Bike[]>([])
   const [rentals, setRentals] = useState<Rental[]>([])
+  const [batteries, setBatteries] = useState<Battery[]>([])
 
   const [clientId, setClientId] = useState('')
   const [bikeId, setBikeId] = useState('')
   const [startDate, setStartDate] = useState('')
   const [plannedEndDate, setPlannedEndDate] = useState('')
+  const [selectedBatteryIds, setSelectedBatteryIds] = useState<string[]>([])
   const [extendMap, setExtendMap] = useState<Record<string, string>>({})
   const [journalMap, setJournalMap] = useState<Record<string, any[]>>({})
   const [dailyRateRub, setDailyRateRub] = useState(500)
@@ -27,14 +29,16 @@ export default function RentalsPage() {
   async function loadAll() {
     setError('')
     try {
-      const [clientsRes, bikesRes, rentalsRes] = await Promise.all([
+      const [clientsRes, bikesRes, rentalsRes, batteriesRes] = await Promise.all([
         api.clients(),
         api.bikes(),
         api.activeRentals(),
+        api.batteries(),
       ])
       setClients(clientsRes)
       setBikes(bikesRes)
       setRentals(rentalsRes)
+      setBatteries(batteriesRes)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки')
     }
@@ -48,6 +52,10 @@ export default function RentalsPage() {
         throw new Error('Заполни все поля аренды')
       }
 
+      if (selectedBatteryIds.length < 1) {
+        throw new Error('Для выдачи нужен минимум 1 АКБ')
+      }
+
       if (diffDays(startDate, plannedEndDate) < minRentalDays) {
         throw new Error(`Минимальный срок аренды — ${minRentalDays} дней`)
       }
@@ -57,8 +65,10 @@ export default function RentalsPage() {
         bikeId,
         startDate: `${startDate}T00:00:00.000Z`,
         plannedEndDate: `${plannedEndDate}T00:00:00.000Z`,
+        batteryIds: selectedBatteryIds,
       })
 
+      setSelectedBatteryIds([])
       await loadAll()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка создания аренды')
@@ -121,6 +131,7 @@ export default function RentalsPage() {
 
   const rentalDays = startDate && plannedEndDate ? diffDays(startDate, plannedEndDate) : 0
   const projectedTotalRub = dailyRateRub * rentalDays
+  const bikeBatteries = batteries.filter((b) => b.bikeId === bikeId && b.status === 'AVAILABLE')
 
   return (
     <main className="mx-auto max-w-6xl p-6 with-sidebar">
@@ -132,14 +143,22 @@ export default function RentalsPage() {
           <option value="">Курьер</option>
           {clients.map((c) => <option key={c.id} value={c.id}>{c.fullName}</option>)}
         </select>
-        <select className="rounded border p-2" value={bikeId} onChange={(e) => setBikeId(e.target.value)}>
+        <select className="rounded border p-2" value={bikeId} onChange={(e) => { setBikeId(e.target.value); setSelectedBatteryIds([]) }}>
           <option value="">Велосипед</option>
           {bikes.filter((b) => b.status === 'AVAILABLE').map((b) => <option key={b.id} value={b.id}>{b.code}</option>)}
         </select>
         <input type="date" className="rounded border p-2" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
         <input type="date" className="rounded border p-2" value={plannedEndDate} onChange={(e) => setPlannedEndDate(e.target.value)} />
+        <select
+          multiple
+          className="rounded border p-2 md:col-span-4"
+          value={selectedBatteryIds}
+          onChange={(e) => setSelectedBatteryIds(Array.from(e.target.selectedOptions).map((o) => o.value))}
+        >
+          {bikeBatteries.map((b) => <option key={b.id} value={b.id}>{b.code}{b.serialNumber ? ` (${b.serialNumber})` : ''}</option>)}
+        </select>
         <button
-          disabled={!clientId || !bikeId || !startDate || !plannedEndDate || rentalDays < minRentalDays}
+          disabled={!clientId || !bikeId || !startDate || !plannedEndDate || selectedBatteryIds.length < 1 || rentalDays < minRentalDays}
           className="rounded bg-black p-2 text-white disabled:opacity-50 md:col-span-4"
         >
           Создать аренду
@@ -148,7 +167,7 @@ export default function RentalsPage() {
 
       {startDate && plannedEndDate && (
         <p className="mb-3 text-sm text-gray-600">
-          Тариф: {formatRub(dailyRateRub)} / сутки · Срок: {rentalDays} дн. (минимум {minRentalDays}) · Сумма: {formatRub(projectedTotalRub)}
+          Тариф: {formatRub(dailyRateRub)} / сутки · Срок: {rentalDays} дн. (минимум {minRentalDays}) · АКБ выбрано: {selectedBatteryIds.length} · Сумма: {formatRub(projectedTotalRub)}
         </p>
       )}
 
@@ -160,6 +179,7 @@ export default function RentalsPage() {
             <div className="font-medium">{r.client.fullName} — {r.bike.code}</div>
             <div>Период: {formatDate(r.startDate)} → {formatDate(r.plannedEndDate)}</div>
             <div>Тариф: {formatRub(dailyRateRub)} / сутки</div>
+            <div>АКБ: {r.batteries?.map((x) => x.battery.code).join(', ') || '—'}</div>
             <div className="mt-2 flex items-center gap-2">
               <input
                 type="number"
