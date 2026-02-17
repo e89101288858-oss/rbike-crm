@@ -31,6 +31,10 @@ export type Client = {
   passportNumber?: string | null
   emergencyContactPhone?: string | null
   notes?: string | null
+  isBlacklisted?: boolean
+  blacklistReason?: string | null
+  hasActiveRental?: boolean
+  hasClosedRental?: boolean
   isActive?: boolean
 }
 

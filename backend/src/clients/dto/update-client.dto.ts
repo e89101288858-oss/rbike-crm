@@ -1,4 +1,4 @@
-import { IsDateString, IsOptional, IsString, MinLength } from 'class-validator'
+import { IsBoolean, IsDateString, IsOptional, IsString, MinLength } from 'class-validator'
 
 export class UpdateClientDto {
   @IsOptional()
@@ -33,4 +33,12 @@ export class UpdateClientDto {
   @IsOptional()
   @IsString()
   notes?: string
+
+  @IsOptional()
+  @IsBoolean()
+  isBlacklisted?: boolean
+
+  @IsOptional()
+  @IsString()
+  blacklistReason?: string
 }

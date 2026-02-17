@@ -201,6 +201,8 @@ export default function RentalsPage() {
       const currentTenant = myTenants.find((t) => t.id === currentTenantId)
       setDailyRateRub(Number(currentTenant?.dailyRateRub ?? 500))
       setMinRentalDays(Number(currentTenant?.minRentalDays ?? 7))
+      const fromQueryClientId = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('clientId') : null
+      if (fromQueryClientId) setClientId(fromQueryClientId)
       await loadAll()
     })()
   }, [router])

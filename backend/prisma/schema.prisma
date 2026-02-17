@@ -206,6 +206,8 @@ model Client {
   passportNumber        String?
   emergencyContactPhone String?
   notes                 String?
+  isBlacklisted         Boolean @default(false)
+  blacklistReason       String?
   isActive              Boolean @default(true)
 
   rentals   Rental[]

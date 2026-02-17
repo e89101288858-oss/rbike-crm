@@ -32,4 +32,8 @@ export class CreateClientDto {
   @IsOptional()
   @IsString()
   notes?: string
+
+  @IsOptional()
+  @IsString()
+  blacklistReason?: string
 }

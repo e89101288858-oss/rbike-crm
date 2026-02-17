@@ -31,6 +31,7 @@ export class ClientsController {
         passportNumber: dto.passportNumber ?? undefined,
         emergencyContactPhone: dto.emergencyContactPhone ?? undefined,
         notes: dto.notes ?? undefined,
+        blacklistReason: dto.blacklistReason ?? undefined,
       },
     })
   }
@@ -50,6 +51,7 @@ export class ClientsController {
         passportNumber: r.passportNumber?.trim() || undefined,
         emergencyContactPhone: r.emergencyContactPhone?.trim() || undefined,
         notes: r.notes?.trim() || undefined,
+        blacklistReason: r.blacklistReason?.trim() || undefined,
       }))
       .filter((r) => r.fullName)
 
@@ -65,7 +67,7 @@ export class ClientsController {
     const q = query.q?.trim()
     const archivedOnly = query.archivedOnly === 'true'
 
-    return this.prisma.client.findMany({
+    const rows = await this.prisma.client.findMany({
       where: {
         tenantId,
         isActive: archivedOnly ? false : true,
@@ -81,7 +83,18 @@ export class ClientsController {
             }
           : {}),
       },
+      include: { rentals: { select: { status: true } } },
       orderBy: { createdAt: 'desc' },
+    })
+
+    return rows.map((c) => {
+      const hasActiveRental = c.rentals.some((r) => r.status === 'ACTIVE')
+      const hasClosedRental = c.rentals.some((r) => r.status === 'CLOSED')
+      return {
+        ...c,
+        hasActiveRental,
+        hasClosedRental,
+      }
     })
   }
 
@@ -134,6 +147,8 @@ export class ClientsController {
         ...(dto.passportNumber !== undefined && { passportNumber: dto.passportNumber }),
         ...(dto.emergencyContactPhone !== undefined && { emergencyContactPhone: dto.emergencyContactPhone }),
         ...(dto.notes !== undefined && { notes: dto.notes }),
+        ...(dto.isBlacklisted !== undefined && { isBlacklisted: dto.isBlacklisted }),
+        ...(dto.blacklistReason !== undefined && { blacklistReason: dto.blacklistReason }),
       },
     })
 

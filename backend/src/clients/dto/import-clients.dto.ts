@@ -32,6 +32,10 @@ export class ImportClientRowDto {
   @IsOptional()
   @IsString()
   notes?: string
+
+  @IsOptional()
+  @IsString()
+  blacklistReason?: string
 }
 
 export class ImportClientsDto {
