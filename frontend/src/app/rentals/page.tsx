@@ -32,6 +32,7 @@ export default function RentalsPage() {
   const [dailyRateRub, setDailyRateRub] = useState(500)
   const [minRentalDays, setMinRentalDays] = useState(7)
   const [listTab, setListTab] = useState<'ACTIVE' | 'CLOSED'>('ACTIVE')
+  const [expandedMap, setExpandedMap] = useState<Record<string, boolean>>({})
   const [error, setError] = useState('')
 
   async function loadAll() {
@@ -220,7 +221,7 @@ export default function RentalsPage() {
   const canCreate = !!clientId && !!bikeId && !!startDate && !!plannedEndDate && selectedBatteryIds.length === batteryCount && rentalDays >= minRentalDays
 
   return (
-    <main className="mx-auto max-w-6xl p-6 with-sidebar">
+    <main className="page with-sidebar">
       <Topbar tenants={tenants} />
       <div className="mb-4 flex items-center justify-between gap-2">
         <h1 className="text-2xl font-semibold">Аренды</h1>
@@ -230,31 +231,31 @@ export default function RentalsPage() {
         </div>
       </div>
 
-      <form onSubmit={createRental} className="mb-6 grid gap-2 rounded border p-3 md:grid-cols-4">
-        <select className="rounded border p-2" value={clientId} onChange={(e) => setClientId(e.target.value)}>
+      <form onSubmit={createRental} className="panel mb-6 grid gap-2 md:grid-cols-4">
+        <select className="select" value={clientId} onChange={(e) => setClientId(e.target.value)}>
           <option value="">Курьер</option>
           {clients.map((c) => <option key={c.id} value={c.id}>{c.fullName}</option>)}
         </select>
-        <select className="rounded border p-2" value={bikeId} onChange={(e) => { setBikeId(e.target.value); setBattery1Id(''); setBattery2Id('') }}>
+        <select className="select" value={bikeId} onChange={(e) => { setBikeId(e.target.value); setBattery1Id(''); setBattery2Id('') }}>
           <option value="">Велосипед</option>
           {bikes.filter((b) => b.status === 'AVAILABLE').map((b) => <option key={b.id} value={b.id}>{b.code}</option>)}
         </select>
-        <input type="date" className="rounded border p-2" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-        <input type="date" className="rounded border p-2" value={plannedEndDate} onChange={(e) => setPlannedEndDate(e.target.value)} />
+        <input type="date" className="input" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+        <input type="date" className="input" value={plannedEndDate} onChange={(e) => setPlannedEndDate(e.target.value)} />
 
-        <div className="md:col-span-4 rounded border p-2 text-sm">
+        <div className="md:col-span-4 rounded-xl border border-gray-200 bg-gray-50 p-2 text-sm">
           <div className="mb-2 flex items-center gap-3">
             <span>АКБ к выдаче:</span>
             <label className="flex items-center gap-1"><input type="radio" checked={batteryCount === 1} onChange={() => { setBatteryCount(1); setBattery2Id('') }} /> 1</label>
             <label className="flex items-center gap-1"><input type="radio" checked={batteryCount === 2} onChange={() => setBatteryCount(2)} /> 2</label>
           </div>
           <div className="grid gap-2 md:grid-cols-2">
-            <select className="rounded border p-2" value={battery1Id} onChange={(e) => setBattery1Id(e.target.value)}>
+            <select className="select" value={battery1Id} onChange={(e) => setBattery1Id(e.target.value)}>
               <option value="">Выбери АКБ 1</option>
               {availableBatteries.map((b) => <option key={b.id} value={b.id}>{b.code}{b.serialNumber ? ` (${b.serialNumber})` : ''}</option>)}
             </select>
             {batteryCount === 2 && (
-              <select className="rounded border p-2" value={battery2Id} onChange={(e) => setBattery2Id(e.target.value)}>
+              <select className="select" value={battery2Id} onChange={(e) => setBattery2Id(e.target.value)}>
                 <option value="">Выбери АКБ 2</option>
                 {availableBatteries.filter((b) => b.id !== battery1Id).map((b) => <option key={b.id} value={b.id}>{b.code}{b.serialNumber ? ` (${b.serialNumber})` : ''}</option>)}
               </select>
@@ -264,7 +265,7 @@ export default function RentalsPage() {
 
         <button
           disabled={!canCreate}
-          className="rounded bg-black p-2 text-white disabled:opacity-50 md:col-span-4"
+          className="btn-primary md:col-span-4"
         >
           Создать аренду
         </button>
@@ -286,99 +287,111 @@ export default function RentalsPage() {
       {error && <p className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
       <div className="space-y-2">
-        {rentals.map((r) => (
-          <div key={r.id} className="rounded border p-3 text-sm">
-            <div className="font-medium">{r.client.fullName} — {r.bike.code}</div>
-            <div>Статус: {r.status === 'ACTIVE' ? 'Активна' : 'Завершена'}</div>
-            <div>Период: {formatDate(r.startDate)} → {formatDate(r.plannedEndDate)}</div>
-            <div>Факт завершения: {formatDate(r.actualEndDate)}</div>
-            {!!r.closeReason && <div>Причина досрочного завершения: {r.closeReason}</div>}
-            <div>Тариф: {formatRub(dailyRateRub)} / сутки</div>
-            <div>АКБ: {r.batteries?.map((x) => x.battery.code).join(', ') || '—'} ({r.batteries?.length || 0}/2)</div>
-            {r.status === 'ACTIVE' && <div>Осталось дней: {Math.max(0, diffDays(new Date().toISOString(), r.plannedEndDate))}</div>}
-            <div className="mt-2 flex items-center gap-2">
-              {r.status === 'ACTIVE' && (
+        {rentals.map((r) => {
+          const expanded = !!expandedMap[r.id]
+          return (
+            <div key={r.id} className="panel text-sm">
+              <div className="flex cursor-pointer flex-wrap items-center gap-2 rounded-lg px-1 py-1 hover:bg-gray-50" onClick={() => setExpandedMap((p) => ({ ...p, [r.id]: !expanded }))}>
+                <div className="font-medium min-w-56">{r.client.fullName} — {r.bike.code}</div>
+                <span className={`badge ${r.status === 'ACTIVE' ? 'badge-warn' : 'badge-ok'}`}>{r.status === 'ACTIVE' ? 'Активна' : 'Завершена'}</span>
+                <div className="text-gray-600">{formatDate(r.startDate)} → {formatDate(r.plannedEndDate)}</div>
+                {r.status === 'ACTIVE' && <div className="text-gray-600">Осталось: {Math.max(0, diffDays(new Date().toISOString(), r.plannedEndDate))} дн.</div>}
+              </div>
+
+              {expanded && (
                 <>
-                  <input type="number" className="w-40 rounded border p-1" placeholder="Дней продления" value={extendMap[r.id] ?? ''} onChange={(e) => setExtendMap((prev) => ({ ...prev, [r.id]: e.target.value }))} />
-                  <button className="rounded border px-2 py-1" onClick={() => extendRental(r.id)}>Продлить</button>
-                </>
-              )}
-              <button className="rounded border px-2 py-1" onClick={() => loadJournal(r.id)}>Журнал</button>
-              <button className="rounded border px-2 py-1" onClick={() => generateContract(r.id)}>Сформировать договор</button>
-              {r.status === 'ACTIVE' && <button className="rounded border border-red-300 px-2 py-1 text-red-700" onClick={() => closeRental(r.id)}>Завершить досрочно</button>}
-            </div>
+                  <div>Факт завершения: {formatDate(r.actualEndDate)}</div>
+                  {!!r.closeReason && <div>Причина досрочного завершения: {r.closeReason}</div>}
+                  <div>Тариф: {formatRub(dailyRateRub)} / сутки</div>
+                  <div>АКБ: {r.batteries?.map((x) => x.battery.code).join(', ') || '—'} ({r.batteries?.length || 0}/2)</div>
 
-            {r.status === 'ACTIVE' && (
-            <div className="mt-2 grid gap-2 md:grid-cols-2">
-              {(r.batteries?.length || 0) < 2 && (
-                <div className="rounded border p-2">
-                  <div className="mb-1 text-xs text-gray-600">Довыдача АКБ</div>
-                  <div className="flex gap-2">
-                    <select className="rounded border p-1 w-full" value={addBatteryMap[r.id] || ''} onChange={(e) => setAddBatteryMap((p) => ({ ...p, [r.id]: e.target.value }))}>
-                      <option value="">Выбери АКБ</option>
-                      {batteries.filter((b) => b.status === 'AVAILABLE').map((b) => <option key={b.id} value={b.id}>{b.code}</option>)}
-                    </select>
-                    <button className="rounded border px-2 py-1" onClick={() => addBatteryToRental(r.id)}>Выдать</button>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {r.status === 'ACTIVE' && (
+                      <>
+                        <input type="number" className="input w-40" placeholder="Дней продления" value={extendMap[r.id] ?? ''} onChange={(e) => setExtendMap((prev) => ({ ...prev, [r.id]: e.target.value }))} />
+                        <button className="btn" onClick={() => extendRental(r.id)}>Продлить</button>
+                      </>
+                    )}
+                    <button className="btn" onClick={() => loadJournal(r.id)}>Журнал</button>
+                    <button className="btn" onClick={() => generateContract(r.id)}>Сформировать договор</button>
+                    {r.status === 'ACTIVE' && <button className="btn border-red-300 text-red-700" onClick={() => closeRental(r.id)}>Завершить досрочно</button>}
                   </div>
-                </div>
-              )}
 
-              {(r.batteries?.length || 0) > 0 && (
-                <div className="rounded border p-2">
-                  <div className="mb-1 text-xs text-gray-600">Замена АКБ</div>
-                  <div className="grid gap-2 md:grid-cols-3">
-                    <select className="rounded border p-1" value={replaceFromMap[r.id] || ''} onChange={(e) => setReplaceFromMap((p) => ({ ...p, [r.id]: e.target.value }))}>
-                      <option value="">Снять</option>
-                      {(r.batteries || []).map((x) => <option key={x.battery.id} value={x.battery.id}>{x.battery.code}</option>)}
-                    </select>
-                    <select className="rounded border p-1" value={replaceToMap[r.id] || ''} onChange={(e) => setReplaceToMap((p) => ({ ...p, [r.id]: e.target.value }))}>
-                      <option value="">Выдать</option>
-                      {batteries.filter((b) => b.status === 'AVAILABLE').map((b) => <option key={b.id} value={b.id}>{b.code}</option>)}
-                    </select>
-                    <button className="rounded border px-2 py-1" onClick={() => replaceBatteryInRental(r.id)}>Заменить</button>
-                  </div>
-                </div>
-              )}
-            </div>
-            )}
-            {!!docsMap[r.id]?.length && (
-              <div className="mt-3 rounded border p-2">
-                <div className="mb-2 font-medium">Документы по аренде</div>
-                <div className="space-y-2">
-                  {docsMap[r.id].map((d) => (
-                    <div key={d.id} className="rounded border p-2">
-                      <div className="mb-1 text-xs text-gray-600">{d.type} · {formatDateTime(d.createdAt)}</div>
-                      <div className="flex gap-2">
-                        {d.filePath?.endsWith('.docx') ? (
-                          <button className="rounded border px-2 py-1 text-xs" onClick={() => downloadDocument(d.id)}>Скачать DOCX</button>
-                        ) : (
-                          <>
-                            <button className="rounded border px-2 py-1 text-xs" onClick={() => openDocument(d.id)}>Показать</button>
-                            <button className="rounded border px-2 py-1 text-xs" onClick={() => printDocument(d.id)} disabled={!docHtmlMap[d.id]}>Печать / PDF</button>
-                          </>
-                        )}
-                      </div>
-                      {!!docHtmlMap[d.id] && (
-                        <div className="mt-2 rounded border bg-white p-2" dangerouslySetInnerHTML={{ __html: docHtmlMap[d.id] }} />
+                  {r.status === 'ACTIVE' && (
+                    <div className="mt-2 grid gap-2 md:grid-cols-2">
+                      {(r.batteries?.length || 0) < 2 && (
+                        <div className="rounded border p-2">
+                          <div className="mb-1 text-xs text-gray-600">Довыдача АКБ</div>
+                          <div className="flex gap-2">
+                            <select className="select w-full" value={addBatteryMap[r.id] || ''} onChange={(e) => setAddBatteryMap((p) => ({ ...p, [r.id]: e.target.value }))}>
+                              <option value="">Выбери АКБ</option>
+                              {batteries.filter((b) => b.status === 'AVAILABLE').map((b) => <option key={b.id} value={b.id}>{b.code}</option>)}
+                            </select>
+                            <button className="btn" onClick={() => addBatteryToRental(r.id)}>Выдать</button>
+                          </div>
+                        </div>
+                      )}
+
+                      {(r.batteries?.length || 0) > 0 && (
+                        <div className="rounded border p-2">
+                          <div className="mb-1 text-xs text-gray-600">Замена АКБ</div>
+                          <div className="grid gap-2 md:grid-cols-3">
+                            <select className="select" value={replaceFromMap[r.id] || ''} onChange={(e) => setReplaceFromMap((p) => ({ ...p, [r.id]: e.target.value }))}>
+                              <option value="">Снять</option>
+                              {(r.batteries || []).map((x) => <option key={x.battery.id} value={x.battery.id}>{x.battery.code}</option>)}
+                            </select>
+                            <select className="select" value={replaceToMap[r.id] || ''} onChange={(e) => setReplaceToMap((p) => ({ ...p, [r.id]: e.target.value }))}>
+                              <option value="">Выдать</option>
+                              {batteries.filter((b) => b.status === 'AVAILABLE').map((b) => <option key={b.id} value={b.id}>{b.code}</option>)}
+                            </select>
+                            <button className="btn" onClick={() => replaceBatteryInRental(r.id)}>Заменить</button>
+                          </div>
+                        </div>
                       )}
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                  )}
 
-            {!!journalMap[r.id]?.length && (
-              <div className="mt-3 rounded border p-2">
-                <div className="mb-2 font-medium">Журнал операций</div>
-                <div className="space-y-1 text-xs">
-                  {journalMap[r.id].map((e: any, idx: number) => (
-                    <div key={idx}>{formatDate(e.at)} {new Date(e.at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} — {e.type}: {e.details}</div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        ))}
+                  {!!docsMap[r.id]?.length && (
+                    <div className="mt-3 rounded border p-2">
+                      <div className="mb-2 font-medium">Документы по аренде</div>
+                      <div className="space-y-2">
+                        {docsMap[r.id].map((d) => (
+                          <div key={d.id} className="rounded border p-2">
+                            <div className="mb-1 text-xs text-gray-600">{d.type} · {formatDateTime(d.createdAt)}</div>
+                            <div className="flex gap-2">
+                              {d.filePath?.endsWith('.docx') ? (
+                                <button className="btn" onClick={() => downloadDocument(d.id)}>Скачать DOCX</button>
+                              ) : (
+                                <>
+                                  <button className="btn" onClick={() => openDocument(d.id)}>Показать</button>
+                                  <button className="btn" onClick={() => printDocument(d.id)} disabled={!docHtmlMap[d.id]}>Печать / PDF</button>
+                                </>
+                              )}
+                            </div>
+                            {!!docHtmlMap[d.id] && (
+                              <div className="mt-2 rounded border bg-white p-2" dangerouslySetInnerHTML={{ __html: docHtmlMap[d.id] }} />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {!!journalMap[r.id]?.length && (
+                    <div className="mt-3 rounded border p-2">
+                      <div className="mb-2 font-medium">Журнал операций</div>
+                      <div className="space-y-1 text-xs">
+                        {journalMap[r.id].map((e: any, idx: number) => (
+                          <div key={idx}>{formatDate(e.at)} {new Date(e.at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} — {e.type}: {e.details}</div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )
+        })}
         {!rentals.length && <p className="text-sm text-gray-600">{listTab === 'ACTIVE' ? 'Активных аренд пока нет' : 'Завершенных аренд пока нет'}</p>}
       </div>
     </main>
