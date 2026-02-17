@@ -87,7 +87,7 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
                   <Link
                     key={l.href}
                     href={l.href}
-                    className={pathname === l.href ? 'btn-primary w-full text-left' : 'btn w-full text-left'}
+                    className={pathname === l.href ? 'btn-primary block w-full text-left' : 'btn block w-full text-left'}
                     onClick={() => setMobileOpen(false)}
                   >
                     <span className="mr-2">{l.icon}</span>
