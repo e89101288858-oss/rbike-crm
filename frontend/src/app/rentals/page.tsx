@@ -168,6 +168,15 @@ export default function RentalsPage() {
     }
   }
 
+  async function downloadDocument(documentId: string) {
+    setError('')
+    try {
+      await api.downloadDocument(documentId)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка скачивания документа')
+    }
+  }
+
   function printDocument(documentId: string) {
     const html = docHtmlMap[documentId]
     if (!html) return
@@ -316,8 +325,14 @@ export default function RentalsPage() {
                     <div key={d.id} className="rounded border p-2">
                       <div className="mb-1 text-xs text-gray-600">{d.type} · {formatDateTime(d.createdAt)}</div>
                       <div className="flex gap-2">
-                        <button className="rounded border px-2 py-1 text-xs" onClick={() => openDocument(d.id)}>Показать</button>
-                        <button className="rounded border px-2 py-1 text-xs" onClick={() => printDocument(d.id)} disabled={!docHtmlMap[d.id]}>Печать / PDF</button>
+                        {d.filePath?.endsWith('.docx') ? (
+                          <button className="rounded border px-2 py-1 text-xs" onClick={() => downloadDocument(d.id)}>Скачать DOCX</button>
+                        ) : (
+                          <>
+                            <button className="rounded border px-2 py-1 text-xs" onClick={() => openDocument(d.id)}>Показать</button>
+                            <button className="rounded border px-2 py-1 text-xs" onClick={() => printDocument(d.id)} disabled={!docHtmlMap[d.id]}>Печать / PDF</button>
+                          </>
+                        )}
                       </div>
                       {!!docHtmlMap[d.id] && (
                         <div className="mt-2 rounded border bg-white p-2" dangerouslySetInnerHTML={{ __html: docHtmlMap[d.id] }} />

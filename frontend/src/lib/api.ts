@@ -281,6 +281,30 @@ export const api = {
       body: JSON.stringify({ templateHtml }),
     }, true),
 
+  downloadDocument: async (documentId: string) => {
+    const token = getToken()
+    const tenantId = getTenantId()
+    const headers: Record<string, string> = {}
+    if (token) headers.Authorization = `Bearer ${token}`
+    if (tenantId) headers['X-Tenant-Id'] = tenantId
+
+    const res = await fetch(`${API_BASE}/documents/${documentId}/download`, { headers })
+    if (!res.ok) {
+      const text = await res.text()
+      throw new Error(text || `HTTP ${res.status}`)
+    }
+
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `contract-${documentId}.docx`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  },
+
   payments: (query = '') => request<any[]>(`/payments${query ? `?${query}` : ''}`, undefined, true),
 
   revenueByBike: (query = '') =>

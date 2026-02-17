@@ -8,12 +8,15 @@ import {
   Patch,
   Post,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common'
 import { DocumentType, UserRole } from '@prisma/client'
 import { promises as fs } from 'fs'
 import * as path from 'path'
-import type { Request } from 'express'
+import type { Request, Response } from 'express'
+import Docxtemplater from 'docxtemplater'
+import PizZip from 'pizzip'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
 import type { JwtUser } from '../common/decorators/current-user.decorator'
@@ -109,48 +112,73 @@ export class DocumentsController {
     const dailyRateRub = rental.tenant.dailyRateRub ?? 500
     const totalRub = days * dailyRateRub
 
-    const template = await this.prisma.contractTemplate.findUnique({
-      where: { tenantId },
-      select: { templateHtml: true },
-    })
-
-    const html = this.applyTemplate(template?.templateHtml ?? this.defaultTemplate(), {
-      'contract.number': documentNo,
-      'contract.date': this.fmt(new Date()),
-      'tenant.name': rental.tenant.name,
-      'tenant.address': rental.tenant.address ?? '—',
-      'franchisee.name': rental.tenant.franchisee?.name ?? '—',
-      'franchisee.companyName': rental.tenant.franchisee?.companyName ?? '—',
-      'franchisee.signerFullName': rental.tenant.franchisee?.signerFullName ?? '—',
-      'franchisee.bankDetails': rental.tenant.franchisee?.bankDetails ?? '—',
-      'franchisee.city': rental.tenant.franchisee?.city ?? '—',
-      'client.fullName': rental.client.fullName,
-      'client.phone': rental.client.phone ?? '—',
-      'client.birthDate': rental.client.birthDate ? this.fmt(rental.client.birthDate) : '—',
-      'client.address': rental.client.address ?? '—',
-      'client.emergencyContactPhone': rental.client.emergencyContactPhone ?? '—',
-      'client.passportSeries': rental.client.passportSeries ?? '—',
-      'client.passportNumber': rental.client.passportNumber ?? '—',
-      'bike.code': rental.bike.code,
-      'bike.model': rental.bike.model ?? '—',
-      'bike.frameNumber': rental.bike.frameNumber ?? '—',
-      'bike.motorWheelNumber': rental.bike.motorWheelNumber ?? '—',
-      'batteries.numbers': rental.batteries.map((x) => x.battery.code).join(', ') || '—',
-      'rental.startDate': this.fmt(rental.startDate),
-      'rental.plannedEndDate': this.fmt(rental.plannedEndDate),
-      'rental.days': String(days),
-      'rental.dailyRateRub': String(dailyRateRub),
-      'rental.totalRub': String(totalRub),
-    })
+    const data = {
+      contract: {
+        number: documentNo,
+        date: this.fmt(new Date()),
+      },
+      tenant: {
+        name: rental.tenant.name,
+        address: rental.tenant.address ?? '—',
+      },
+      franchisee: {
+        name: rental.tenant.franchisee?.name ?? '—',
+        companyName: rental.tenant.franchisee?.companyName ?? '—',
+        signerFullName: rental.tenant.franchisee?.signerFullName ?? '—',
+        bankDetails: rental.tenant.franchisee?.bankDetails ?? '—',
+        city: rental.tenant.franchisee?.city ?? '—',
+      },
+      client: {
+        fullName: rental.client.fullName,
+        phone: rental.client.phone ?? '—',
+        birthDate: rental.client.birthDate ? this.fmt(rental.client.birthDate) : '—',
+        address: rental.client.address ?? '—',
+        emergencyContactPhone: rental.client.emergencyContactPhone ?? '—',
+        passportSeries: rental.client.passportSeries ?? '—',
+        passportNumber: rental.client.passportNumber ?? '—',
+      },
+      bike: {
+        code: rental.bike.code,
+        model: rental.bike.model ?? '—',
+        frameNumber: rental.bike.frameNumber ?? '—',
+        motorWheelNumber: rental.bike.motorWheelNumber ?? '—',
+      },
+      batteries: {
+        numbers: rental.batteries.map((x) => x.battery.code).join(', ') || '—',
+      },
+      rental: {
+        startDate: this.fmt(rental.startDate),
+        plannedEndDate: this.fmt(rental.plannedEndDate),
+        days: String(days),
+        dailyRateRub: String(dailyRateRub),
+        totalRub: String(totalRub),
+      },
+    }
 
     const baseDir = path.join(process.cwd(), 'storage', 'documents', tenantId)
     await fs.mkdir(baseDir, { recursive: true })
 
-    const fileName = `contract-${rental.id}-${Date.now()}.html`
+    const fileName = `contract-${rental.id}-${Date.now()}.docx`
     const absolute = path.join(baseDir, fileName)
     const relative = path.join('storage', 'documents', tenantId, fileName)
 
-    await fs.writeFile(absolute, html, 'utf-8')
+    const templatePath = path.join(process.cwd(), 'templates', 'contract-template.docx')
+    const tplBuffer = await fs.readFile(templatePath)
+    const zip = new PizZip(tplBuffer)
+    const docx = new Docxtemplater(zip, {
+      delimiters: { start: '{{', end: '}}' },
+      paragraphLoop: true,
+      linebreaks: true,
+    })
+
+    try {
+      docx.render(data)
+    } catch (e) {
+      throw new BadRequestException('Ошибка генерации DOCX по шаблону. Проверь плейсхолдеры.')
+    }
+
+    const out = docx.getZip().generate({ type: 'nodebuffer', compression: 'DEFLATE' })
+    await fs.writeFile(absolute, out)
 
     const doc = await this.prisma.document.create({
       data: {
@@ -178,6 +206,20 @@ export class DocumentsController {
     })
   }
 
+  @Get(':id/download')
+  async download(@Req() req: Request, @Param('id') id: string, @Res() res: Response) {
+    const tenantId = req.tenantId!
+
+    const doc = await this.prisma.document.findFirst({
+      where: { id, tenantId },
+      select: { id: true, filePath: true },
+    })
+    if (!doc) throw new NotFoundException('Document not found')
+
+    const absolute = path.join(process.cwd(), doc.filePath)
+    return res.download(absolute, path.basename(absolute))
+  }
+
   @Get(':id/content')
   async content(@Req() req: Request, @Param('id') id: string) {
     const tenantId = req.tenantId!
@@ -187,6 +229,9 @@ export class DocumentsController {
       select: { id: true, filePath: true, type: true, createdAt: true },
     })
     if (!doc) throw new NotFoundException('Document not found')
+    if (!doc.filePath.endsWith('.html')) {
+      throw new BadRequestException('For DOCX use download endpoint')
+    }
 
     const absolute = path.join(process.cwd(), doc.filePath)
     const html = await fs.readFile(absolute, 'utf-8')
