@@ -20,7 +20,6 @@ const nav: NavGroup[] = [
     items: [
       { href: '/dashboard', label: 'Дашборд', icon: '🏠', roles: ['OWNER', 'FRANCHISEE', 'MANAGER', 'MECHANIC'] },
       { href: '/rentals', label: 'Аренды', icon: '🗓️', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
-      { href: '/payments', label: 'Платежи', icon: '💳', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
     ],
   },
   {
@@ -33,7 +32,10 @@ const nav: NavGroup[] = [
   },
   {
     title: 'Аналитика',
-    items: [{ href: '/finance', label: 'Финансы', icon: '📈', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] }],
+    items: [
+      { href: '/finance', label: 'Финансы', icon: '📈', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
+      { href: '/payments', label: 'Платежи', icon: '💳', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
+    ],
   },
   {
     title: 'Инструменты',
