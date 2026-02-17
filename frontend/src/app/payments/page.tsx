@@ -15,6 +15,8 @@ export default function PaymentsPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [status, setStatus] = useState<'PLANNED' | 'PAID'>('PAID')
+  const [editId, setEditId] = useState('')
+  const [editAmount, setEditAmount] = useState('')
 
   async function load() {
     setLoading(true)
@@ -29,16 +31,27 @@ export default function PaymentsPage() {
     }
   }
 
-  async function editPayment(p: any) {
+  function startEdit(p: any) {
+    setError('')
+    setSuccess('')
+    setEditId(p.id)
+    setEditAmount(String(p.amount ?? ''))
+  }
+
+  function cancelEdit() {
+    setEditId('')
+    setEditAmount('')
+  }
+
+  async function saveEdit(paymentId: string) {
     setError('')
     setSuccess('')
     try {
-      const amountRaw = prompt('Новая сумма (RUB):', String(p.amount ?? ''))
-      if (amountRaw === null) return
-      const amount = Number(amountRaw)
+      const amount = Number(editAmount)
       if (!Number.isFinite(amount)) throw new Error('Сумма должна быть числом')
 
-      await api.updatePayment(p.id, { amount })
+      await api.updatePayment(paymentId, { amount })
+      cancelEdit()
       await load()
       setSuccess('Сохранено')
     } catch (err) {
@@ -94,10 +107,20 @@ export default function PaymentsPage() {
             <div>Период: {formatDate(p.periodStart)} → {formatDate(p.periodEnd)}</div>
             <div>Оплата: {formatDateTime(p.paidAt)}</div>
             <div className="mb-2"><span className={`badge ${p.status === 'PAID' ? 'badge-ok' : 'badge-warn'}`}>{p.status === 'PAID' ? 'Оплачен' : 'Плановый'}</span></div>
-            <div className="flex gap-2">
-              <button className="btn" onClick={() => editPayment(p)}>Редактировать</button>
-              <button className="btn border-red-300 text-red-700" onClick={() => removePayment(p)}>Удалить</button>
-            </div>
+            {editId === p.id ? (
+              <div className="space-y-2">
+                <input className="input w-full" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} placeholder="Сумма" />
+                <div className="flex gap-2">
+                  <button className="btn" onClick={() => saveEdit(p.id)}>Сохранить</button>
+                  <button className="btn" onClick={cancelEdit}>Отмена</button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <button className="btn" onClick={() => startEdit(p)}>Редактировать</button>
+                <button className="btn border-red-300 text-red-700" onClick={() => removePayment(p)}>Удалить</button>
+              </div>
+            )}
           </div>
         ))}
         {!items.length && <p className="text-sm text-gray-600">Нет платежей в этом статусе</p>}
@@ -130,10 +153,18 @@ export default function PaymentsPage() {
                   </span>
                 </td>
                 <td>
-                  <div className="flex gap-2">
-                    <button className="btn" onClick={() => editPayment(p)}>Редакт.</button>
-                    <button className="btn border-red-300 text-red-700" onClick={() => removePayment(p)}>Удалить</button>
-                  </div>
+                  {editId === p.id ? (
+                    <div className="flex items-center gap-2">
+                      <input className="input w-28" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} />
+                      <button className="btn" onClick={() => saveEdit(p.id)}>Сохр.</button>
+                      <button className="btn" onClick={cancelEdit}>Отмена</button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <button className="btn" onClick={() => startEdit(p)}>Редакт.</button>
+                      <button className="btn border-red-300 text-red-700" onClick={() => removePayment(p)}>Удалить</button>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}
