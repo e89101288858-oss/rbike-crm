@@ -25,6 +25,10 @@ export default function AdminPage() {
   const [users, setUsers] = useState<any[]>([])
   const [userTenantMap, setUserTenantMap] = useState<Record<string, string[]>>({})
   const [tenantPickMap, setTenantPickMap] = useState<Record<string, string>>({})
+  const [passwordMap, setPasswordMap] = useState<Record<string, string>>({})
+  const [userSearch, setUserSearch] = useState('')
+  const [userRoleFilter, setUserRoleFilter] = useState<'ALL' | 'OWNER' | 'FRANCHISEE' | 'MANAGER' | 'MECHANIC'>('ALL')
+  const [userActiveFilter, setUserActiveFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL')
   const [newUser, setNewUser] = useState({ email: '', password: '', role: 'MANAGER', franchiseeId: '' })
   const [audit, setAudit] = useState<AuditItem[]>([])
   const [auditRows, setAuditRows] = useState<any[]>([])
@@ -308,10 +312,31 @@ export default function AdminPage() {
     }
   }
 
+  async function resetUserPassword(u: any) {
+    setError('')
+    setSuccess('')
+    try {
+      const password = passwordMap[u.id]?.trim()
+      if (!password || password.length < 6) throw new Error('Новый пароль минимум 6 символов')
+      await api.adminUpdateUser(u.id, { password })
+      setPasswordMap((p) => ({ ...p, [u.id]: '' }))
+      setSuccess('Пароль обновлён')
+    } catch (err) {
+      setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка смены пароля'}`)
+    }
+  }
+
   useEffect(() => {
     if (!getToken()) return router.replace('/login')
     void loadAll()
   }, [router])
+
+  const filteredUsers = users.filter((u) => {
+    const matchesSearch = !userSearch.trim() || u.email.toLowerCase().includes(userSearch.trim().toLowerCase())
+    const matchesRole = userRoleFilter === 'ALL' || u.role === userRoleFilter
+    const matchesActive = userActiveFilter === 'ALL' || (userActiveFilter === 'ACTIVE' ? !!u.isActive : !u.isActive)
+    return matchesSearch && matchesRole && matchesActive
+  })
 
   return (
     <main className="page with-sidebar">
@@ -420,8 +445,24 @@ export default function AdminPage() {
               <button className="btn-primary">Добавить пользователя</button>
             </form>
 
+            <div className="mb-3 grid gap-2 md:grid-cols-3">
+              <input className="input" placeholder="Поиск по email" value={userSearch} onChange={(e) => setUserSearch(e.target.value)} />
+              <select className="select" value={userRoleFilter} onChange={(e) => setUserRoleFilter(e.target.value as any)}>
+                <option value="ALL">Все роли</option>
+                <option value="OWNER">OWNER</option>
+                <option value="FRANCHISEE">FRANCHISEE</option>
+                <option value="MANAGER">MANAGER</option>
+                <option value="MECHANIC">MECHANIC</option>
+              </select>
+              <select className="select" value={userActiveFilter} onChange={(e) => setUserActiveFilter(e.target.value as any)}>
+                <option value="ALL">Все статусы</option>
+                <option value="ACTIVE">Только активные</option>
+                <option value="INACTIVE">Только выключенные</option>
+              </select>
+            </div>
+
             <div className="space-y-2">
-              {users.map((u) => {
+              {filteredUsers.map((u) => {
                 const allTenants = Object.values(tenantMap).flat() as any[]
                 const allowedTenants = u.role === 'MANAGER' || u.role === 'MECHANIC'
                   ? allTenants.filter((t) => t.isActive)
@@ -456,6 +497,18 @@ export default function AdminPage() {
                       <button className="btn border-red-300 text-red-700" onClick={() => deleteUser(u)} disabled={u.role === 'OWNER'}>Удалить</button>
                     </div>
 
+                    <div className="mt-2 grid gap-2 md:grid-cols-3">
+                      <input
+                        className="input"
+                        type="password"
+                        placeholder="Новый пароль (мин. 6)"
+                        value={passwordMap[u.id] || ''}
+                        onChange={(e) => setPasswordMap((p) => ({ ...p, [u.id]: e.target.value }))}
+                        disabled={u.role === 'OWNER'}
+                      />
+                      <button className="btn" onClick={() => resetUserPassword(u)} disabled={u.role === 'OWNER'}>Сбросить пароль</button>
+                    </div>
+
                     <div className="mt-2 rounded border p-2">
                       <div className="mb-1 text-xs text-gray-600">Привязка точек (только MANAGER/MECHANIC)</div>
                       <div className="mb-2 flex flex-wrap gap-2">
@@ -481,7 +534,7 @@ export default function AdminPage() {
                   </div>
                 )
               })}
-              {!users.length && <p className="text-gray-500">Пользователей пока нет</p>}
+              {!filteredUsers.length && <p className="text-gray-500">По фильтру ничего не найдено</p>}
             </div>
           </section>
 
