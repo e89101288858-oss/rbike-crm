@@ -16,6 +16,7 @@ import type { JwtUser } from '../common/decorators/current-user.decorator'
 import { Roles } from '../common/decorators/roles.decorator'
 import { RolesGuard } from '../common/guards/roles.guard'
 import { PrismaService } from '../prisma/prisma.service'
+import { ApproveRegistrationDto } from './dto/approve-registration.dto'
 import { CreateFranchiseeDto } from './dto/create-franchisee.dto'
 import { UpdateFranchiseeDto } from './dto/update-franchisee.dto'
 import { CreateTenantDto } from './dto/create-tenant.dto'
@@ -49,6 +50,84 @@ export class AdminController {
     })
     await this.audit(user.userId, 'CREATE_FRANCHISEE', 'FRANCHISEE', created.id, { name: created.name })
     return created
+  }
+
+  @Get('admin/registration-requests')
+  async listRegistrationRequests() {
+    return this.prisma.registrationRequest.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: { reviewedBy: { select: { id: true, email: true, role: true } } },
+    })
+  }
+
+  @Post('admin/registration-requests/:id/approve')
+  async approveRegistration(
+    @Param('id') id: string,
+    @Body() dto: ApproveRegistrationDto,
+    @CurrentUser() user: JwtUser,
+  ) {
+    const req = await this.prisma.registrationRequest.findUnique({ where: { id } })
+    if (!req) throw new NotFoundException('Registration request not found')
+    if (req.status !== 'PENDING') throw new BadRequestException('Request already processed')
+
+    const franchisee = await this.prisma.franchisee.findUnique({ where: { id: dto.franchiseeId }, select: { id: true } })
+    if (!franchisee) throw new BadRequestException('Franchisee not found')
+
+    if (dto.tenantId) {
+      const tenant = await this.prisma.tenant.findUnique({ where: { id: dto.tenantId }, select: { id: true, franchiseeId: true } })
+      if (!tenant) throw new BadRequestException('Tenant not found')
+      if (tenant.franchiseeId !== dto.franchiseeId) throw new BadRequestException('Tenant does not belong to selected franchisee')
+    }
+
+    const existingUser = await this.prisma.user.findUnique({ where: { email: req.email } })
+    if (existingUser) throw new BadRequestException('User already exists')
+
+    const created = await this.prisma.$transaction(async (tx) => {
+      const userCreated = await tx.user.create({
+        data: {
+          email: req.email,
+          passwordHash: req.passwordHash,
+          role: 'FRANCHISEE',
+          franchiseeId: dto.franchiseeId,
+          isActive: true,
+        },
+      })
+
+      if (dto.tenantId) {
+        await tx.userTenant.create({ data: { userId: userCreated.id, tenantId: dto.tenantId } })
+      }
+
+      await tx.registrationRequest.update({
+        where: { id },
+        data: { status: 'APPROVED', reviewedById: user.userId, reviewedAt: new Date() },
+      })
+
+      return userCreated
+    })
+
+    await this.audit(user.userId, 'APPROVE_REGISTRATION', 'REGISTRATION_REQUEST', id, {
+      email: req.email,
+      franchiseeId: dto.franchiseeId,
+      tenantId: dto.tenantId ?? null,
+      createdUserId: created.id,
+    })
+
+    return { id, approved: true, userId: created.id }
+  }
+
+  @Post('admin/registration-requests/:id/reject')
+  async rejectRegistration(@Param('id') id: string, @CurrentUser() user: JwtUser) {
+    const req = await this.prisma.registrationRequest.findUnique({ where: { id } })
+    if (!req) throw new NotFoundException('Registration request not found')
+    if (req.status !== 'PENDING') throw new BadRequestException('Request already processed')
+
+    await this.prisma.registrationRequest.update({
+      where: { id },
+      data: { status: 'REJECTED', reviewedById: user.userId, reviewedAt: new Date() },
+    })
+
+    await this.audit(user.userId, 'REJECT_REGISTRATION', 'REGISTRATION_REQUEST', id, { email: req.email })
+    return { id, rejected: true }
   }
 
   @Get('admin/audit')

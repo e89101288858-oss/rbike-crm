@@ -50,6 +50,12 @@ enum RentalChangeType {
   CLOSE
 }
 
+enum RegistrationRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum BatteryStatus {
   AVAILABLE
   RENTED
@@ -75,6 +81,7 @@ model User {
   createdRepairs       Repair[]       @relation("RepairCreatedBy")
   createdDocuments     Document[]     @relation("DocumentCreatedBy")
   auditLogs            AuditLog[]
+  reviewedRegistrationRequests RegistrationRequest[] @relation("RegistrationReviewedBy")
 }
 
 model Franchisee {
@@ -325,4 +332,19 @@ model AuditLog {
 
   @@index([createdAt])
   @@index([userId])
+}
+
+model RegistrationRequest {
+  id           String                    @id @default(uuid())
+  email        String                    @unique
+  passwordHash String
+  fullName     String?
+  phone        String?
+  status       RegistrationRequestStatus @default(PENDING)
+  reviewedById String?
+  reviewedBy   User?                     @relation("RegistrationReviewedBy", fields: [reviewedById], references: [id])
+  createdAt    DateTime                  @default(now())
+  reviewedAt   DateTime?
+
+  @@index([status, createdAt])
 }

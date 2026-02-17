@@ -73,6 +73,12 @@ export const api = {
       body: JSON.stringify({ email, password }),
     }),
 
+  registerRequest: (payload: { email: string; password: string; fullName?: string; phone?: string }) =>
+    request<any>('/auth/register-request', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
   me: () => request<{ userId: string; role: string; franchiseeId: string | null }>('/me'),
 
   myTenants: () =>
@@ -327,4 +333,12 @@ export const api = {
   adminDeleteTenant: (id: string) => request<any>(`/tenants/${id}`, { method: 'DELETE' }),
 
   adminAudit: () => request<any[]>('/admin/audit'),
+
+  adminRegistrationRequests: () => request<any[]>('/admin/registration-requests'),
+  adminApproveRegistration: (id: string, payload: { franchiseeId: string; tenantId?: string }) =>
+    request<any>(`/admin/registration-requests/${id}/approve`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  adminRejectRegistration: (id: string) => request<any>(`/admin/registration-requests/${id}/reject`, { method: 'POST' }),
 }

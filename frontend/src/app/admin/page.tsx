@@ -20,6 +20,8 @@ export default function AdminPage() {
   const [tenantMap, setTenantMap] = useState<Record<string, any[]>>({})
   const [newFranchiseeName, setNewFranchiseeName] = useState('')
   const [newTenantDraft, setNewTenantDraft] = useState<Record<string, { name: string; dailyRateRub: number; minRentalDays: number }>>({})
+  const [registrationRequests, setRegistrationRequests] = useState<any[]>([])
+  const [approveMap, setApproveMap] = useState<Record<string, { franchiseeId: string; tenantId: string }>>({})
   const [audit, setAudit] = useState<AuditItem[]>([])
   const [auditRows, setAuditRows] = useState<any[]>([])
   const [error, setError] = useState('')
@@ -41,12 +43,13 @@ export default function AdminPage() {
   async function loadAll() {
     setError('')
     try {
-      const [myTenants, me, frs, logs] = await Promise.all([api.myTenants(), api.me(), api.adminFranchisees(), api.adminAudit()])
+      const [myTenants, me, frs, logs, requests] = await Promise.all([api.myTenants(), api.me(), api.adminFranchisees(), api.adminAudit(), api.adminRegistrationRequests()])
       setRole((me.role as UserRole) || '')
       setTenants(myTenants)
       if (!getTenantId() && myTenants.length > 0) setTenantId(myTenants[0].id)
       setFranchisees(frs)
       setAuditRows(logs)
+      setRegistrationRequests(requests)
 
       const entries = await Promise.all(
         frs.map(async (f) => [f.id, await api.adminTenantsByFranchisee(f.id)] as const),
@@ -181,6 +184,35 @@ export default function AdminPage() {
     }
   }
 
+  async function approveRegistration(req: any) {
+    setError('')
+    setSuccess('')
+    try {
+      const data = approveMap[req.id]
+      if (!data?.franchiseeId) throw new Error('Выбери франчайзи для заявки')
+      await api.adminApproveRegistration(req.id, {
+        franchiseeId: data.franchiseeId,
+        tenantId: data.tenantId || undefined,
+      })
+      await loadAll()
+      setSuccess('Сохранено')
+    } catch (err) {
+      setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка одобрения заявки'}`)
+    }
+  }
+
+  async function rejectRegistration(req: any) {
+    setError('')
+    setSuccess('')
+    try {
+      await api.adminRejectRegistration(req.id)
+      await loadAll()
+      setSuccess('Сохранено')
+    } catch (err) {
+      setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка отклонения заявки'}`)
+    }
+  }
+
   useEffect(() => {
     if (!getToken()) return router.replace('/login')
     void loadAll()
@@ -198,6 +230,36 @@ export default function AdminPage() {
         <section className="panel text-sm text-gray-700">Доступ только для OWNER.</section>
       ) : (
         <>
+          <section className="panel mb-4 text-sm">
+            <h2 className="mb-2 font-semibold">Заявки на регистрацию</h2>
+            <div className="space-y-2">
+              {registrationRequests.filter((r) => r.status === 'PENDING').map((r) => {
+                const selectedFranchiseeId = approveMap[r.id]?.franchiseeId || ''
+                const availableTenants = selectedFranchiseeId ? (tenantMap[selectedFranchiseeId] || []) : []
+                return (
+                  <div key={r.id} className="rounded border p-2">
+                    <div className="mb-2">{r.email}{r.fullName ? ` · ${r.fullName}` : ''}{r.phone ? ` · ${r.phone}` : ''}</div>
+                    <div className="grid gap-2 md:grid-cols-3">
+                      <select className="select" value={selectedFranchiseeId} onChange={(e) => setApproveMap((p) => ({ ...p, [r.id]: { franchiseeId: e.target.value, tenantId: '' } }))}>
+                        <option value="">Выбери франчайзи</option>
+                        {franchisees.filter((f) => f.isActive).map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                      </select>
+                      <select className="select" value={approveMap[r.id]?.tenantId || ''} onChange={(e) => setApproveMap((p) => ({ ...p, [r.id]: { ...(p[r.id] || { franchiseeId: '', tenantId: '' }), tenantId: e.target.value } }))}>
+                        <option value="">Точка (опционально)</option>
+                        {availableTenants.filter((t: any) => t.isActive).map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                      </select>
+                      <div className="flex gap-2">
+                        <button className="btn" onClick={() => approveRegistration(r)}>Одобрить</button>
+                        <button className="btn border-red-300 text-red-700" onClick={() => rejectRegistration(r)}>Отклонить</button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+              {!registrationRequests.filter((r) => r.status === 'PENDING').length && <p className="text-gray-600">Новых заявок нет</p>}
+            </div>
+          </section>
+
           <form onSubmit={createFranchisee} className="panel mb-4 flex flex-wrap items-center gap-2">
             <input className="input min-w-72" placeholder="Новый франчайзи" value={newFranchiseeName} onChange={(e) => setNewFranchiseeName(e.target.value)} />
             <button className="btn-primary">Добавить франчайзи</button>
