@@ -1,8 +1,15 @@
 # Changelog
 
 Все значимые изменения в проекте RBike CRM.
+Формат: semver-подобные релизы (`vMAJOR.MINOR.PATCH`).
 
-## [2026-02-17] — Owner/Admin/Auth/АКБ major update
+## [Unreleased]
+
+- В работе: финальная русификация всех оставшихся статусных меток.
+- В работе: снижение frontend lint-debt (`no-explicit-any`, hooks deps).
+- План: Documents module (договоры/печать/PDF).
+
+## [v0.9.0] - 2026-02-17
 
 ### Added
 - Owner Admin Panel `/admin`:
@@ -62,7 +69,7 @@
 - Frontend/Backend builds are green.
 - Frontend ESLint still contains technical debt (`no-explicit-any`, hooks deps warnings).
 
-## [Previous milestones]
+## [pre-v0.9.0 milestones]
 
 - Soft archive/restore for bikes and clients.
 - CSV imports for bikes/clients with validation and summary.
