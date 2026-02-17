@@ -11,6 +11,10 @@ export class ImportClientRowDto {
 
   @IsOptional()
   @IsString()
+  birthDate?: string
+
+  @IsOptional()
+  @IsString()
   address?: string
 
   @IsOptional()

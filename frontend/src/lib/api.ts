@@ -25,6 +25,7 @@ export type Client = {
   id: string
   fullName: string
   phone?: string | null
+  birthDate?: string | null
   address?: string | null
   passportSeries?: string | null
   passportNumber?: string | null
@@ -95,6 +96,7 @@ export const api = {
       name: string
       franchiseeId: string
       franchisee?: { name: string }
+      address?: string
       dailyRateRub?: number
       minRentalDays?: number
     }>>('/my/tenants'),
@@ -104,6 +106,7 @@ export const api = {
   createClient: (payload: {
     fullName: string
     phone?: string
+    birthDate?: string
     address?: string
     passportSeries?: string
     passportNumber?: string
@@ -127,6 +130,7 @@ export const api = {
   importClients: (rows: Array<{
     fullName: string
     phone?: string
+    birthDate?: string
     address?: string
     passportSeries?: string
     passportNumber?: string
@@ -320,13 +324,13 @@ export const api = {
 
   adminFranchisees: () => request<any[]>('/franchisees'),
 
-  adminCreateFranchisee: (payload: { name: string; companyName?: string; signerFullName?: string; bankDetails?: string; isActive?: boolean }) =>
+  adminCreateFranchisee: (payload: { name: string; companyName?: string; signerFullName?: string; bankDetails?: string; city?: string; isActive?: boolean }) =>
     request<any>('/franchisees', {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
 
-  adminUpdateFranchisee: (id: string, payload: { name?: string; companyName?: string; signerFullName?: string; bankDetails?: string; isActive?: boolean }) =>
+  adminUpdateFranchisee: (id: string, payload: { name?: string; companyName?: string; signerFullName?: string; bankDetails?: string; city?: string; isActive?: boolean }) =>
     request<any>(`/franchisees/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(payload),
@@ -338,7 +342,7 @@ export const api = {
 
   adminCreateTenant: (
     franchiseeId: string,
-    payload: { name: string; isActive?: boolean; dailyRateRub?: number; minRentalDays?: number },
+    payload: { name: string; address?: string; isActive?: boolean; dailyRateRub?: number; minRentalDays?: number },
   ) =>
     request<any>(`/franchisees/${franchiseeId}/tenants`, {
       method: 'POST',
@@ -347,7 +351,7 @@ export const api = {
 
   adminUpdateTenant: (
     id: string,
-    payload: { name?: string; isActive?: boolean; dailyRateRub?: number; minRentalDays?: number },
+    payload: { name?: string; address?: string; isActive?: boolean; dailyRateRub?: number; minRentalDays?: number },
   ) =>
     request<any>(`/tenants/${id}`, {
       method: 'PATCH',

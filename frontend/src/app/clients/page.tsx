@@ -12,6 +12,7 @@ function toClientForm(c: Client): ClientForm {
   return {
     fullName: c.fullName ?? '',
     phone: c.phone ?? '',
+    birthDate: c.birthDate ? String(c.birthDate).slice(0, 10) : '',
     address: c.address ?? '',
     passportSeries: c.passportSeries ?? '',
     passportNumber: c.passportNumber ?? '',
@@ -26,6 +27,7 @@ export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([])
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
+  const [birthDate, setBirthDate] = useState('')
   const [address, setAddress] = useState('')
   const [passportSeries, setPassportSeries] = useState('')
   const [passportNumber, setPassportNumber] = useState('')
@@ -67,6 +69,7 @@ export default function ClientsPage() {
       await api.createClient({
         fullName: fullName.trim(),
         phone: phone.trim(),
+        birthDate: birthDate || undefined,
         address: address.trim(),
         passportSeries: passportSeries.trim(),
         passportNumber: passportNumber.trim(),
@@ -75,6 +78,7 @@ export default function ClientsPage() {
       })
       setFullName('')
       setPhone('')
+      setBirthDate('')
       setAddress('')
       setPassportSeries('')
       setPassportNumber('')
@@ -157,6 +161,7 @@ export default function ClientsPage() {
       <form onSubmit={createClient} className="panel mb-6 grid gap-2 md:grid-cols-3">
         <input className="input" placeholder="ФИО" value={fullName} onChange={(e) => setFullName(e.target.value)} />
         <input className="input" placeholder="Телефон" value={phone} onChange={(e) => setPhone(e.target.value)} />
+        <input className="input" type="date" placeholder="Дата рождения" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
         <input className="input" placeholder="Адрес проживания" value={address} onChange={(e) => setAddress(e.target.value)} />
         <input className="input" placeholder="Паспорт серия" value={passportSeries} onChange={(e) => setPassportSeries(e.target.value)} />
         <input className="input" placeholder="Паспорт номер" value={passportNumber} onChange={(e) => setPassportNumber(e.target.value)} />
@@ -183,6 +188,7 @@ export default function ClientsPage() {
               <div className="grid gap-2 md:grid-cols-3">
                 <input disabled={archived} className="input" value={e.fullName ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], fullName: ev.target.value } }))} />
                 <input disabled={archived} className="input" value={e.phone ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], phone: ev.target.value } }))} />
+                <input disabled={archived} className="input" type="date" value={(e.birthDate as string) ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], birthDate: ev.target.value } }))} />
                 <input disabled={archived} className="input" value={e.address ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], address: ev.target.value } }))} />
                 <input disabled={archived} className="input" value={e.passportSeries ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], passportSeries: ev.target.value } }))} />
                 <input disabled={archived} className="input" value={e.passportNumber ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], passportNumber: ev.target.value } }))} />

@@ -78,21 +78,24 @@ export class DocumentsController {
         tenant: {
           select: {
             name: true,
+            address: true,
             dailyRateRub: true,
-            franchisee: { select: { name: true, companyName: true, signerFullName: true, bankDetails: true } },
+            franchisee: { select: { name: true, companyName: true, signerFullName: true, bankDetails: true, city: true } },
           },
         },
         client: {
           select: {
             fullName: true,
             phone: true,
+            birthDate: true,
             address: true,
             emergencyContactPhone: true,
             passportSeries: true,
             passportNumber: true,
           },
         },
-        bike: { select: { code: true, model: true } },
+        bike: { select: { code: true, model: true, frameNumber: true, motorWheelNumber: true } },
+        batteries: { include: { battery: { select: { code: true } } } },
       },
     })
 
@@ -115,18 +118,24 @@ export class DocumentsController {
       'contract.number': documentNo,
       'contract.date': this.fmt(new Date()),
       'tenant.name': rental.tenant.name,
+      'tenant.address': rental.tenant.address ?? '—',
       'franchisee.name': rental.tenant.franchisee?.name ?? '—',
       'franchisee.companyName': rental.tenant.franchisee?.companyName ?? '—',
       'franchisee.signerFullName': rental.tenant.franchisee?.signerFullName ?? '—',
       'franchisee.bankDetails': rental.tenant.franchisee?.bankDetails ?? '—',
+      'franchisee.city': rental.tenant.franchisee?.city ?? '—',
       'client.fullName': rental.client.fullName,
       'client.phone': rental.client.phone ?? '—',
+      'client.birthDate': rental.client.birthDate ? this.fmt(rental.client.birthDate) : '—',
       'client.address': rental.client.address ?? '—',
       'client.emergencyContactPhone': rental.client.emergencyContactPhone ?? '—',
       'client.passportSeries': rental.client.passportSeries ?? '—',
       'client.passportNumber': rental.client.passportNumber ?? '—',
       'bike.code': rental.bike.code,
       'bike.model': rental.bike.model ?? '—',
+      'bike.frameNumber': rental.bike.frameNumber ?? '—',
+      'bike.motorWheelNumber': rental.bike.motorWheelNumber ?? '—',
+      'batteries.numbers': rental.batteries.map((x) => x.battery.code).join(', ') || '—',
       'rental.startDate': this.fmt(rental.startDate),
       'rental.plannedEndDate': this.fmt(rental.plannedEndDate),
       'rental.days': String(days),
@@ -216,12 +225,15 @@ export class DocumentsController {
     <div class="row"><b>Название компании:</b> {{franchisee.companyName}}</div>
     <div class="row"><b>Подписант со стороны франчайзи:</b> {{franchisee.signerFullName}}</div>
     <div class="row"><b>Банковские реквизиты:</b> {{franchisee.bankDetails}}</div>
+    <div class="row"><b>Город франчайзи:</b> {{franchisee.city}}</div>
     <div class="row"><b>Точка выдачи:</b> {{tenant.name}}</div>
+    <div class="row"><b>Адрес возврата электровелосипеда:</b> {{tenant.address}}</div>
   </div>
 
   <div class="box">
     <div class="row"><b>Арендатор:</b> {{client.fullName}}</div>
     <div class="row"><b>Телефон:</b> {{client.phone}}</div>
+    <div class="row"><b>Дата рождения:</b> {{client.birthDate}}</div>
     <div class="row"><b>Адрес проживания:</b> {{client.address}}</div>
     <div class="row"><b>Телефон родственника/знакомого:</b> {{client.emergencyContactPhone}}</div>
     <div class="row"><b>Паспорт:</b> {{client.passportSeries}} {{client.passportNumber}}</div>
@@ -229,6 +241,9 @@ export class DocumentsController {
 
   <div class="box">
     <div class="row"><b>Транспорт:</b> {{bike.code}} ({{bike.model}})</div>
+    <div class="row"><b>Номер рамы:</b> {{bike.frameNumber}}</div>
+    <div class="row"><b>Номер мотор-колеса:</b> {{bike.motorWheelNumber}}</div>
+    <div class="row"><b>Номера АКБ:</b> {{batteries.numbers}}</div>
     <div class="row"><b>Срок аренды:</b> {{rental.startDate}} — {{rental.plannedEndDate}} ({{rental.days}} дн.)</div>
     <div class="row"><b>Тариф:</b> {{rental.dailyRateRub}} RUB/сутки</div>
     <div class="row"><b>Итого к оплате:</b> {{rental.totalRub}} RUB</div>

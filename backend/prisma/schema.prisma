@@ -91,6 +91,7 @@ model Franchisee {
   companyName    String?
   signerFullName String?
   bankDetails    String?
+  city           String?
   tenants        Tenant[]
   users          User[]
   isActive       Boolean  @default(true)
@@ -100,6 +101,7 @@ model Franchisee {
 model Tenant {
   id             String     @id @default(uuid())
   name           String
+  address        String?
   franchiseeId   String
   franchisee     Franchisee @relation(fields: [franchiseeId], references: [id])
   dailyRateRub   Float      @default(500)
@@ -198,6 +200,7 @@ model Client {
 
   fullName       String
   phone          String?
+  birthDate      DateTime?
   address        String?
   passportSeries        String?
   passportNumber        String?

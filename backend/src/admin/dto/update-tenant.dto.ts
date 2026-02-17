@@ -7,6 +7,10 @@ export class UpdateTenantDto {
   name?: string
 
   @IsOptional()
+  @IsString()
+  address?: string
+
+  @IsOptional()
   @IsBoolean()
   isActive?: boolean
 

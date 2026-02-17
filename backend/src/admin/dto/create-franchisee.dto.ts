@@ -18,6 +18,10 @@ export class CreateFranchiseeDto {
   bankDetails?: string
 
   @IsOptional()
+  @IsString()
+  city?: string
+
+  @IsOptional()
   @IsBoolean()
   isActive?: boolean
 }

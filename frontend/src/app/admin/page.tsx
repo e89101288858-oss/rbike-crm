@@ -22,7 +22,8 @@ export default function AdminPage() {
   const [newFranchiseeCompanyName, setNewFranchiseeCompanyName] = useState('')
   const [newFranchiseeSignerFullName, setNewFranchiseeSignerFullName] = useState('')
   const [newFranchiseeBankDetails, setNewFranchiseeBankDetails] = useState('')
-  const [newTenantDraft, setNewTenantDraft] = useState<Record<string, { name: string; dailyRateRub: number; minRentalDays: number }>>({})
+  const [newFranchiseeCity, setNewFranchiseeCity] = useState('')
+  const [newTenantDraft, setNewTenantDraft] = useState<Record<string, { name: string; address: string; dailyRateRub: number; minRentalDays: number }>>({})
   const [registrationRequests, setRegistrationRequests] = useState<any[]>([])
   const [approveMap, setApproveMap] = useState<Record<string, { franchiseeId: string; tenantId: string }>>({})
   const [users, setUsers] = useState<any[]>([])
@@ -104,6 +105,7 @@ export default function AdminPage() {
         companyName: newFranchiseeCompanyName.trim() || undefined,
         signerFullName: newFranchiseeSignerFullName.trim() || undefined,
         bankDetails: newFranchiseeBankDetails.trim() || undefined,
+        city: newFranchiseeCity.trim() || undefined,
         isActive: true,
       })
       pushAudit(`Создан франчайзи: ${newFranchiseeName.trim()}`)
@@ -111,6 +113,7 @@ export default function AdminPage() {
       setNewFranchiseeCompanyName('')
       setNewFranchiseeSignerFullName('')
       setNewFranchiseeBankDetails('')
+      setNewFranchiseeCity('')
       await loadAll()
       setSuccess('Сохранено')
     } catch (err) {
@@ -127,6 +130,7 @@ export default function AdminPage() {
         companyName: f.companyName || undefined,
         signerFullName: f.signerFullName || undefined,
         bankDetails: f.bankDetails || undefined,
+        city: f.city || undefined,
       })
       pushAudit(`Обновлён франчайзи: ${f.name}`)
       await loadAll()
@@ -167,18 +171,19 @@ export default function AdminPage() {
     setError('')
     setSuccess('')
     try {
-      const draft = newTenantDraft[franchiseeId] || { name: '', dailyRateRub: 500, minRentalDays: 7 }
+      const draft = newTenantDraft[franchiseeId] || { name: '', address: '', dailyRateRub: 500, minRentalDays: 7 }
       const name = draft.name.trim()
       if (!name) throw new Error('Укажи название точки')
       validateTenantSettings(Number(draft.dailyRateRub), Number(draft.minRentalDays))
       await api.adminCreateTenant(franchiseeId, {
         name,
+        address: draft.address.trim() || undefined,
         isActive: true,
         dailyRateRub: Number(draft.dailyRateRub),
         minRentalDays: Number(draft.minRentalDays),
       })
       pushAudit(`Создана точка: ${name}`)
-      setNewTenantDraft((p) => ({ ...p, [franchiseeId]: { name: '', dailyRateRub: 500, minRentalDays: 7 } }))
+      setNewTenantDraft((p) => ({ ...p, [franchiseeId]: { name: '', address: '', dailyRateRub: 500, minRentalDays: 7 } }))
       await loadAll()
       setSuccess('Сохранено')
     } catch (err) {
@@ -193,6 +198,7 @@ export default function AdminPage() {
       validateTenantSettings(Number(t.dailyRateRub), Number(t.minRentalDays))
       await api.adminUpdateTenant(t.id, {
         name: t.name,
+        address: t.address || undefined,
         dailyRateRub: Number(t.dailyRateRub),
         minRentalDays: Number(t.minRentalDays),
       })
@@ -449,6 +455,7 @@ export default function AdminPage() {
             <input className="input" placeholder="Название компании" value={newFranchiseeCompanyName} onChange={(e) => setNewFranchiseeCompanyName(e.target.value)} />
             <input className="input" placeholder="ФИО подписанта" value={newFranchiseeSignerFullName} onChange={(e) => setNewFranchiseeSignerFullName(e.target.value)} />
             <input className="input" placeholder="Банковские реквизиты" value={newFranchiseeBankDetails} onChange={(e) => setNewFranchiseeBankDetails(e.target.value)} />
+            <input className="input" placeholder="Город франчайзи" value={newFranchiseeCity} onChange={(e) => setNewFranchiseeCity(e.target.value)} />
             <button className="btn-primary md:col-span-2">Добавить франчайзи</button>
           </form>
 
@@ -460,6 +467,7 @@ export default function AdminPage() {
                   <input className="input" placeholder="Название компании" value={f.companyName || ''} onChange={(e) => setFranchisees((prev) => prev.map((x) => x.id === f.id ? { ...x, companyName: e.target.value } : x))} />
                   <input className="input" placeholder="ФИО подписанта" value={f.signerFullName || ''} onChange={(e) => setFranchisees((prev) => prev.map((x) => x.id === f.id ? { ...x, signerFullName: e.target.value } : x))} />
                   <input className="input" placeholder="Банковские реквизиты" value={f.bankDetails || ''} onChange={(e) => setFranchisees((prev) => prev.map((x) => x.id === f.id ? { ...x, bankDetails: e.target.value } : x))} />
+                  <input className="input" placeholder="Город франчайзи" value={f.city || ''} onChange={(e) => setFranchisees((prev) => prev.map((x) => x.id === f.id ? { ...x, city: e.target.value } : x))} />
                   <div className="md:col-span-2 flex flex-wrap items-center gap-2">
                     <span className={`badge ${f.isActive ? 'badge-ok' : 'badge-muted'}`}>{f.isActive ? 'Активен' : 'Архив'}</span>
                     <button className="btn" onClick={() => saveFranchisee(f)}>Сохранить</button>
@@ -472,9 +480,10 @@ export default function AdminPage() {
                   <div className="mb-2 font-semibold">Точки</div>
                   <p className="mb-2 text-xs text-gray-600">Тариф: от 1 до 100000 ₽ в сутки. Минимальный срок: 1–365 дней.</p>
                   <div className="mb-2 flex flex-wrap gap-2">
-                    <input className="input min-w-56" placeholder="Новая точка" value={newTenantDraft[f.id]?.name || ''} onChange={(e) => setNewTenantDraft((p) => ({ ...p, [f.id]: { ...(p[f.id] || { dailyRateRub: 500, minRentalDays: 7 }), name: e.target.value } }))} />
-                    <input className="input w-32" type="number" min={1} max={100000} placeholder="Тариф ₽" value={newTenantDraft[f.id]?.dailyRateRub ?? 500} onChange={(e) => setNewTenantDraft((p) => ({ ...p, [f.id]: { ...(p[f.id] || { name: '', minRentalDays: 7 }), dailyRateRub: Number(e.target.value) } }))} />
-                    <input className="input w-28" type="number" min={1} max={365} placeholder="Мин. дней" value={newTenantDraft[f.id]?.minRentalDays ?? 7} onChange={(e) => setNewTenantDraft((p) => ({ ...p, [f.id]: { ...(p[f.id] || { name: '', dailyRateRub: 500 }), minRentalDays: Number(e.target.value) } }))} />
+                    <input className="input min-w-56" placeholder="Новая точка" value={newTenantDraft[f.id]?.name || ''} onChange={(e) => setNewTenantDraft((p) => ({ ...p, [f.id]: { ...(p[f.id] || { address: '', dailyRateRub: 500, minRentalDays: 7 }), name: e.target.value } }))} />
+                    <input className="input min-w-72" placeholder="Адрес точки (возврата)" value={newTenantDraft[f.id]?.address || ''} onChange={(e) => setNewTenantDraft((p) => ({ ...p, [f.id]: { ...(p[f.id] || { name: '', dailyRateRub: 500, minRentalDays: 7 }), address: e.target.value } }))} />
+                    <input className="input w-32" type="number" min={1} max={100000} placeholder="Тариф ₽" value={newTenantDraft[f.id]?.dailyRateRub ?? 500} onChange={(e) => setNewTenantDraft((p) => ({ ...p, [f.id]: { ...(p[f.id] || { name: '', address: '', minRentalDays: 7 }), dailyRateRub: Number(e.target.value) } }))} />
+                    <input className="input w-28" type="number" min={1} max={365} placeholder="Мин. дней" value={newTenantDraft[f.id]?.minRentalDays ?? 7} onChange={(e) => setNewTenantDraft((p) => ({ ...p, [f.id]: { ...(p[f.id] || { name: '', address: '', dailyRateRub: 500 }), minRentalDays: Number(e.target.value) } }))} />
                     <button className="btn" onClick={() => createTenant(f.id)}>Добавить точку</button>
                   </div>
 
@@ -482,6 +491,7 @@ export default function AdminPage() {
                     {(tenantMap[f.id] || []).map((t) => (
                       <div key={t.id} className="flex flex-wrap items-center gap-2">
                         <input className="input min-w-56" value={t.name} onChange={(e) => setTenantMap((p) => ({ ...p, [f.id]: (p[f.id] || []).map((x: any) => x.id === t.id ? { ...x, name: e.target.value } : x) }))} />
+                        <input className="input min-w-72" placeholder="Адрес точки" value={t.address || ''} onChange={(e) => setTenantMap((p) => ({ ...p, [f.id]: (p[f.id] || []).map((x: any) => x.id === t.id ? { ...x, address: e.target.value } : x) }))} />
                         <label className="text-xs text-gray-600">₽/сутки</label>
                         <input className="input w-28" type="number" min={1} max={100000} value={t.dailyRateRub ?? 500} onChange={(e) => setTenantMap((p) => ({ ...p, [f.id]: (p[f.id] || []).map((x: any) => x.id === t.id ? { ...x, dailyRateRub: Number(e.target.value) } : x) }))} />
                         <label className="text-xs text-gray-600">мин. дней</label>

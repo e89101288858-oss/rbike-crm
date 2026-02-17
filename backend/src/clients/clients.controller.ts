@@ -25,6 +25,7 @@ export class ClientsController {
         tenantId,
         fullName: dto.fullName,
         phone: dto.phone ?? undefined,
+        birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
         address: dto.address ?? undefined,
         passportSeries: dto.passportSeries ?? undefined,
         passportNumber: dto.passportNumber ?? undefined,
@@ -43,6 +44,7 @@ export class ClientsController {
         tenantId,
         fullName: r.fullName?.trim(),
         phone: r.phone?.trim() || undefined,
+        birthDate: r.birthDate ? new Date(r.birthDate) : undefined,
         address: r.address?.trim() || undefined,
         passportSeries: r.passportSeries?.trim() || undefined,
         passportNumber: r.passportNumber?.trim() || undefined,
@@ -126,6 +128,7 @@ export class ClientsController {
       data: {
         ...(dto.fullName !== undefined && { fullName: dto.fullName }),
         ...(dto.phone !== undefined && { phone: dto.phone }),
+        ...(dto.birthDate !== undefined && { birthDate: dto.birthDate ? new Date(dto.birthDate) : null }),
         ...(dto.address !== undefined && { address: dto.address }),
         ...(dto.passportSeries !== undefined && { passportSeries: dto.passportSeries }),
         ...(dto.passportNumber !== undefined && { passportNumber: dto.passportNumber }),

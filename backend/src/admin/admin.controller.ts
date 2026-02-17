@@ -48,6 +48,7 @@ export class AdminController {
         companyName: dto.companyName ?? null,
         signerFullName: dto.signerFullName ?? null,
         bankDetails: dto.bankDetails ?? null,
+        city: dto.city ?? null,
         isActive: dto.isActive ?? true,
       },
     })
@@ -198,6 +199,7 @@ export class AdminController {
         ...(dto.companyName !== undefined && { companyName: dto.companyName }),
         ...(dto.signerFullName !== undefined && { signerFullName: dto.signerFullName }),
         ...(dto.bankDetails !== undefined && { bankDetails: dto.bankDetails }),
+        ...(dto.city !== undefined && { city: dto.city }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
       },
     })
@@ -207,6 +209,7 @@ export class AdminController {
         companyName: franchisee.companyName,
         signerFullName: franchisee.signerFullName,
         bankDetails: franchisee.bankDetails,
+        city: franchisee.city,
         isActive: franchisee.isActive,
       },
       to: {
@@ -214,6 +217,7 @@ export class AdminController {
         companyName: updated.companyName,
         signerFullName: updated.signerFullName,
         bankDetails: updated.bankDetails,
+        city: updated.city,
         isActive: updated.isActive,
       },
     })
@@ -236,6 +240,7 @@ export class AdminController {
       data: {
         franchiseeId,
         name: dto.name,
+        address: dto.address ?? null,
         isActive: dto.isActive ?? true,
         dailyRateRub: dto.dailyRateRub ?? 500,
         minRentalDays: dto.minRentalDays ?? 7,
@@ -300,6 +305,7 @@ export class AdminController {
       where: { id },
       data: {
         ...(dto.name !== undefined && { name: dto.name }),
+        ...(dto.address !== undefined && { address: dto.address }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
         ...(dto.dailyRateRub !== undefined && { dailyRateRub: dto.dailyRateRub }),
         ...(dto.minRentalDays !== undefined && { minRentalDays: Math.trunc(dto.minRentalDays) }),
@@ -308,12 +314,14 @@ export class AdminController {
     await this.audit(user.userId, 'UPDATE_TENANT', 'TENANT', id, {
       from: {
         name: tenant.name,
+        address: tenant.address,
         isActive: tenant.isActive,
         dailyRateRub: tenant.dailyRateRub,
         minRentalDays: tenant.minRentalDays,
       },
       to: {
         name: updated.name,
+        address: updated.address,
         isActive: updated.isActive,
         dailyRateRub: updated.dailyRateRub,
         minRentalDays: updated.minRentalDays,
