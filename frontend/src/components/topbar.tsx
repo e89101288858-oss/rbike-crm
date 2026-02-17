@@ -11,36 +11,36 @@ type UserRole = 'OWNER' | 'FRANCHISEE' | 'MANAGER' | 'MECHANIC' | ''
 
 type NavGroup = {
   title: string
-  items: Array<{ href: string; label: string; roles: UserRole[] }>
+  items: Array<{ href: string; label: string; icon: string; roles: UserRole[] }>
 }
 
 const nav: NavGroup[] = [
   {
     title: 'Операции',
     items: [
-      { href: '/dashboard', label: 'Дашборд', roles: ['OWNER', 'FRANCHISEE', 'MANAGER', 'MECHANIC'] },
-      { href: '/rentals', label: 'Аренды', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
-      { href: '/payments', label: 'Платежи', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
+      { href: '/dashboard', label: 'Дашборд', icon: '🏠', roles: ['OWNER', 'FRANCHISEE', 'MANAGER', 'MECHANIC'] },
+      { href: '/rentals', label: 'Аренды', icon: '🗓️', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
+      { href: '/payments', label: 'Платежи', icon: '💳', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
     ],
   },
   {
     title: 'Справочники',
     items: [
-      { href: '/clients', label: 'Курьеры', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
-      { href: '/bikes', label: 'Велосипеды', roles: ['OWNER', 'FRANCHISEE', 'MANAGER', 'MECHANIC'] },
+      { href: '/clients', label: 'Курьеры', icon: '🧑‍🔧', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
+      { href: '/bikes', label: 'Велосипеды', icon: '🚲', roles: ['OWNER', 'FRANCHISEE', 'MANAGER', 'MECHANIC'] },
     ],
   },
   {
     title: 'Аналитика',
     items: [
-      { href: '/finance', label: 'Финансы', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
+      { href: '/finance', label: 'Финансы', icon: '📈', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
     ],
   },
   {
     title: 'Инструменты',
     items: [
-      { href: '/import', label: 'Импорт CSV', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
-      { href: '/admin', label: 'Админ', roles: ['OWNER'] },
+      { href: '/import', label: 'Импорт CSV', icon: '📥', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
+      { href: '/admin', label: 'Админ', icon: '🛠️', roles: ['OWNER'] },
     ],
   },
 ]
@@ -51,6 +51,7 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
   const [tenantId, setTenantIdState] = useState(getTenantId())
   const [role, setRole] = useState<UserRole>('')
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
 
   useEffect(() => {
     ;(async () => {
@@ -61,28 +62,45 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
         setRole('')
       }
     })()
+    setCollapsed(localStorage.getItem('rbike_sidebar_collapsed') === '1')
   }, [])
 
   const visibleGroups = nav
     .map((g) => ({ ...g, items: g.items.filter((i) => !role || i.roles.includes(role)) }))
     .filter((g) => g.items.length > 0)
 
+  const asideClass = `sidebar ${collapsed ? 'sidebar-collapsed' : ''} ${mobileOpen ? 'sidebar-open' : ''}`
+
   return (
     <>
+      {mobileOpen && <div className="sidebar-backdrop md:hidden" onClick={() => setMobileOpen(false)} />}
       <button className="sidebar-toggle btn md:hidden" onClick={() => setMobileOpen((v) => !v)}>
         {mobileOpen ? 'Закрыть меню' : 'Меню'}
       </button>
 
-      <aside className={`sidebar ${mobileOpen ? 'sidebar-open' : ''}`}>
+      <aside className={asideClass}>
         <div className="sidebar-head">
-          <div className="text-lg font-bold">RBike CRM</div>
-          {!!role && <div className="text-xs text-gray-500">Роль: {role}</div>}
+          <div className="flex items-center justify-between gap-2">
+            {!collapsed && <div className="text-lg font-bold">RBike CRM</div>}
+            <button
+              className="btn hidden md:inline-flex"
+              onClick={() => {
+                const next = !collapsed
+                setCollapsed(next)
+                localStorage.setItem('rbike_sidebar_collapsed', next ? '1' : '0')
+              }}
+              title={collapsed ? 'Развернуть' : 'Свернуть'}
+            >
+              {collapsed ? '»' : '«'}
+            </button>
+          </div>
+          {!!role && !collapsed && <div className="text-xs text-gray-500">Роль: {role}</div>}
         </div>
 
         <nav className="sidebar-nav">
           {visibleGroups.map((g) => (
             <div key={g.title} className="sidebar-group">
-              <div className="sidebar-group-title">{g.title}</div>
+              {!collapsed && <div className="sidebar-group-title">{g.title}</div>}
               <div className="space-y-1">
                 {g.items.map((l) => (
                   <Link
@@ -90,8 +108,10 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
                     href={l.href}
                     className={pathname === l.href ? 'btn-primary w-full text-left' : 'btn w-full text-left'}
                     onClick={() => setMobileOpen(false)}
+                    title={l.label}
                   >
-                    {l.label}
+                    <span className="mr-2">{l.icon}</span>
+                    {!collapsed && l.label}
                   </Link>
                 ))}
               </div>
@@ -110,6 +130,7 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
                 setTenantId(value)
                 router.refresh()
               }}
+              title="Точка"
             >
               {tenants.map((t) => (
                 <option key={t.id} value={t.id}>
@@ -137,8 +158,10 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
               clearTenantId()
               router.push('/login')
             }}
+            title="Выход"
           >
-            Выход
+            <span className="mr-2">↩</span>
+            {!collapsed && 'Выход'}
           </button>
         </div>
       </aside>

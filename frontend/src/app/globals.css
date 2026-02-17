@@ -30,6 +30,7 @@ body {
 
 .with-sidebar {
   margin-left: 270px;
+  transition: margin-left .2s ease;
 }
 
 .sidebar {
@@ -52,6 +53,12 @@ body {
 .sidebar-group-title { font-size: 11px; color: #6b7280; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .04em; }
 .sidebar-foot { border-top: 1px solid #e5e7eb; padding-top: 10px; display: grid; gap: 8px; }
 .sidebar-toggle { position: fixed; left: 12px; top: 10px; z-index: 50; }
+.sidebar-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.3); z-index: 35; }
+.sidebar-collapsed { width: 76px; }
+
+@media (min-width: 768px) {
+  body:has(.sidebar-collapsed) .with-sidebar { margin-left: 96px; }
+}
 
 @media (max-width: 767px) {
   .with-sidebar { margin-left: 0; padding-top: 54px; }
