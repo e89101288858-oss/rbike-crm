@@ -1,6 +1,6 @@
 'use client'
 
-import { FormEvent, useEffect, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api, Battery, Bike, Client, Rental } from '@/lib/api'
@@ -20,7 +20,8 @@ export default function RentalsPage() {
   const [startDate, setStartDate] = useState('')
   const [plannedEndDate, setPlannedEndDate] = useState('')
   const [batteryCount, setBatteryCount] = useState(2)
-  const [selectedBatteryIds, setSelectedBatteryIds] = useState<string[]>([])
+  const [battery1Id, setBattery1Id] = useState('')
+  const [battery2Id, setBattery2Id] = useState('')
   const [extendMap, setExtendMap] = useState<Record<string, string>>({})
   const [journalMap, setJournalMap] = useState<Record<string, any[]>>({})
   const [dailyRateRub, setDailyRateRub] = useState(500)
@@ -45,24 +46,20 @@ export default function RentalsPage() {
     }
   }
 
+  const selectedBatteryIds = useMemo(() => {
+    const arr = [battery1Id, battery2Id].filter(Boolean)
+    return batteryCount === 1 ? arr.slice(0, 1) : arr.slice(0, 2)
+  }, [battery1Id, battery2Id, batteryCount])
+
   async function createRental(e: FormEvent) {
     e.preventDefault()
     setError('')
     try {
-      if (!clientId || !bikeId || !startDate || !plannedEndDate) {
-        throw new Error('Заполни все поля аренды')
-      }
-
-      if (selectedBatteryIds.length < 1) {
-        throw new Error('Для выдачи нужен минимум 1 АКБ')
-      }
-      if (selectedBatteryIds.length !== batteryCount) {
-        throw new Error(`Выбери ${batteryCount} АКБ`) 
-      }
-
-      if (diffDays(startDate, plannedEndDate) < minRentalDays) {
-        throw new Error(`Минимальный срок аренды — ${minRentalDays} дней`)
-      }
+      if (!clientId || !bikeId || !startDate || !plannedEndDate) throw new Error('Заполни все поля аренды')
+      if (!battery1Id) throw new Error('Выбери АКБ 1')
+      if (batteryCount === 2 && !battery2Id) throw new Error('Выбери АКБ 2')
+      if (battery1Id && battery2Id && battery1Id === battery2Id) throw new Error('АКБ 1 и АКБ 2 должны отличаться')
+      if (diffDays(startDate, plannedEndDate) < minRentalDays) throw new Error(`Минимальный срок аренды — ${minRentalDays} дней`)
 
       await api.createRental({
         clientId,
@@ -72,7 +69,8 @@ export default function RentalsPage() {
         batteryIds: selectedBatteryIds,
       })
 
-      setSelectedBatteryIds([])
+      setBattery1Id('')
+      setBattery2Id('')
       await loadAll()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка создания аренды')
@@ -83,9 +81,7 @@ export default function RentalsPage() {
     setError('')
     try {
       const days = Number(extendMap[rentalId] || 0)
-      if (!Number.isInteger(days) || days <= 0) {
-        throw new Error('Введите дни продления (целое > 0)')
-      }
+      if (!Number.isInteger(days) || days <= 0) throw new Error('Введите дни продления (целое > 0)')
       await api.extendRental(rentalId, days)
       await loadAll()
     } catch (err) {
@@ -114,18 +110,12 @@ export default function RentalsPage() {
   }
 
   useEffect(() => {
-    if (!getToken()) {
-      router.replace('/login')
-      return
-    }
-
+    if (!getToken()) return router.replace('/login')
     ;(async () => {
       const myTenants = await api.myTenants()
       setTenants(myTenants)
       const currentTenantId = getTenantId() || myTenants[0]?.id || ''
-      if (!getTenantId() && myTenants.length > 0) {
-        setTenantId(myTenants[0].id)
-      }
+      if (!getTenantId() && myTenants.length > 0) setTenantId(myTenants[0].id)
       const currentTenant = myTenants.find((t) => t.id === currentTenantId)
       setDailyRateRub(Number(currentTenant?.dailyRateRub ?? 500))
       setMinRentalDays(Number(currentTenant?.minRentalDays ?? 7))
@@ -147,28 +137,33 @@ export default function RentalsPage() {
           <option value="">Курьер</option>
           {clients.map((c) => <option key={c.id} value={c.id}>{c.fullName}</option>)}
         </select>
-        <select className="rounded border p-2" value={bikeId} onChange={(e) => { setBikeId(e.target.value); setSelectedBatteryIds([]) }}>
+        <select className="rounded border p-2" value={bikeId} onChange={(e) => { setBikeId(e.target.value); setBattery1Id(''); setBattery2Id('') }}>
           <option value="">Велосипед</option>
           {bikes.filter((b) => b.status === 'AVAILABLE').map((b) => <option key={b.id} value={b.id}>{b.code}</option>)}
         </select>
         <input type="date" className="rounded border p-2" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
         <input type="date" className="rounded border p-2" value={plannedEndDate} onChange={(e) => setPlannedEndDate(e.target.value)} />
-        <div className="rounded border p-2 md:col-span-4">
-          <div className="mb-2 flex items-center gap-3 text-sm">
-            <span>Количество АКБ к выдаче:</span>
-            <label className="flex items-center gap-1"><input type="radio" checked={batteryCount === 1} onChange={() => { setBatteryCount(1); setSelectedBatteryIds((p) => p.slice(0, 1)) }} /> 1</label>
+
+        <div className="md:col-span-4 rounded border p-2 text-sm">
+          <div className="mb-2 flex items-center gap-3">
+            <span>АКБ к выдаче:</span>
+            <label className="flex items-center gap-1"><input type="radio" checked={batteryCount === 1} onChange={() => { setBatteryCount(1); setBattery2Id('') }} /> 1</label>
             <label className="flex items-center gap-1"><input type="radio" checked={batteryCount === 2} onChange={() => setBatteryCount(2)} /> 2</label>
-            <button type="button" className="btn" onClick={() => setSelectedBatteryIds(availableBatteries.slice(0, batteryCount).map((b) => b.id))}>Автоподбор</button>
           </div>
-          <select
-            multiple
-            className="w-full rounded border p-2"
-            value={selectedBatteryIds}
-            onChange={(e) => setSelectedBatteryIds(Array.from(e.target.selectedOptions).map((o) => o.value).slice(0, 2))}
-          >
-            {availableBatteries.map((b) => <option key={b.id} value={b.id}>{b.code}{b.serialNumber ? ` (${b.serialNumber})` : ''}{b.bike?.code ? ` — сейчас на ${b.bike.code}` : ''}</option>)}
-          </select>
+          <div className="grid gap-2 md:grid-cols-2">
+            <select className="rounded border p-2" value={battery1Id} onChange={(e) => setBattery1Id(e.target.value)}>
+              <option value="">АКБ 1</option>
+              {availableBatteries.map((b) => <option key={b.id} value={b.id}>{b.code}{b.serialNumber ? ` (${b.serialNumber})` : ''}</option>)}
+            </select>
+            {batteryCount === 2 && (
+              <select className="rounded border p-2" value={battery2Id} onChange={(e) => setBattery2Id(e.target.value)}>
+                <option value="">АКБ 2</option>
+                {availableBatteries.filter((b) => b.id !== battery1Id).map((b) => <option key={b.id} value={b.id}>{b.code}{b.serialNumber ? ` (${b.serialNumber})` : ''}</option>)}
+              </select>
+            )}
+          </div>
         </div>
+
         <button
           disabled={!clientId || !bikeId || !startDate || !plannedEndDate || selectedBatteryIds.length !== batteryCount || rentalDays < minRentalDays}
           className="rounded bg-black p-2 text-white disabled:opacity-50 md:col-span-4"
@@ -179,7 +174,7 @@ export default function RentalsPage() {
 
       {startDate && plannedEndDate && (
         <p className="mb-3 text-sm text-gray-600">
-          Тариф: {formatRub(dailyRateRub)} / сутки · Срок: {rentalDays} дн. (минимум {minRentalDays}) · АКБ: выбрано {selectedBatteryIds.length} из {batteryCount} · Сумма: {formatRub(projectedTotalRub)}
+          Тариф: {formatRub(dailyRateRub)} / сутки · Срок: {rentalDays} дн. (минимум {minRentalDays}) · АКБ: {selectedBatteryIds.length}/{batteryCount} · Сумма: {formatRub(projectedTotalRub)}
         </p>
       )}
 
@@ -193,13 +188,7 @@ export default function RentalsPage() {
             <div>Тариф: {formatRub(dailyRateRub)} / сутки</div>
             <div>АКБ: {r.batteries?.map((x) => x.battery.code).join(', ') || '—'}</div>
             <div className="mt-2 flex items-center gap-2">
-              <input
-                type="number"
-                className="w-40 rounded border p-1"
-                placeholder="Дней продления"
-                value={extendMap[r.id] ?? ''}
-                onChange={(e) => setExtendMap((prev) => ({ ...prev, [r.id]: e.target.value }))}
-              />
+              <input type="number" className="w-40 rounded border p-1" placeholder="Дней продления" value={extendMap[r.id] ?? ''} onChange={(e) => setExtendMap((prev) => ({ ...prev, [r.id]: e.target.value }))} />
               <button className="rounded border px-2 py-1" onClick={() => extendRental(r.id)}>Продлить</button>
               <button className="rounded border px-2 py-1" onClick={() => loadJournal(r.id)}>Журнал</button>
               <button className="rounded border border-red-300 px-2 py-1 text-red-700" onClick={() => closeRental(r.id)}>Завершить досрочно</button>
