@@ -233,6 +233,18 @@ export const api = {
   closeRental: (rentalId: string) =>
     request<any>(`/rentals/${rentalId}/close`, { method: 'POST' }, true),
 
+  addRentalBattery: (rentalId: string, batteryId: string) =>
+    request<any>(`/rentals/${rentalId}/batteries`, {
+      method: 'POST',
+      body: JSON.stringify({ batteryId }),
+    }, true),
+
+  replaceRentalBattery: (rentalId: string, removeBatteryId: string, addBatteryId: string) =>
+    request<any>(`/rentals/${rentalId}/batteries/replace`, {
+      method: 'POST',
+      body: JSON.stringify({ removeBatteryId, addBatteryId }),
+    }, true),
+
   rentalJournal: (rentalId: string) => request<any>(`/rentals/${rentalId}/journal`, undefined, true),
 
   payments: (query = '') => request<any[]>(`/payments${query ? `?${query}` : ''}`, undefined, true),

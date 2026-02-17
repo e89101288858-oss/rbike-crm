@@ -19,8 +19,10 @@ import { Roles } from '../common/decorators/roles.decorator'
 import { RolesGuard } from '../common/guards/roles.guard'
 import { TenantGuard } from '../common/guards/tenant.guard'
 import { PrismaService } from '../prisma/prisma.service'
+import { AddRentalBatteryDto } from './dto/add-rental-battery.dto'
 import { CreateRentalDto } from './dto/create-rental.dto'
 import { ExtendRentalDto } from './dto/extend-rental.dto'
+import { ReplaceRentalBatteryDto } from './dto/replace-rental-battery.dto'
 import { UpdateWeeklyRateDto } from './dto/update-weekly-rate.dto'
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24
@@ -297,6 +299,111 @@ export class RentalsController {
     })
   }
 
+  @Post(':id/batteries')
+  async addBattery(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @CurrentUser() user: JwtUser,
+    @Body() dto: AddRentalBatteryDto,
+  ) {
+    const tenantId = req.tenantId!
+
+    const rental = await this.prisma.rental.findFirst({
+      where: { id, tenantId, status: RentalStatus.ACTIVE },
+      select: { id: true, bikeId: true },
+    })
+    if (!rental) throw new NotFoundException('Active rental not found')
+
+    const current = await this.prisma.rentalBattery.findMany({
+      where: { tenantId, rentalId: id },
+      select: { batteryId: true },
+    })
+    if (current.some((x) => x.batteryId === dto.batteryId)) {
+      throw new BadRequestException('Battery already assigned to rental')
+    }
+    if (current.length >= 2) {
+      throw new BadRequestException('Cannot assign more than 2 batteries')
+    }
+
+    const battery = await this.prisma.battery.findFirst({
+      where: { id: dto.batteryId, tenantId, isActive: true },
+      select: { id: true, status: true },
+    })
+    if (!battery) throw new NotFoundException('Battery not found')
+    if (battery.status !== 'AVAILABLE') throw new BadRequestException('Battery is not AVAILABLE')
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.rentalBattery.create({ data: { tenantId, rentalId: id, batteryId: dto.batteryId } })
+      await tx.battery.updateMany({ where: { tenantId, id: dto.batteryId }, data: { status: 'RENTED', bikeId: rental.bikeId } })
+      await tx.rentalChange.create({
+        data: {
+          tenantId,
+          rentalId: id,
+          type: RentalChangeType.SHORTEN,
+          daysDelta: 0,
+          reason: `АКБ: добавлена ${dto.batteryId}`,
+          createdById: user.userId,
+        },
+      })
+    })
+
+    return { rentalId: id, addedBatteryId: dto.batteryId }
+  }
+
+  @Post(':id/batteries/replace')
+  async replaceBattery(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @CurrentUser() user: JwtUser,
+    @Body() dto: ReplaceRentalBatteryDto,
+  ) {
+    const tenantId = req.tenantId!
+
+    if (dto.removeBatteryId === dto.addBatteryId) {
+      throw new BadRequestException('removeBatteryId and addBatteryId must differ')
+    }
+
+    const rental = await this.prisma.rental.findFirst({
+      where: { id, tenantId, status: RentalStatus.ACTIVE },
+      select: { id: true, bikeId: true },
+    })
+    if (!rental) throw new NotFoundException('Active rental not found')
+
+    const removeLink = await this.prisma.rentalBattery.findFirst({
+      where: { tenantId, rentalId: id, batteryId: dto.removeBatteryId },
+      select: { id: true },
+    })
+    if (!removeLink) throw new BadRequestException('Removed battery is not assigned to rental')
+
+    const addBattery = await this.prisma.battery.findFirst({
+      where: { id: dto.addBatteryId, tenantId, isActive: true },
+      select: { id: true, status: true },
+    })
+    if (!addBattery) throw new NotFoundException('Added battery not found')
+    if (addBattery.status !== 'AVAILABLE') throw new BadRequestException('Added battery is not AVAILABLE')
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.rentalBattery.deleteMany({ where: { tenantId, rentalId: id, batteryId: dto.removeBatteryId } })
+      await tx.battery.updateMany({ where: { tenantId, id: dto.removeBatteryId }, data: { status: 'AVAILABLE', bikeId: null } })
+
+      await tx.rentalBattery.create({ data: { tenantId, rentalId: id, batteryId: dto.addBatteryId } })
+      await tx.battery.updateMany({ where: { tenantId, id: dto.addBatteryId }, data: { status: 'RENTED', bikeId: rental.bikeId } })
+
+      await tx.rentalChange.create({
+        data: {
+          tenantId,
+          rentalId: id,
+          type: RentalChangeType.SHORTEN,
+          daysDelta: 0,
+          reason: `АКБ: замена ${dto.removeBatteryId} -> ${dto.addBatteryId}`,
+          createdById: user.userId,
+        },
+      })
+    })
+
+    return { rentalId: id, replaced: true }
+  }
+
   @Get(':id/journal')
   async journal(@Req() req: Request, @Param('id') id: string) {
     const tenantId = req.tenantId!
@@ -341,6 +448,8 @@ export class RentalsController {
         events.push({ at: c.createdAt, type: 'ПРОДЛЕНА', details: `+${c.daysDelta} дн.` })
       } else if (c.type === RentalChangeType.CLOSE) {
         events.push({ at: c.createdAt, type: 'ЗАКРЫТА_ДОСРОЧНО', details: c.reason ?? '' })
+      } else if (c.reason?.startsWith('АКБ:')) {
+        events.push({ at: c.createdAt, type: 'АКБ', details: c.reason })
       }
     }
 

@@ -23,6 +23,9 @@ export default function RentalsPage() {
   const [battery1Id, setBattery1Id] = useState('')
   const [battery2Id, setBattery2Id] = useState('')
   const [extendMap, setExtendMap] = useState<Record<string, string>>({})
+  const [addBatteryMap, setAddBatteryMap] = useState<Record<string, string>>({})
+  const [replaceFromMap, setReplaceFromMap] = useState<Record<string, string>>({})
+  const [replaceToMap, setReplaceToMap] = useState<Record<string, string>>({})
   const [journalMap, setJournalMap] = useState<Record<string, any[]>>({})
   const [dailyRateRub, setDailyRateRub] = useState(500)
   const [minRentalDays, setMinRentalDays] = useState(7)
@@ -96,6 +99,34 @@ export default function RentalsPage() {
       await loadAll()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка закрытия аренды')
+    }
+  }
+
+  async function addBatteryToRental(rentalId: string) {
+    setError('')
+    try {
+      const batteryId = addBatteryMap[rentalId]
+      if (!batteryId) throw new Error('Выбери АКБ для добавления')
+      await api.addRentalBattery(rentalId, batteryId)
+      setAddBatteryMap((p) => ({ ...p, [rentalId]: '' }))
+      await loadAll()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка добавления АКБ в аренду')
+    }
+  }
+
+  async function replaceBatteryInRental(rentalId: string) {
+    setError('')
+    try {
+      const removeBatteryId = replaceFromMap[rentalId]
+      const addBatteryId = replaceToMap[rentalId]
+      if (!removeBatteryId || !addBatteryId) throw new Error('Выбери АКБ для замены')
+      await api.replaceRentalBattery(rentalId, removeBatteryId, addBatteryId)
+      setReplaceFromMap((p) => ({ ...p, [rentalId]: '' }))
+      setReplaceToMap((p) => ({ ...p, [rentalId]: '' }))
+      await loadAll()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка замены АКБ в аренде')
     }
   }
 
@@ -194,12 +225,45 @@ export default function RentalsPage() {
             <div className="font-medium">{r.client.fullName} — {r.bike.code}</div>
             <div>Период: {formatDate(r.startDate)} → {formatDate(r.plannedEndDate)}</div>
             <div>Тариф: {formatRub(dailyRateRub)} / сутки</div>
-            <div>АКБ: {r.batteries?.map((x) => x.battery.code).join(', ') || '—'}</div>
+            <div>АКБ: {r.batteries?.map((x) => x.battery.code).join(', ') || '—'} ({r.batteries?.length || 0}/2)</div>
+            <div>Осталось дней: {Math.max(0, diffDays(new Date().toISOString(), r.plannedEndDate))}</div>
             <div className="mt-2 flex items-center gap-2">
               <input type="number" className="w-40 rounded border p-1" placeholder="Дней продления" value={extendMap[r.id] ?? ''} onChange={(e) => setExtendMap((prev) => ({ ...prev, [r.id]: e.target.value }))} />
               <button className="rounded border px-2 py-1" onClick={() => extendRental(r.id)}>Продлить</button>
               <button className="rounded border px-2 py-1" onClick={() => loadJournal(r.id)}>Журнал</button>
               <button className="rounded border border-red-300 px-2 py-1 text-red-700" onClick={() => closeRental(r.id)}>Завершить досрочно</button>
+            </div>
+
+            <div className="mt-2 grid gap-2 md:grid-cols-2">
+              {(r.batteries?.length || 0) < 2 && (
+                <div className="rounded border p-2">
+                  <div className="mb-1 text-xs text-gray-600">Довыдача АКБ</div>
+                  <div className="flex gap-2">
+                    <select className="rounded border p-1 w-full" value={addBatteryMap[r.id] || ''} onChange={(e) => setAddBatteryMap((p) => ({ ...p, [r.id]: e.target.value }))}>
+                      <option value="">Выбери АКБ</option>
+                      {batteries.filter((b) => b.status === 'AVAILABLE').map((b) => <option key={b.id} value={b.id}>{b.code}</option>)}
+                    </select>
+                    <button className="rounded border px-2 py-1" onClick={() => addBatteryToRental(r.id)}>Выдать</button>
+                  </div>
+                </div>
+              )}
+
+              {(r.batteries?.length || 0) > 0 && (
+                <div className="rounded border p-2">
+                  <div className="mb-1 text-xs text-gray-600">Замена АКБ</div>
+                  <div className="grid gap-2 md:grid-cols-3">
+                    <select className="rounded border p-1" value={replaceFromMap[r.id] || ''} onChange={(e) => setReplaceFromMap((p) => ({ ...p, [r.id]: e.target.value }))}>
+                      <option value="">Снять</option>
+                      {(r.batteries || []).map((x) => <option key={x.battery.id} value={x.battery.id}>{x.battery.code}</option>)}
+                    </select>
+                    <select className="rounded border p-1" value={replaceToMap[r.id] || ''} onChange={(e) => setReplaceToMap((p) => ({ ...p, [r.id]: e.target.value }))}>
+                      <option value="">Выдать</option>
+                      {batteries.filter((b) => b.status === 'AVAILABLE').map((b) => <option key={b.id} value={b.id}>{b.code}</option>)}
+                    </select>
+                    <button className="rounded border px-2 py-1" onClick={() => replaceBatteryInRental(r.id)}>Заменить</button>
+                  </div>
+                </div>
+              )}
             </div>
             {!!journalMap[r.id]?.length && (
               <div className="mt-3 rounded border p-2">
