@@ -120,3 +120,15 @@ body {
 .alert-success {
   @apply mb-4 rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-700;
 }
+
+.section-title {
+  @apply mb-3 text-base font-semibold text-gray-800;
+}
+
+.soft-card {
+  @apply rounded-xl border border-gray-200 bg-gradient-to-b from-white to-gray-50/70 p-3 shadow-sm;
+}
+
+.muted-chip {
+  @apply inline-flex items-center rounded-full border border-gray-200 bg-white px-2.5 py-1 text-xs text-gray-600;
+}

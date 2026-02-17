@@ -338,10 +338,23 @@ export default function AdminPage() {
     return matchesSearch && matchesRole && matchesActive
   })
 
+  const pendingCount = registrationRequests.filter((r) => r.status === 'PENDING').length
+  const activeUsersCount = users.filter((u) => u.isActive).length
+
   return (
     <main className="page with-sidebar">
       <Topbar tenants={tenants} />
-      <h1 className="mb-4 text-2xl font-bold">Админ-панель владельца</h1>
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">Админ-панель владельца</h1>
+          <p className="text-sm text-gray-600">Управление франчайзи, точками и доступами</p>
+        </div>
+        <div className="flex gap-2">
+          <span className="muted-chip">Заявок: {pendingCount}</span>
+          <span className="muted-chip">Пользователей: {users.length}</span>
+          <span className="muted-chip">Активных: {activeUsersCount}</span>
+        </div>
+      </div>
 
       {error && <p className="alert">{error}</p>}
       {success && <p className="alert-success">{success}</p>}
@@ -351,13 +364,13 @@ export default function AdminPage() {
       ) : (
         <>
           <section className="panel mb-4 text-sm">
-            <h2 className="mb-2 font-semibold">Заявки на регистрацию</h2>
+            <h2 className="section-title">Заявки на регистрацию</h2>
             <div className="space-y-2">
               {registrationRequests.filter((r) => r.status === 'PENDING').map((r) => {
                 const selectedFranchiseeId = approveMap[r.id]?.franchiseeId || ''
                 const availableTenants = selectedFranchiseeId ? (tenantMap[selectedFranchiseeId] || []) : []
                 return (
-                  <div key={r.id} className="rounded border p-2">
+                  <div key={r.id} className="soft-card">
                     <div className="mb-2">{r.email}{r.fullName ? ` · ${r.fullName}` : ''}{r.phone ? ` · ${r.phone}` : ''}</div>
                     <div className="grid gap-2 md:grid-cols-3">
                       <select className="select" value={selectedFranchiseeId} onChange={(e) => setApproveMap((p) => ({ ...p, [r.id]: { franchiseeId: e.target.value, tenantId: '' } }))}>
@@ -396,7 +409,7 @@ export default function AdminPage() {
                   <button className="btn border-red-300 text-red-700" onClick={() => deleteFranchisee(f)}>Удалить</button>
                 </div>
 
-                <div className="rounded-xl border border-gray-200 p-3">
+                <div className="soft-card">
                   <div className="mb-2 font-semibold">Точки</div>
                   <p className="mb-2 text-xs text-gray-600">Тариф: от 1 до 100000 ₽ в сутки. Минимальный срок: 1–365 дней.</p>
                   <div className="mb-2 flex flex-wrap gap-2">
@@ -428,7 +441,7 @@ export default function AdminPage() {
           </div>
 
           <section className="panel mt-4 text-sm">
-            <h2 className="mb-2 font-semibold">Пользователи и роли</h2>
+            <h2 className="section-title">Пользователи и роли</h2>
 
             <form onSubmit={createUser} className="mb-3 grid gap-2 md:grid-cols-5">
               <input className="input" placeholder="Email" value={newUser.email} onChange={(e) => setNewUser((p) => ({ ...p, email: e.target.value }))} />
@@ -469,7 +482,7 @@ export default function AdminPage() {
                   : []
 
                 return (
-                  <div key={u.id} className="rounded border p-2">
+                  <div key={u.id} className="soft-card">
                     <div className="mb-2 flex flex-wrap items-center gap-2">
                       <span className="font-medium">{u.email}</span>
                       <span className="text-xs text-gray-500">{new Date(u.createdAt).toLocaleString('ru-RU')}</span>
@@ -509,7 +522,7 @@ export default function AdminPage() {
                       <button className="btn" onClick={() => resetUserPassword(u)} disabled={u.role === 'OWNER'}>Сбросить пароль</button>
                     </div>
 
-                    <div className="mt-2 rounded border p-2">
+                    <div className="mt-2 rounded-xl border border-gray-200 bg-white/80 p-2.5">
                       <div className="mb-1 text-xs text-gray-600">Привязка точек (только MANAGER/MECHANIC)</div>
                       <div className="mb-2 flex flex-wrap gap-2">
                         {(userTenantMap[u.id] || []).map((tenantId) => {
@@ -539,7 +552,7 @@ export default function AdminPage() {
           </section>
 
           <section className="panel mt-4 text-sm">
-            <h2 className="mb-2 font-semibold">Аудит действий (БД)</h2>
+            <h2 className="section-title">Аудит действий (БД)</h2>
             <div className="space-y-1 text-gray-700">
               {auditRows.map((a) => (
                 <div key={a.id}>
