@@ -32,9 +32,7 @@ const nav: NavGroup[] = [
   },
   {
     title: 'Аналитика',
-    items: [
-      { href: '/finance', label: 'Финансы', icon: '📈', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
-    ],
+    items: [{ href: '/finance', label: 'Финансы', icon: '📈', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] }],
   },
   {
     title: 'Инструменты',
@@ -51,7 +49,6 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
   const [tenantId, setTenantIdState] = useState(getTenantId())
   const [role, setRole] = useState<UserRole>('')
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [collapsed, setCollapsed] = useState(false)
 
   useEffect(() => {
     ;(async () => {
@@ -62,14 +59,11 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
         setRole('')
       }
     })()
-    setCollapsed(localStorage.getItem('rbike_sidebar_collapsed') === '1')
   }, [])
 
   const visibleGroups = nav
     .map((g) => ({ ...g, items: g.items.filter((i) => !role || i.roles.includes(role)) }))
     .filter((g) => g.items.length > 0)
-
-  const asideClass = `sidebar ${collapsed ? 'sidebar-collapsed' : ''} ${mobileOpen ? 'sidebar-open' : ''}`
 
   return (
     <>
@@ -78,29 +72,16 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
         {mobileOpen ? 'Закрыть меню' : 'Меню'}
       </button>
 
-      <aside className={asideClass}>
+      <aside className={`sidebar ${mobileOpen ? 'sidebar-open' : ''}`}>
         <div className="sidebar-head">
-          <div className="flex items-center justify-between gap-2">
-            {!collapsed && <div className="text-lg font-bold">RBike CRM</div>}
-            <button
-              className="btn hidden md:inline-flex"
-              onClick={() => {
-                const next = !collapsed
-                setCollapsed(next)
-                localStorage.setItem('rbike_sidebar_collapsed', next ? '1' : '0')
-              }}
-              title={collapsed ? 'Развернуть' : 'Свернуть'}
-            >
-              {collapsed ? '»' : '«'}
-            </button>
-          </div>
-          {!!role && !collapsed && <div className="text-xs text-gray-500">Роль: {role}</div>}
+          <div className="text-lg font-bold">RBike CRM</div>
+          {!!role && <div className="text-xs text-gray-500">Роль: {role}</div>}
         </div>
 
         <nav className="sidebar-nav">
           {visibleGroups.map((g) => (
             <div key={g.title} className="sidebar-group">
-              {!collapsed && <div className="sidebar-group-title">{g.title}</div>}
+              <div className="sidebar-group-title">{g.title}</div>
               <div className="space-y-1">
                 {g.items.map((l) => (
                   <Link
@@ -108,10 +89,9 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
                     href={l.href}
                     className={pathname === l.href ? 'btn-primary w-full text-left' : 'btn w-full text-left'}
                     onClick={() => setMobileOpen(false)}
-                    title={l.label}
                   >
                     <span className="mr-2">{l.icon}</span>
-                    {!collapsed && l.label}
+                    {l.label}
                   </Link>
                 ))}
               </div>
@@ -130,7 +110,6 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
                 setTenantId(value)
                 router.refresh()
               }}
-              title="Точка"
             >
               {tenants.map((t) => (
                 <option key={t.id} value={t.id}>
@@ -158,10 +137,8 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
               clearTenantId()
               router.push('/login')
             }}
-            title="Выход"
           >
-            <span className="mr-2">↩</span>
-            {!collapsed && 'Выход'}
+            Выход
           </button>
         </div>
       </aside>
