@@ -3,13 +3,12 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
-import { api, Battery, Bike } from '@/lib/api'
+import { api, Bike } from '@/lib/api'
 import { getTenantId, getToken, setTenantId } from '@/lib/auth'
 
 type UserRole = 'OWNER' | 'FRANCHISEE' | 'MANAGER' | 'MECHANIC' | ''
 
 const BIKE_STATUSES = ['AVAILABLE', 'RENTED', 'MAINTENANCE', 'BLOCKED', 'LOST'] as const
-const BATTERY_STATUSES = ['AVAILABLE', 'RENTED', 'MAINTENANCE', 'LOST'] as const
 
 type BikeForm = {
   code: string
@@ -46,7 +45,6 @@ export default function BikesPage() {
   const router = useRouter()
   const [tenants, setTenants] = useState<any[]>([])
   const [bikes, setBikes] = useState<Bike[]>([])
-  const [batteries, setBatteries] = useState<Battery[]>([])
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [role, setRole] = useState<UserRole>('')
@@ -54,7 +52,6 @@ export default function BikesPage() {
   const [newBike, setNewBike] = useState<BikeForm>({
     code: '', model: '', frameNumber: '', motorWheelNumber: '', simCardNumber: '', status: 'AVAILABLE', repairReason: '', repairEndDate: '',
   })
-  const [newBatteryMap, setNewBatteryMap] = useState<Record<string, { code: string; serialNumber: string; status: string; notes: string }>>({})
   const [formMap, setFormMap] = useState<Record<string, BikeForm>>({})
   const [originalMap, setOriginalMap] = useState<Record<string, BikeForm>>({})
 
@@ -62,10 +59,9 @@ export default function BikesPage() {
     setError('')
     try {
       const query = includeArchived ? 'archivedOnly=true' : ''
-      const [bikeRows, batteryRows] = await Promise.all([api.bikes(query), api.batteries(query)])
-      setBikes(bikeRows)
-      setBatteries(batteryRows)
-      const mapped = Object.fromEntries(bikeRows.map((b: any) => [b.id, toBikeForm(b)])) as Record<string, BikeForm>
+      const rows = await api.bikes(query)
+      setBikes(rows)
+      const mapped = Object.fromEntries(rows.map((b: any) => [b.id, toBikeForm(b)])) as Record<string, BikeForm>
       setFormMap(mapped)
       setOriginalMap(mapped)
     } catch (err) {
@@ -104,25 +100,6 @@ export default function BikesPage() {
     } catch (err) { setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка обновления карточки велосипеда'}`) }
   }
 
-  async function createBattery(bikeId: string) {
-    setError(''); setSuccess('')
-    try {
-      const d = newBatteryMap[bikeId] || { code: '', serialNumber: '', status: 'AVAILABLE', notes: '' }
-      if (!d.code.trim()) throw new Error('Укажи код АКБ')
-      await api.createBattery({ bikeId, code: d.code.trim(), serialNumber: d.serialNumber.trim() || undefined, status: d.status, notes: d.notes.trim() || undefined })
-      setNewBatteryMap((p) => ({ ...p, [bikeId]: { code: '', serialNumber: '', status: 'AVAILABLE', notes: '' } }))
-      await load(); setSuccess('Сохранено')
-    } catch (err) { setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка добавления АКБ'}`) }
-  }
-
-  async function saveBattery(b: Battery) {
-    setError(''); setSuccess('')
-    try { await api.updateBattery(b.id, b as any); await load(); setSuccess('Сохранено') }
-    catch (err) { setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка обновления АКБ'}`) }
-  }
-
-  async function removeBattery(id: string) { setError(''); setSuccess(''); try { await api.deleteBattery(id); await load(); setSuccess('Сохранено') } catch (err) { setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка удаления АКБ'}`) } }
-  async function restoreBattery(id: string) { setError(''); setSuccess(''); try { await api.restoreBattery(id); await load(); setSuccess('Сохранено') } catch (err) { setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка восстановления АКБ'}`) } }
   async function removeBike(id: string) { setError(''); setSuccess(''); try { await api.deleteBike(id); await load(); setSuccess('Сохранено') } catch (err) { setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка удаления велосипеда'}`) } }
   async function restoreBike(id: string) { setError(''); setSuccess(''); try { await api.restoreBike(id); await load(); setSuccess('Сохранено') } catch (err) { setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка восстановления велосипеда'}`) } }
   function cancelChanges(id: string) { setFormMap((p) => ({ ...p, [id]: { ...originalMap[id] } })); setError(''); setSuccess('Сохранено') }
@@ -145,7 +122,7 @@ export default function BikesPage() {
     <main className="page with-sidebar">
       <Topbar tenants={tenants} />
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Велосипеды и служебный раздел (АКБ)</h1>
+        <h1 className="text-2xl font-bold">Велосипеды</h1>
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={includeArchived} onChange={(e) => setIncludeArchived(e.target.checked)} /> Показать архив</label>
       </div>
       {error && <p className="alert">{error}</p>}
@@ -172,8 +149,6 @@ export default function BikesPage() {
         {bikes.map((b: any) => {
           const f = formMap[b.id] ?? toBikeForm(b)
           const archived = b.isActive === false
-          const bikeBats = batteries.filter((x) => x.bikeId === b.id)
-          const batDraft = newBatteryMap[b.id] || { code: '', serialNumber: '', status: 'AVAILABLE', notes: '' }
           return (
             <div key={b.id} className="panel text-sm">
               <div className="mb-2 flex items-center justify-between">
@@ -200,35 +175,6 @@ export default function BikesPage() {
                     {canManageCards && <button className="btn border-red-300 text-red-700" onClick={() => removeBike(b.id)}>В архив</button>}
                   </>
                 ) : canManageCards && <button className="btn" onClick={() => restoreBike(b.id)}>Восстановить из архива</button>}
-              </div>
-
-              <div className="mt-4 rounded-xl border border-gray-200 p-3">
-                <div className="mb-2 font-semibold">АКБ этого велосипеда</div>
-                <div className="space-y-2">
-                  {bikeBats.map((bat: any) => (
-                    <div key={bat.id} className="grid gap-2 md:grid-cols-6 items-center">
-                      <input className="input" value={bat.code || ''} onChange={(e) => setBatteries((prev) => prev.map((x: any) => x.id === bat.id ? { ...x, code: e.target.value } : x))} />
-                      <input className="input" value={bat.serialNumber || ''} onChange={(e) => setBatteries((prev) => prev.map((x: any) => x.id === bat.id ? { ...x, serialNumber: e.target.value } : x))} />
-                      <select className="select" value={bat.status} onChange={(e) => setBatteries((prev) => prev.map((x: any) => x.id === bat.id ? { ...x, status: e.target.value } : x))}>{BATTERY_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select>
-                      <input className="input md:col-span-2" value={bat.notes || ''} onChange={(e) => setBatteries((prev) => prev.map((x: any) => x.id === bat.id ? { ...x, notes: e.target.value } : x))} placeholder="Заметка" />
-                      <div className="flex gap-2">
-                        <button className="btn" onClick={() => saveBattery(bat)}>Сохранить</button>
-                        {bat.isActive !== false ? <button className="btn border-red-300 text-red-700" onClick={() => removeBattery(bat.id)}>В архив</button> : <button className="btn" onClick={() => restoreBattery(bat.id)}>Восстановить</button>}
-                      </div>
-                    </div>
-                  ))}
-                  {!bikeBats.length && <p className="text-gray-600">АКБ пока не добавлены</p>}
-                </div>
-
-                {canManageCards && b.isActive !== false && (
-                  <div className="mt-3 grid gap-2 md:grid-cols-5">
-                    <input className="input" placeholder="Код АКБ" value={batDraft.code} onChange={(e) => setNewBatteryMap((p) => ({ ...p, [b.id]: { ...batDraft, code: e.target.value } }))} />
-                    <input className="input" placeholder="Серийный номер" value={batDraft.serialNumber} onChange={(e) => setNewBatteryMap((p) => ({ ...p, [b.id]: { ...batDraft, serialNumber: e.target.value } }))} />
-                    <select className="select" value={batDraft.status} onChange={(e) => setNewBatteryMap((p) => ({ ...p, [b.id]: { ...batDraft, status: e.target.value } }))}>{BATTERY_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select>
-                    <input className="input" placeholder="Заметка" value={batDraft.notes} onChange={(e) => setNewBatteryMap((p) => ({ ...p, [b.id]: { ...batDraft, notes: e.target.value } }))} />
-                    <button className="btn" onClick={() => createBattery(b.id)}>Добавить АКБ</button>
-                  </div>
-                )}
               </div>
             </div>
           )
