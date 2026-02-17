@@ -168,6 +168,20 @@ export default function RentalsPage() {
     }
   }
 
+  function printDocument(documentId: string) {
+    const html = docHtmlMap[documentId]
+    if (!html) return
+
+    const w = window.open('', '_blank', 'width=980,height=780')
+    if (!w) return
+
+    w.document.open()
+    w.document.write(html)
+    w.document.close()
+    w.focus()
+    setTimeout(() => w.print(), 200)
+  }
+
   useEffect(() => {
     if (!getToken()) return router.replace('/login')
     ;(async () => {
@@ -301,7 +315,10 @@ export default function RentalsPage() {
                   {docsMap[r.id].map((d) => (
                     <div key={d.id} className="rounded border p-2">
                       <div className="mb-1 text-xs text-gray-600">{d.type} · {formatDateTime(d.createdAt)}</div>
-                      <button className="rounded border px-2 py-1 text-xs" onClick={() => openDocument(d.id)}>Показать</button>
+                      <div className="flex gap-2">
+                        <button className="rounded border px-2 py-1 text-xs" onClick={() => openDocument(d.id)}>Показать</button>
+                        <button className="rounded border px-2 py-1 text-xs" onClick={() => printDocument(d.id)} disabled={!docHtmlMap[d.id]}>Печать / PDF</button>
+                      </div>
                       {!!docHtmlMap[d.id] && (
                         <div className="mt-2 rounded border bg-white p-2" dangerouslySetInnerHTML={{ __html: docHtmlMap[d.id] }} />
                       )}
