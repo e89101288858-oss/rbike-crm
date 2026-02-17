@@ -220,6 +220,13 @@ export default function RentalsPage() {
   const availableBatteries = batteries.filter((b) => b.status === 'AVAILABLE')
   const canCreate = !!clientId && !!bikeId && !!startDate && !!plannedEndDate && selectedBatteryIds.length === batteryCount && rentalDays >= minRentalDays
 
+  function daysHighlightClass(daysLeft: number) {
+    if (daysLeft >= 4) return 'border-green-300 bg-green-50'
+    if (daysLeft === 3 || daysLeft === 2) return 'border-amber-300 bg-amber-50'
+    if (daysLeft === 1) return 'border-red-300 bg-red-50'
+    return 'border-gray-200 bg-white'
+  }
+
   return (
     <main className="page with-sidebar">
       <Topbar tenants={tenants} />
@@ -289,13 +296,15 @@ export default function RentalsPage() {
       <div className="space-y-2">
         {rentals.map((r) => {
           const expanded = !!expandedMap[r.id]
+          const daysLeft = Math.max(0, diffDays(new Date().toISOString(), r.plannedEndDate))
+          const highlight = r.status === 'ACTIVE' ? daysHighlightClass(daysLeft) : 'border-gray-200 bg-white'
           return (
-            <div key={r.id} className="panel text-sm">
+            <div key={r.id} className={`panel text-sm ${highlight}`}>
               <div className="flex cursor-pointer flex-wrap items-center gap-2 rounded-lg px-1 py-1 hover:bg-gray-50" onClick={() => setExpandedMap((p) => ({ ...p, [r.id]: !expanded }))}>
                 <div className="font-medium min-w-56">{r.client.fullName} — {r.bike.code}</div>
                 <span className={`badge ${r.status === 'ACTIVE' ? 'badge-warn' : 'badge-ok'}`}>{r.status === 'ACTIVE' ? 'Активна' : 'Завершена'}</span>
                 <div className="text-gray-600">{formatDate(r.startDate)} → {formatDate(r.plannedEndDate)}</div>
-                {r.status === 'ACTIVE' && <div className="text-gray-600">Осталось: {Math.max(0, diffDays(new Date().toISOString(), r.plannedEndDate))} дн.</div>}
+                {r.status === 'ACTIVE' && <div className="text-gray-600">Осталось: {daysLeft} дн.</div>}
               </div>
 
               {expanded && (
