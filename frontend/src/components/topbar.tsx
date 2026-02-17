@@ -28,6 +28,7 @@ const nav: NavGroup[] = [
     items: [
       { href: '/clients', label: 'Курьеры', icon: '🧑‍🔧', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
       { href: '/bikes', label: 'Велосипеды', icon: '🚲', roles: ['OWNER', 'FRANCHISEE', 'MANAGER', 'MECHANIC'] },
+      { href: '/batteries', label: 'АКБ', icon: '🔋', roles: ['OWNER', 'FRANCHISEE', 'MANAGER', 'MECHANIC'] },
     ],
   },
   {
