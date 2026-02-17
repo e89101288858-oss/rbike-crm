@@ -17,6 +17,7 @@ const links: Array<{ href: string; label: string; roles: UserRole[] }> = [
   { href: '/payments', label: 'Платежи', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
   { href: '/finance', label: 'Финансы', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
   { href: '/import', label: 'Импорт CSV', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
+  { href: '/admin', label: 'Админ', roles: ['OWNER'] },
 ]
 
 export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {

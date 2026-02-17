@@ -230,4 +230,32 @@ export const api = {
 
   franchiseOwnerMonthly: (month: string) =>
     request<any>(`/franchise-billing/owner/monthly?month=${month}`),
+
+  adminFranchisees: () => request<any[]>('/franchisees'),
+
+  adminCreateFranchisee: (payload: { name: string; isActive?: boolean }) =>
+    request<any>('/franchisees', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  adminUpdateFranchisee: (id: string, payload: { name?: string; isActive?: boolean }) =>
+    request<any>(`/franchisees/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+
+  adminTenantsByFranchisee: (franchiseeId: string) => request<any[]>(`/franchisees/${franchiseeId}/tenants`),
+
+  adminCreateTenant: (franchiseeId: string, payload: { name: string; isActive?: boolean }) =>
+    request<any>(`/franchisees/${franchiseeId}/tenants`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  adminUpdateTenant: (id: string, payload: { name?: string; isActive?: boolean }) =>
+    request<any>(`/tenants/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
 }
