@@ -1,56 +1,88 @@
-RBike CRM — Development Roadmap
-Phase 1 — Users & Access
+# RBike CRM — Development Roadmap (Updated)
 
-UsersModule (OWNER only)
+## ✅ Completed
 
-UserTenant assignment table
+### Platform, security, tenancy
+- JWT auth + roles + guards
+- Strict tenant isolation (`X-Tenant-Id`)
+- Role-aware UI navigation
 
-Tenant-based employee access
+### Owner operations (web-first)
+- Owner admin panel for franchisees/tenants
+- Tenant settings in UI (`dailyRateRub`, `minRentalDays`)
+- Persistent audit log in DB + admin feed
 
-FRANCHISEE restriction to own tenants
+### Operational entities
+- Bikes: CRUD + archive/restore + repair fields
+- Clients: CRUD + archive/restore
+- Rentals: create/extend/close/journal
+- Payments: list/edit/delete/mark states
+- CSV import for bikes/clients
 
-Phase 2 — Clients & Documents
+### АКБ workflow
+- Separate АКБ section/module
+- Rental issuance requires 1–2 batteries
+- Battery binding during active rental only
+- Unbind + return to AVAILABLE on close
+- In-rental actions: add second battery, replace battery
 
-ClientsModule (tenant-scoped)
+### Access lifecycle
+- Login simplified (no Tenant ID field)
+- Self-registration request flow
+- OWNER approval/rejection flow
+- User management in owner panel:
+  - create/edit/delete users
+  - role changes
+  - activation toggle
+  - password reset
+  - tenant binding/unbinding
 
-Document upload system
+### UX progress
+- Sidebar layout
+- Improved admin visuals/cards/chips
+- Centralized RU status labels for bikes/batteries/payments
 
-Document isolation by tenant
+---
 
-Passport + contract storage
+## 🔄 In progress
 
-Phase 3 — Rentals
+1. Full RU status localization pass on remaining modules
+- Rentals/admin leftovers (all status-like labels via one map)
 
-Rental creation with transaction
+2. Frontend type/lint hardening
+- Reduce `any`
+- Fix hooks dependency warnings
+- Reach clean ESLint run
 
-Automatic bike.status = RENTED only on creation
+---
 
-RentalChange logging
+## ⏭ Next priorities
 
-Rental close (no automatic bike status change)
+### P1 — Documents module (final business block)
+- Rental contract generation
+- Printable/PDF output
+- Attachment to rental/client timeline
 
-Phase 4 — Payments
+### P1 — Regression safety
+- Expand smoke test script for:
+  - registration -> approval
+  - user-role/tenant bindings
+  - rental with АКБ issuance/add/replace/close
+  - payment edit/delete/refund checks
 
-Manual payment creation
+### P2 — Admin polish
+- Better audit table UX (filters/action groups)
+- Registration history filters (pending/approved/rejected)
 
-Assignment to rentals
+### P2 — Reporting enhancements
+- Revenue and debt widgets by tenant/franchisee
+- Operational KPIs for active rentals and battery utilization
 
-Payment logs
+---
 
-Later: YooKassa integration
-
-Phase 5 — Repairs & Fines
-
-RepairsModule
-
-FinesModule
-
-Bike maintenance tracking
-
-Phase 6 — Reporting
-
-Revenue by tenant
-
-Active rentals
-
-Outstanding payments
+## Release discipline checklist (every schema-affecting change)
+1. `npx prisma db push` (or migration flow)
+2. `npx prisma generate`
+3. Backend build + restart
+4. Frontend build + restart
+5. Smoke test critical flows

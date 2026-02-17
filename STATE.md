@@ -1,84 +1,98 @@
-RBike CRM — System State (Checkpoint)
-Backend
+# RBike CRM — System State (2026-02-17)
 
-NestJS + Prisma 5
+## Stack & runtime
+- Backend: NestJS + Prisma 5 + PostgreSQL
+- Frontend: Next.js (App Router)
+- Process manager: PM2 (`rbike-backend`, `rbike-frontend`)
 
-PostgreSQL 16 (Docker)
+## Security & access
+- JWT auth (`POST /auth/login`, `GET /me`)
+- Roles: `OWNER`, `FRANCHISEE`, `MANAGER`, `MECHANIC`
+- Tenant isolation via `X-Tenant-Id` on tenant-scoped endpoints
+- Guards: `JwtAuthGuard`, `RolesGuard`, `TenantGuard`
+- OWNER can manage global entities; tenant-scoped routes still require tenant context
 
-PM2 process: rbike-backend
+## Owner admin capabilities (`/admin`)
+- Franchisee management: create/update/archive/restore/delete
+- Tenant (point) management: create/update/archive/restore/delete
+- Tenant business settings:
+  - `dailyRateRub` (default 500)
+  - `minRentalDays` (default 7)
+- Audit log persisted in DB (`AuditLog`) + UI feed
 
-API runs on port 3001
+## Registration & user approval flow
+- Login page no longer asks for Tenant ID
+- Public registration request:
+  - `POST /auth/register-request`
+  - Stores `RegistrationRequest` with statuses `PENDING/APPROVED/REJECTED`
+- OWNER moderation:
+  - `GET /admin/registration-requests`
+  - `POST /admin/registration-requests/:id/approve`
+  - `POST /admin/registration-requests/:id/reject`
+- On approve:
+  - user is created
+  - franchisee assignment is required
+  - optional tenant binding
+  - action is written to audit
 
-Authentication
+## User management (OWNER)
+- `GET /admin/users` (full list)
+- `POST /admin/users` (create)
+- `PATCH /admin/users/:id` (role/status/password/franchisee updates)
+- `DELETE /admin/users/:id` (except OWNER)
+- Tenant binding for staff:
+  - `POST /tenants/:tenantId/users`
+  - `DELETE /tenants/:tenantId/users/:userId`
+  - `GET /tenants/:tenantId/users`
 
-JWT-based auth
+## Core operations
+### Bikes
+- CRUD + archive/restore (`isActive`)
+- repair fields: `repairReason`, `repairEndDate`
 
-Endpoint: POST /auth/login
+### Clients
+- CRUD + archive/restore (`isActive`)
 
-Endpoint: GET /me
+### Rentals
+- Create rental with tenant rules (`dailyRateRub`, `minRentalDays`)
+- Extend rental
+- Close rental with recalculation/refund payment logic
+- Journal endpoint with rental/payment/change timeline
 
-Roles: OWNER, FRANCHISEE, MANAGER, MECHANIC
+### Batteries (АКБ)
+- Separate module/page (`/batteries`)
+- CRUD + archive/restore
+- Rental creation requires battery issuance (1 or 2)
+- During active rental: selected batteries set `RENTED` and bound to bike
+- On rental close: batteries set `AVAILABLE`, bike binding cleared
+- Active rental operations:
+  - add second battery
+  - replace battery
+  - journal entries for battery operations
 
-Access control
+### Payments
+- List by status
+- Edit amount
+- Delete payment
+- Mark paid/planned
 
-JwtAuthGuard implemented
+## Frontend highlights
+- Left sidebar navigation with role-based visibility
+- Owner panel with:
+  - registration moderation
+  - user CRUD and tenant bindings
+  - user filters/search/password reset
+- Centralized Russian status labels applied across bikes/batteries/payments
 
-RolesGuard reads metadata from both handler and class
+## Data model additions already in schema
+- `Tenant.dailyRateRub`, `Tenant.minRentalDays`
+- `Battery`, `RentalBattery`, `BatteryStatus`
+- `AuditLog`
+- `RegistrationRequest`, `RegistrationRequestStatus`
+- bike/client `isActive`
 
-TenantGuard requires X-Tenant-Id header for tenant-scoped routes
-
-OWNER must also provide X-Tenant-Id
-
-Admin module (OWNER only)
-
-Franchisee CRUD:
-
-POST /franchisees
-
-GET /franchisees
-
-GET /franchisees/:id
-
-PATCH /franchisees/:id
-
-Tenant CRUD:
-
-POST /franchisees/:franchiseeId/tenants
-
-GET /franchisees/:franchiseeId/tenants
-
-PATCH /tenants/:id
-
-Bikes module (tenant-scoped)
-
-POST /bikes
-
-GET /bikes
-
-GET /bikes/:id
-
-PATCH /bikes/:id
-
-Requires X-Tenant-Id
-
-Verified tenant isolation works
-
-Critical fixes already handled
-
-Type imports in decorated signatures must use import type
-
-RolesGuard reads metadata via getAllAndOverride
-
-Never use findUnique for tenant-scoped access without tenant filter
-
-Verified
-
-Tenant isolation works
-
-Role protection works
-
-OWNER cannot bypass tenant header
-
-FRANCHISEE cannot access OWNER endpoints
-
-Bike creation requires X-Tenant-Id
+## Current quality status
+- Frontend build: green
+- Backend build: green
+- TypeScript strict unused check (`--noUnusedLocals --noUnusedParameters`): green
+- Frontend ESLint still has debt mainly from `no-explicit-any`

@@ -1,37 +1,63 @@
-# RBike CRM — AI Spec (must follow)
+# RBike CRM — AI Spec (current working rules)
 
-## Business & access model
-- There is exactly one global OWNER (full access to everything).
-- There are many FRANCHISEE partners.
-- Each FRANCHISEE can have multiple TENANTS (separate cabinets/contexts).
-- All operational data is strictly isolated by tenant_id: bikes, clients, rentals, payments, repairs, documents.
+## 1) Business model & access
+- One global `OWNER`.
+- Multiple `FRANCHISEE` partners.
+- Each FRANCHISEE owns multiple `TENANT` points.
+- Operational data is tenant-isolated.
 
-## Tenant selection
-- Every tenant-scoped API request MUST include header: X-Tenant-Id: <tenant_uuid>.
-- OWNER can access any tenant, but still must provide X-Tenant-Id for tenant-scoped endpoints.
-- FRANCHISEE can access only tenants where tenant.franchiseeId == user.franchiseeId.
-- MANAGER / MECHANIC can access tenants only via UserTenant table (userId, tenantId).
+### Roles
+- `OWNER` — global administration.
+- `FRANCHISEE` — access within own franchise boundaries.
+- `MANAGER` / `MECHANIC` — tenant-scoped access via `UserTenant` bindings.
 
-## Bike status rule (CRITICAL)
-- The system automatically changes bike status ONLY once:
-  - when a rental is created successfully -> bike.status becomes RENTED.
-- No other automatic bike status transitions are allowed.
-- Closing a rental MUST NOT change bike status automatically.
-- Any other bike status changes happen only via manual endpoint.
+## 2) Tenant context
+- Tenant-scoped API requests require header: `X-Tenant-Id`.
+- OWNER must still provide tenant context for tenant-scoped routes.
+- FRANCHISEE must not cross franchise boundary.
+- MANAGER/MECHANIC can act only in bound tenants.
 
-## Rental rules
-- Minimum rental duration: 7 days.
-- Rental can be extended/shortened by days; every change must be logged in RentalChange.
-- Use Prisma transactions for operations that update multiple tables.
+## 3) Core rental rules
+- Minimum rental duration is tenant-configurable: `Tenant.minRentalDays` (default 7).
+- Daily pricing is tenant-configurable: `Tenant.dailyRateRub` (default 500 RUB).
+- Rental create/extend/close operations must be transactional where multiple entities are updated.
+- Rental changes should be auditable in rental journal/history.
 
-## Tech constraints
+## 4) Bike + Battery operational rules
+
+### Bike
+- Status is controlled by business operations and explicit updates.
+- On rental close, bike returns to `AVAILABLE`.
+
+### Battery (АКБ)
+- АКБ is a separate module/section.
+- Rental issuance requires battery selection (1 or 2 batteries).
+- Issued batteries must be `AVAILABLE` before assignment.
+- During active rental: batteries are marked `RENTED` and linked to rental bike.
+- On rental close: batteries become `AVAILABLE` and are unbound (`bikeId = null`).
+- Active rental supports:
+  - adding second battery,
+  - replacing battery,
+  with journal entries.
+
+## 5) Archive/restore policy
+- Operational entities use soft archive (`isActive`) where implemented.
+- UI archive toggle semantics: when enabled, show archived-only set.
+
+## 6) Owner-first operations (no console dependency)
+- Owner can manage franchisees, tenants, tenant settings, users, bindings, and registration approvals from web UI.
+- Registration is request-based and requires owner approval.
+
+## 7) Tech constraints
 - Backend: NestJS + TypeScript + Prisma 5 + PostgreSQL.
-- Do NOT upgrade Prisma to v7.
-- Do NOT change prisma/schema.prisma unless explicitly instructed.
-- Prefer simple, explicit code over magic.
+- Frontend: Next.js + TypeScript.
+- Keep code explicit and maintainable over hidden automation.
+- Do not weaken access control or tenant isolation.
 
-## Development discipline
-- All changes must follow this spec strictly.
-- Never weaken access control or tenant isolation.
-- Never introduce automatic bike status transitions except the one defined above.
-- Any new module must respect tenant_id isolation.
+## 8) Delivery discipline
+For deployable backend/schema changes:
+1. Apply schema changes (`prisma db push` or migration flow).
+2. Run `prisma generate`.
+3. Build backend/frontend.
+4. Restart services.
+5. Smoke test critical business flow.
