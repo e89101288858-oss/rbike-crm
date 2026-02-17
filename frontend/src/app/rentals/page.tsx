@@ -126,6 +126,7 @@ export default function RentalsPage() {
   const rentalDays = startDate && plannedEndDate ? diffDays(startDate, plannedEndDate) : 0
   const projectedTotalRub = dailyRateRub * rentalDays
   const availableBatteries = batteries.filter((b) => b.status === 'AVAILABLE')
+  const canCreate = !!clientId && !!bikeId && !!startDate && !!plannedEndDate && selectedBatteryIds.length === batteryCount && rentalDays >= minRentalDays
 
   return (
     <main className="mx-auto max-w-6xl p-6 with-sidebar">
@@ -152,12 +153,12 @@ export default function RentalsPage() {
           </div>
           <div className="grid gap-2 md:grid-cols-2">
             <select className="rounded border p-2" value={battery1Id} onChange={(e) => setBattery1Id(e.target.value)}>
-              <option value="">АКБ 1</option>
+              <option value="">Выбери АКБ 1</option>
               {availableBatteries.map((b) => <option key={b.id} value={b.id}>{b.code}{b.serialNumber ? ` (${b.serialNumber})` : ''}</option>)}
             </select>
             {batteryCount === 2 && (
               <select className="rounded border p-2" value={battery2Id} onChange={(e) => setBattery2Id(e.target.value)}>
-                <option value="">АКБ 2</option>
+                <option value="">Выбери АКБ 2</option>
                 {availableBatteries.filter((b) => b.id !== battery1Id).map((b) => <option key={b.id} value={b.id}>{b.code}{b.serialNumber ? ` (${b.serialNumber})` : ''}</option>)}
               </select>
             )}
@@ -165,11 +166,18 @@ export default function RentalsPage() {
         </div>
 
         <button
-          disabled={!clientId || !bikeId || !startDate || !plannedEndDate || selectedBatteryIds.length !== batteryCount || rentalDays < minRentalDays}
+          disabled={!canCreate}
           className="rounded bg-black p-2 text-white disabled:opacity-50 md:col-span-4"
         >
           Создать аренду
         </button>
+
+        {!canCreate && (
+          <p className="md:col-span-4 text-xs text-amber-700">
+            Заполни курьера, велосипед, даты и выбери {batteryCount} АКБ.
+            {rentalDays > 0 && rentalDays < minRentalDays ? ` Текущий срок ${rentalDays} дн., минимум ${minRentalDays}.` : ''}
+          </p>
+        )}
       </form>
 
       {startDate && plannedEndDate && (
