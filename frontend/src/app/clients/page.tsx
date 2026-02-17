@@ -197,10 +197,10 @@ export default function ClientsPage() {
           const st = courierStatus(c)
           return (
             <div key={c.id} className="panel text-sm">
-              <div className="flex flex-wrap items-center gap-2">
-                <button className="btn" onClick={() => setExpandedMap((p) => ({ ...p, [c.id]: !expanded }))}>
-                  {expanded ? 'Скрыть' : 'Открыть'}
-                </button>
+              <div
+                className="flex cursor-pointer flex-wrap items-center gap-2 rounded-lg px-1 py-1 hover:bg-gray-50"
+                onClick={() => setExpandedMap((p) => ({ ...p, [c.id]: !expanded }))}
+              >
                 <div className="font-medium min-w-52">{e.fullName || '—'}</div>
                 <div className="text-gray-600">{e.phone || 'без телефона'}</div>
                 <div className="text-gray-600">ДР: {(e.birthDate as string) || '—'}</div>
