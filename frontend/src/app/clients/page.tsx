@@ -40,6 +40,7 @@ export default function ClientsPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
+  const [expandedMap, setExpandedMap] = useState<Record<string, boolean>>({})
 
   async function load() {
     setLoading(true)
@@ -178,34 +179,49 @@ export default function ClientsPage() {
       {error && <p className="alert">{error}</p>}
       {success && <p className="alert-success">{success}</p>}
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {clients.map((c) => {
           const e = editMap[c.id] ?? toClientForm(c)
           const archived = c.isActive === false
+          const expanded = !!expandedMap[c.id]
           return (
             <div key={c.id} className="panel text-sm">
-              {archived && <div className="mb-2"><span className="badge badge-muted">АРХИВ</span></div>}
-              <div className="grid gap-2 md:grid-cols-3">
-                <input disabled={archived} className="input" value={e.fullName ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], fullName: ev.target.value } }))} />
-                <input disabled={archived} className="input" value={e.phone ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], phone: ev.target.value } }))} />
-                <input disabled={archived} className="input" type="date" value={(e.birthDate as string) ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], birthDate: ev.target.value } }))} />
-                <input disabled={archived} className="input" value={e.address ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], address: ev.target.value } }))} />
-                <input disabled={archived} className="input" value={e.passportSeries ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], passportSeries: ev.target.value } }))} />
-                <input disabled={archived} className="input" value={e.passportNumber ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], passportNumber: ev.target.value } }))} />
-                <input disabled={archived} className="input" placeholder="Телефон родственника/знакомого" value={e.emergencyContactPhone ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], emergencyContactPhone: ev.target.value } }))} />
-                <input disabled={archived} className="input" value={e.notes ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], notes: ev.target.value } }))} />
+              <div className="flex flex-wrap items-center gap-2">
+                <button className="btn" onClick={() => setExpandedMap((p) => ({ ...p, [c.id]: !expanded }))}>
+                  {expanded ? 'Скрыть' : 'Открыть'}
+                </button>
+                <div className="font-medium min-w-52">{e.fullName || '—'}</div>
+                <div className="text-gray-600">{e.phone || 'без телефона'}</div>
+                <div className="text-gray-600">ДР: {(e.birthDate as string) || '—'}</div>
+                <div className="text-gray-600">Паспорт: {e.passportSeries || '—'} {e.passportNumber || ''}</div>
+                {archived && <span className="badge badge-muted">АРХИВ</span>}
               </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {!archived ? (
-                  <>
-                    <button className="btn" onClick={() => saveClient(c.id)}>Сохранить карточку</button>
-                    <button className="btn" onClick={() => cancelChanges(c.id)}>Отменить изменения</button>
-                    <button className="btn border-red-300 text-red-700" onClick={() => removeClient(c.id)}>В архив</button>
-                  </>
-                ) : (
-                  <button className="btn" onClick={() => restoreClient(c.id)}>Восстановить из архива</button>
-                )}
-              </div>
+
+              {expanded && (
+                <>
+                  <div className="mt-3 grid gap-2 md:grid-cols-3">
+                    <input disabled={archived} className="input" value={e.fullName ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], fullName: ev.target.value } }))} />
+                    <input disabled={archived} className="input" value={e.phone ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], phone: ev.target.value } }))} />
+                    <input disabled={archived} className="input" type="date" value={(e.birthDate as string) ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], birthDate: ev.target.value } }))} />
+                    <input disabled={archived} className="input" value={e.address ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], address: ev.target.value } }))} />
+                    <input disabled={archived} className="input" value={e.passportSeries ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], passportSeries: ev.target.value } }))} />
+                    <input disabled={archived} className="input" value={e.passportNumber ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], passportNumber: ev.target.value } }))} />
+                    <input disabled={archived} className="input" placeholder="Телефон родственника/знакомого" value={e.emergencyContactPhone ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], emergencyContactPhone: ev.target.value } }))} />
+                    <input disabled={archived} className="input" value={e.notes ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], notes: ev.target.value } }))} />
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {!archived ? (
+                      <>
+                        <button className="btn" onClick={() => saveClient(c.id)}>Сохранить карточку</button>
+                        <button className="btn" onClick={() => cancelChanges(c.id)}>Отменить изменения</button>
+                        <button className="btn border-red-300 text-red-700" onClick={() => removeClient(c.id)}>В архив</button>
+                      </>
+                    ) : (
+                      <button className="btn" onClick={() => restoreClient(c.id)}>Восстановить из архива</button>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           )
         })}
