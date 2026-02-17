@@ -67,6 +67,7 @@ model User {
   markedPayments       Payment[]      @relation("PaymentMarkedBy")
   createdRepairs       Repair[]       @relation("RepairCreatedBy")
   createdDocuments     Document[]     @relation("DocumentCreatedBy")
+  auditLogs            AuditLog[]
 }
 
 model Franchisee {
@@ -261,4 +262,18 @@ model Document {
 
   @@index([tenantId, type])
   @@index([clientId])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String
+  targetType String
+  targetId   String?
+  details    Json?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([userId])
 }

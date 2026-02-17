@@ -11,6 +11,8 @@ import {
   UseGuards,
 } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
+import { CurrentUser } from '../common/decorators/current-user.decorator'
+import type { JwtUser } from '../common/decorators/current-user.decorator'
 import { Roles } from '../common/decorators/roles.decorator'
 import { RolesGuard } from '../common/guards/roles.guard'
 import { PrismaService } from '../prisma/prisma.service'
@@ -25,12 +27,37 @@ import { UpdateTenantDto } from './dto/update-tenant.dto'
 export class AdminController {
   constructor(private readonly prisma: PrismaService) {}
 
+  private async audit(userId: string | undefined, action: string, targetType: string, targetId?: string, details?: any) {
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action,
+        targetType,
+        targetId,
+        details: details ?? undefined,
+      },
+    })
+  }
+
   @Post('franchisees')
-  async createFranchisee(@Body() dto: CreateFranchiseeDto) {
-    return this.prisma.franchisee.create({
+  async createFranchisee(@Body() dto: CreateFranchiseeDto, @CurrentUser() user: JwtUser) {
+    const created = await this.prisma.franchisee.create({
       data: {
         name: dto.name,
         isActive: dto.isActive ?? true,
+      },
+    })
+    await this.audit(user.userId, 'CREATE_FRANCHISEE', 'FRANCHISEE', created.id, { name: created.name })
+    return created
+  }
+
+  @Get('admin/audit')
+  async listAudit() {
+    return this.prisma.auditLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+      include: {
+        user: { select: { id: true, email: true, role: true } },
       },
     })
   }
@@ -56,7 +83,7 @@ export class AdminController {
   }
 
   @Delete('franchisees/:id')
-  async deleteFranchisee(@Param('id') id: string) {
+  async deleteFranchisee(@Param('id') id: string, @CurrentUser() user: JwtUser) {
     const existing = await this.prisma.franchisee.findUnique({ where: { id } })
     if (!existing) throw new NotFoundException('Franchisee not found')
 
@@ -66,6 +93,7 @@ export class AdminController {
     }
 
     await this.prisma.franchisee.delete({ where: { id } })
+    await this.audit(user.userId, 'DELETE_FRANCHISEE', 'FRANCHISEE', id, { name: existing.name })
     return { id, deleted: true }
   }
 
@@ -73,6 +101,7 @@ export class AdminController {
   async updateFranchisee(
     @Param('id') id: string,
     @Body() dto: UpdateFranchiseeDto,
+    @CurrentUser() user: JwtUser,
   ) {
     const franchisee = await this.prisma.franchisee.findUnique({
       where: { id },
@@ -80,19 +109,25 @@ export class AdminController {
     if (!franchisee) {
       throw new NotFoundException('Franchisee not found')
     }
-    return this.prisma.franchisee.update({
+    const updated = await this.prisma.franchisee.update({
       where: { id },
       data: {
         ...(dto.name !== undefined && { name: dto.name }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
       },
     })
+    await this.audit(user.userId, 'UPDATE_FRANCHISEE', 'FRANCHISEE', id, {
+      from: { name: franchisee.name, isActive: franchisee.isActive },
+      to: { name: updated.name, isActive: updated.isActive },
+    })
+    return updated
   }
 
   @Post('franchisees/:franchiseeId/tenants')
   async createTenant(
     @Param('franchiseeId') franchiseeId: string,
     @Body() dto: CreateTenantDto,
+    @CurrentUser() user: JwtUser,
   ) {
     const franchisee = await this.prisma.franchisee.findUnique({
       where: { id: franchiseeId },
@@ -100,7 +135,7 @@ export class AdminController {
     if (!franchisee) {
       throw new NotFoundException('Franchisee not found')
     }
-    return this.prisma.tenant.create({
+    const created = await this.prisma.tenant.create({
       data: {
         franchiseeId,
         name: dto.name,
@@ -109,6 +144,13 @@ export class AdminController {
         minRentalDays: dto.minRentalDays ?? 7,
       },
     })
+    await this.audit(user.userId, 'CREATE_TENANT', 'TENANT', created.id, {
+      name: created.name,
+      franchiseeId,
+      dailyRateRub: created.dailyRateRub,
+      minRentalDays: created.minRentalDays,
+    })
+    return created
   }
 
   @Get('franchisees/:franchiseeId/tenants')
@@ -126,7 +168,7 @@ export class AdminController {
   }
 
   @Delete('tenants/:id')
-  async deleteTenant(@Param('id') id: string) {
+  async deleteTenant(@Param('id') id: string, @CurrentUser() user: JwtUser) {
     const tenant = await this.prisma.tenant.findUnique({ where: { id } })
     if (!tenant) throw new NotFoundException('Tenant not found')
 
@@ -145,18 +187,19 @@ export class AdminController {
     }
 
     await this.prisma.tenant.delete({ where: { id } })
+    await this.audit(user.userId, 'DELETE_TENANT', 'TENANT', id, { name: tenant.name })
     return { id, deleted: true }
   }
 
   @Patch('tenants/:id')
-  async updateTenant(@Param('id') id: string, @Body() dto: UpdateTenantDto) {
+  async updateTenant(@Param('id') id: string, @Body() dto: UpdateTenantDto, @CurrentUser() user: JwtUser) {
     const tenant = await this.prisma.tenant.findUnique({
       where: { id },
     })
     if (!tenant) {
       throw new NotFoundException('Tenant not found')
     }
-    return this.prisma.tenant.update({
+    const updated = await this.prisma.tenant.update({
       where: { id },
       data: {
         ...(dto.name !== undefined && { name: dto.name }),
@@ -165,5 +208,20 @@ export class AdminController {
         ...(dto.minRentalDays !== undefined && { minRentalDays: Math.trunc(dto.minRentalDays) }),
       },
     })
+    await this.audit(user.userId, 'UPDATE_TENANT', 'TENANT', id, {
+      from: {
+        name: tenant.name,
+        isActive: tenant.isActive,
+        dailyRateRub: tenant.dailyRateRub,
+        minRentalDays: tenant.minRentalDays,
+      },
+      to: {
+        name: updated.name,
+        isActive: updated.isActive,
+        dailyRateRub: updated.dailyRateRub,
+        minRentalDays: updated.minRentalDays,
+      },
+    })
+    return updated
   }
 }

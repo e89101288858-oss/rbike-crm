@@ -21,6 +21,7 @@ export default function AdminPage() {
   const [newFranchiseeName, setNewFranchiseeName] = useState('')
   const [newTenantDraft, setNewTenantDraft] = useState<Record<string, { name: string; dailyRateRub: number; minRentalDays: number }>>({})
   const [audit, setAudit] = useState<AuditItem[]>([])
+  const [auditRows, setAuditRows] = useState<any[]>([])
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
@@ -40,11 +41,12 @@ export default function AdminPage() {
   async function loadAll() {
     setError('')
     try {
-      const [myTenants, me, frs] = await Promise.all([api.myTenants(), api.me(), api.adminFranchisees()])
+      const [myTenants, me, frs, logs] = await Promise.all([api.myTenants(), api.me(), api.adminFranchisees(), api.adminAudit()])
       setRole((me.role as UserRole) || '')
       setTenants(myTenants)
       if (!getTenantId() && myTenants.length > 0) setTenantId(myTenants[0].id)
       setFranchisees(frs)
+      setAuditRows(logs)
 
       const entries = await Promise.all(
         frs.map(async (f) => [f.id, await api.adminTenantsByFranchisee(f.id)] as const),
@@ -244,13 +246,27 @@ export default function AdminPage() {
           </div>
 
           <section className="panel mt-4 text-sm">
-            <h2 className="mb-2 font-semibold">Последние действия (текущая сессия)</h2>
+            <h2 className="mb-2 font-semibold">Аудит действий (БД)</h2>
             <div className="space-y-1 text-gray-700">
-              {audit.map((a, i) => (
-                <div key={i}>{new Date(a.at).toLocaleString('ru-RU')} — {a.text}</div>
+              {auditRows.map((a) => (
+                <div key={a.id}>
+                  {new Date(a.createdAt).toLocaleString('ru-RU')} — {a.action} {a.targetType}
+                  {a.targetId ? ` (${a.targetId})` : ''}
+                  {a.user?.email ? ` · ${a.user.email}` : ''}
+                </div>
               ))}
-              {!audit.length && <p className="text-gray-500">Пока пусто</p>}
+              {!auditRows.length && <p className="text-gray-500">Пока пусто</p>}
             </div>
+            {!!audit.length && (
+              <>
+                <h3 className="mt-4 mb-2 font-semibold">Текущая сессия UI</h3>
+                <div className="space-y-1 text-gray-700">
+                  {audit.map((a, i) => (
+                    <div key={i}>{new Date(a.at).toLocaleString('ru-RU')} — {a.text}</div>
+                  ))}
+                </div>
+              </>
+            )}
           </section>
         </>
       )}

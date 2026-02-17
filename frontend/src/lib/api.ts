@@ -273,4 +273,6 @@ export const api = {
     }),
 
   adminDeleteTenant: (id: string) => request<any>(`/tenants/${id}`, { method: 'DELETE' }),
+
+  adminAudit: () => request<any[]>('/admin/audit'),
 }
