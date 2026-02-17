@@ -270,6 +270,12 @@ export const api = {
   rentalDocuments: (rentalId: string) => request<RentalDocument[]>(`/documents/by-rental/${rentalId}`, undefined, true),
 
   documentContent: (documentId: string) => request<{ id: string; type: string; createdAt: string; html: string }>(`/documents/${documentId}/content`, undefined, true),
+  getContractTemplate: () => request<{ templateHtml: string; updatedAt?: string | null }>('/documents/template', undefined, true),
+  updateContractTemplate: (templateHtml: string) =>
+    request<any>('/documents/template', {
+      method: 'PATCH',
+      body: JSON.stringify({ templateHtml }),
+    }, true),
 
   payments: (query = '') => request<any[]>(`/payments${query ? `?${query}` : ''}`, undefined, true),
 

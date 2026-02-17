@@ -1,9 +1,11 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Get,
   NotFoundException,
   Param,
+  Patch,
   Post,
   Req,
   UseGuards,
@@ -17,11 +19,46 @@ import { CurrentUser } from '../common/decorators/current-user.decorator'
 import type { JwtUser } from '../common/decorators/current-user.decorator'
 import { TenantGuard } from '../common/guards/tenant.guard'
 import { PrismaService } from '../prisma/prisma.service'
+import { UpdateContractTemplateDto } from './dto/update-contract-template.dto'
 
 @Controller('documents')
 @UseGuards(JwtAuthGuard, TenantGuard)
 export class DocumentsController {
   constructor(private readonly prisma: PrismaService) {}
+
+  @Get('template')
+  async getTemplate(@Req() req: Request) {
+    const tenantId = req.tenantId!
+
+    const existing = await this.prisma.contractTemplate.findUnique({
+      where: { tenantId },
+      select: { templateHtml: true, updatedAt: true, createdAt: true },
+    })
+
+    return {
+      templateHtml: existing?.templateHtml ?? this.defaultTemplate(),
+      updatedAt: existing?.updatedAt ?? null,
+      createdAt: existing?.createdAt ?? null,
+    }
+  }
+
+  @Patch('template')
+  async updateTemplate(@Req() req: Request, @CurrentUser() user: JwtUser, @Body() dto: UpdateContractTemplateDto) {
+    const tenantId = req.tenantId!
+
+    if (user.role === UserRole.MECHANIC) {
+      throw new BadRequestException('MECHANIC cannot update contract template')
+    }
+
+    const updated = await this.prisma.contractTemplate.upsert({
+      where: { tenantId },
+      create: { tenantId, templateHtml: dto.templateHtml, updatedById: user.userId },
+      update: { templateHtml: dto.templateHtml, updatedById: user.userId },
+      select: { tenantId: true, updatedAt: true },
+    })
+
+    return { ok: true, ...updated }
+  }
 
   @Post('contracts/:rentalId/generate')
   async generateContract(
@@ -62,24 +99,39 @@ export class DocumentsController {
     if (!rental) throw new NotFoundException('Rental not found')
 
     const documentNo = `RB-${new Date().getFullYear()}-${rental.id.slice(0, 8).toUpperCase()}`
-    const html = this.contractHtml({
-      documentNo,
-      tenantName: rental.tenant.name,
-      franchiseeName: rental.tenant.franchisee?.name ?? '—',
-      franchiseeCompanyName: rental.tenant.franchisee?.companyName ?? '—',
-      franchiseeSignerFullName: rental.tenant.franchisee?.signerFullName ?? '—',
-      franchiseeBankDetails: rental.tenant.franchisee?.bankDetails ?? '—',
-      clientName: rental.client.fullName,
-      clientPhone: rental.client.phone ?? '—',
-      clientAddress: rental.client.address ?? '—',
-      clientEmergencyPhone: rental.client.emergencyContactPhone ?? '—',
-      passport: `${rental.client.passportSeries ?? ''} ${rental.client.passportNumber ?? ''}`.trim() || '—',
-      bikeCode: rental.bike.code,
-      bikeModel: rental.bike.model ?? '—',
-      startDate: rental.startDate,
-      plannedEndDate: rental.plannedEndDate,
-      dailyRateRub: rental.tenant.dailyRateRub ?? 500,
-      createdAt: new Date(),
+    const days = Math.max(
+      1,
+      Math.ceil((new Date(rental.plannedEndDate).getTime() - new Date(rental.startDate).getTime()) / 86400000),
+    )
+    const dailyRateRub = rental.tenant.dailyRateRub ?? 500
+    const totalRub = days * dailyRateRub
+
+    const template = await this.prisma.contractTemplate.findUnique({
+      where: { tenantId },
+      select: { templateHtml: true },
+    })
+
+    const html = this.applyTemplate(template?.templateHtml ?? this.defaultTemplate(), {
+      'contract.number': documentNo,
+      'contract.date': this.fmt(new Date()),
+      'tenant.name': rental.tenant.name,
+      'franchisee.name': rental.tenant.franchisee?.name ?? '—',
+      'franchisee.companyName': rental.tenant.franchisee?.companyName ?? '—',
+      'franchisee.signerFullName': rental.tenant.franchisee?.signerFullName ?? '—',
+      'franchisee.bankDetails': rental.tenant.franchisee?.bankDetails ?? '—',
+      'client.fullName': rental.client.fullName,
+      'client.phone': rental.client.phone ?? '—',
+      'client.address': rental.client.address ?? '—',
+      'client.emergencyContactPhone': rental.client.emergencyContactPhone ?? '—',
+      'client.passportSeries': rental.client.passportSeries ?? '—',
+      'client.passportNumber': rental.client.passportNumber ?? '—',
+      'bike.code': rental.bike.code,
+      'bike.model': rental.bike.model ?? '—',
+      'rental.startDate': this.fmt(rental.startDate),
+      'rental.plannedEndDate': this.fmt(rental.plannedEndDate),
+      'rental.days': String(days),
+      'rental.dailyRateRub': String(dailyRateRub),
+      'rental.totalRub': String(totalRub),
     })
 
     const baseDir = path.join(process.cwd(), 'storage', 'documents', tenantId)
@@ -133,34 +185,20 @@ export class DocumentsController {
     return { ...doc, html }
   }
 
-  private contractHtml(input: {
-    documentNo: string
-    tenantName: string
-    franchiseeName: string
-    franchiseeCompanyName: string
-    franchiseeSignerFullName: string
-    franchiseeBankDetails: string
-    clientName: string
-    clientPhone: string
-    clientAddress: string
-    clientEmergencyPhone: string
-    passport: string
-    bikeCode: string
-    bikeModel: string
-    startDate: Date
-    plannedEndDate: Date
-    dailyRateRub: number
-    createdAt: Date
-  }) {
-    const format = (d: Date) => new Date(d).toLocaleDateString('ru-RU')
-    const days = Math.max(1, Math.ceil((new Date(input.plannedEndDate).getTime() - new Date(input.startDate).getTime()) / 86400000))
-    const total = days * input.dailyRateRub
+  private applyTemplate(template: string, data: Record<string, string>) {
+    return template.replace(/\{\{\s*([a-zA-Z0-9._-]+)\s*\}\}/g, (_, key: string) => data[key] ?? '—')
+  }
 
+  private fmt(d: Date | string) {
+    return new Date(d).toLocaleDateString('ru-RU')
+  }
+
+  private defaultTemplate() {
     return `<!doctype html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
-<title>Договор аренды ${input.documentNo}</title>
+<title>Договор аренды {{contract.number}}</title>
 <style>
   body { font-family: Arial, sans-serif; margin: 32px; color: #111; }
   h1 { font-size: 20px; margin: 0 0 8px; }
@@ -171,29 +209,29 @@ export class DocumentsController {
 </head>
 <body>
   <h1>ДОГОВОР АРЕНДЫ ЭЛЕКТРОВЕЛОСИПЕДА</h1>
-  <div class="muted">№ ${input.documentNo} · дата: ${format(input.createdAt)}</div>
+  <div class="muted">№ {{contract.number}} · дата: {{contract.date}}</div>
 
   <div class="box">
-    <div class="row"><b>Франчайзи:</b> ${input.franchiseeName}</div>
-    <div class="row"><b>Название компании:</b> ${input.franchiseeCompanyName}</div>
-    <div class="row"><b>Подписант со стороны франчайзи:</b> ${input.franchiseeSignerFullName}</div>
-    <div class="row"><b>Банковские реквизиты:</b> ${input.franchiseeBankDetails}</div>
-    <div class="row"><b>Точка выдачи:</b> ${input.tenantName}</div>
+    <div class="row"><b>Франчайзи:</b> {{franchisee.name}}</div>
+    <div class="row"><b>Название компании:</b> {{franchisee.companyName}}</div>
+    <div class="row"><b>Подписант со стороны франчайзи:</b> {{franchisee.signerFullName}}</div>
+    <div class="row"><b>Банковские реквизиты:</b> {{franchisee.bankDetails}}</div>
+    <div class="row"><b>Точка выдачи:</b> {{tenant.name}}</div>
   </div>
 
   <div class="box">
-    <div class="row"><b>Арендатор:</b> ${input.clientName}</div>
-    <div class="row"><b>Телефон:</b> ${input.clientPhone}</div>
-    <div class="row"><b>Адрес проживания:</b> ${input.clientAddress}</div>
-    <div class="row"><b>Телефон родственника/знакомого:</b> ${input.clientEmergencyPhone}</div>
-    <div class="row"><b>Паспорт:</b> ${input.passport}</div>
+    <div class="row"><b>Арендатор:</b> {{client.fullName}}</div>
+    <div class="row"><b>Телефон:</b> {{client.phone}}</div>
+    <div class="row"><b>Адрес проживания:</b> {{client.address}}</div>
+    <div class="row"><b>Телефон родственника/знакомого:</b> {{client.emergencyContactPhone}}</div>
+    <div class="row"><b>Паспорт:</b> {{client.passportSeries}} {{client.passportNumber}}</div>
   </div>
 
   <div class="box">
-    <div class="row"><b>Транспорт:</b> ${input.bikeCode} (${input.bikeModel})</div>
-    <div class="row"><b>Срок аренды:</b> ${format(input.startDate)} — ${format(input.plannedEndDate)} (${days} дн.)</div>
-    <div class="row"><b>Тариф:</b> ${input.dailyRateRub} RUB/сутки</div>
-    <div class="row"><b>Итого к оплате:</b> ${total} RUB</div>
+    <div class="row"><b>Транспорт:</b> {{bike.code}} ({{bike.model}})</div>
+    <div class="row"><b>Срок аренды:</b> {{rental.startDate}} — {{rental.plannedEndDate}} ({{rental.days}} дн.)</div>
+    <div class="row"><b>Тариф:</b> {{rental.dailyRateRub}} RUB/сутки</div>
+    <div class="row"><b>Итого к оплате:</b> {{rental.totalRub}} RUB</div>
   </div>
 
   <div class="box">

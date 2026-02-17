@@ -33,6 +33,7 @@ export default function AdminPage() {
   const [userRoleFilter, setUserRoleFilter] = useState<'ALL' | 'OWNER' | 'FRANCHISEE' | 'MANAGER' | 'MECHANIC'>('ALL')
   const [userActiveFilter, setUserActiveFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL')
   const [newUser, setNewUser] = useState({ email: '', password: '', role: 'MANAGER', franchiseeId: '' })
+  const [contractTemplateHtml, setContractTemplateHtml] = useState('')
   const [audit, setAudit] = useState<AuditItem[]>([])
   const [auditRows, setAuditRows] = useState<any[]>([])
   const [error, setError] = useState('')
@@ -57,6 +58,7 @@ export default function AdminPage() {
       const [myTenants, me, frs, logs, requests, adminUsers] = await Promise.all([api.myTenants(), api.me(), api.adminFranchisees(), api.adminAudit(), api.adminRegistrationRequests(), api.adminUsers()])
       setRole((me.role as UserRole) || '')
       setTenants(myTenants)
+      const currentTenantId = getTenantId() || myTenants[0]?.id || ''
       if (!getTenantId() && myTenants.length > 0) setTenantId(myTenants[0].id)
       setFranchisees(frs)
       setAuditRows(logs)
@@ -81,6 +83,11 @@ export default function AdminPage() {
         }
       })
       setUserTenantMap(nextUserTenantMap)
+
+      if (currentTenantId) {
+        const tpl = await api.getContractTemplate()
+        setContractTemplateHtml(tpl.templateHtml || '')
+      }
     } catch (err) {
       setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка загрузки админки'}`)
     }
@@ -343,6 +350,18 @@ export default function AdminPage() {
     }
   }
 
+  async function saveContractTemplate() {
+    setError('')
+    setSuccess('')
+    try {
+      if (!contractTemplateHtml.trim()) throw new Error('Шаблон не может быть пустым')
+      await api.updateContractTemplate(contractTemplateHtml)
+      setSuccess('Шаблон договора сохранён')
+    } catch (err) {
+      setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка сохранения шаблона договора'}`)
+    }
+  }
+
   useEffect(() => {
     if (!getToken()) return router.replace('/login')
     void loadAll()
@@ -407,6 +426,21 @@ export default function AdminPage() {
                 )
               })}
               {!registrationRequests.filter((r) => r.status === 'PENDING').length && <p className="text-gray-600">Новых заявок нет</p>}
+            </div>
+          </section>
+
+          <section className="panel mb-4 text-sm">
+            <h2 className="section-title">Шаблон договора (для выбранной точки)</h2>
+            <p className="mb-2 text-xs text-gray-600">
+              Используй плейсхолдеры вида {'{{client.fullName}}'}, {'{{franchisee.companyName}}'}, {'{{rental.totalRub}}'}.
+            </p>
+            <textarea
+              className="input min-h-[280px] w-full font-mono text-xs"
+              value={contractTemplateHtml}
+              onChange={(e) => setContractTemplateHtml(e.target.value)}
+            />
+            <div className="mt-2 flex gap-2">
+              <button className="btn" onClick={saveContractTemplate}>Сохранить шаблон</button>
             </div>
           </section>
 
