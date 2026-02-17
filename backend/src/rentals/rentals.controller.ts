@@ -5,6 +5,7 @@ import {
   Get,
   NotFoundException,
   Param,
+  Query,
   Patch,
   Post,
   Req,
@@ -20,6 +21,7 @@ import { RolesGuard } from '../common/guards/roles.guard'
 import { TenantGuard } from '../common/guards/tenant.guard'
 import { PrismaService } from '../prisma/prisma.service'
 import { AddRentalBatteryDto } from './dto/add-rental-battery.dto'
+import { CloseRentalDto } from './dto/close-rental.dto'
 import { CreateRentalDto } from './dto/create-rental.dto'
 import { ExtendRentalDto } from './dto/extend-rental.dto'
 import { ReplaceRentalBatteryDto } from './dto/replace-rental-battery.dto'
@@ -192,20 +194,23 @@ export class RentalsController {
     return rental
   }
 
-  @Get('active')
-  async active(@Req() req: Request) {
+  @Get()
+  async list(@Req() req: Request, @Query('status') status?: string) {
     const tenantId = req.tenantId!
+    const statusFilter = status === 'ACTIVE' || status === 'CLOSED' ? (status as RentalStatus) : undefined
 
-    return this.prisma.rental.findMany({
+    const rows = await this.prisma.rental.findMany({
       where: {
         tenantId,
-        status: RentalStatus.ACTIVE,
+        ...(statusFilter ? { status: statusFilter } : {}),
       },
       orderBy: { startDate: 'desc' },
       select: {
         id: true,
+        status: true,
         startDate: true,
         plannedEndDate: true,
+        actualEndDate: true,
         weeklyRateRub: true,
         client: {
           select: {
@@ -225,8 +230,22 @@ export class RentalsController {
             battery: { select: { id: true, code: true } },
           },
         },
+        changes: {
+          where: { type: RentalChangeType.CLOSE },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: { reason: true },
+        },
       },
     })
+
+    return rows.map((r) => ({ ...r, closeReason: r.changes[0]?.reason ?? null }))
+  }
+
+  @Get('active')
+  async active(@Req() req: Request) {
+    const tenantId = req.tenantId!
+    return this.list(req, 'ACTIVE')
   }
 
   @Post(':id/extend')
@@ -470,7 +489,12 @@ export class RentalsController {
   }
 
   @Post(':id/close')
-  async close(@Req() req: Request, @Param('id') id: string, @CurrentUser() user: JwtUser) {
+  async close(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @CurrentUser() user: JwtUser,
+    @Body() dto: CloseRentalDto,
+  ) {
     const tenantId = req.tenantId!
 
     const rental = await this.prisma.rental.findFirst({
@@ -491,6 +515,9 @@ export class RentalsController {
     if (rental.status !== RentalStatus.ACTIVE) {
       throw new BadRequestException('Only ACTIVE rental can be closed')
     }
+
+    const reason = dto.reason?.trim()
+    if (!reason) throw new BadRequestException('Reason is required')
 
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
@@ -515,7 +542,7 @@ export class RentalsController {
           rentalId: id,
           type: RentalChangeType.CLOSE,
           daysDelta: 0,
-          reason: 'Досрочное завершение аренды',
+          reason,
           createdById: user.userId,
         },
       })

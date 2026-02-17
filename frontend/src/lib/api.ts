@@ -53,9 +53,12 @@ export type Bike = {
 
 export type Rental = {
   id: string
+  status: string
   startDate: string
   plannedEndDate: string
+  actualEndDate?: string | null
   weeklyRateRub: number
+  closeReason?: string | null
   client: { id: string; fullName: string; phone?: string | null }
   bike: { id: string; code: string }
   batteries?: Array<{ battery: { id: string; code: string } }>
@@ -203,6 +206,9 @@ export const api = {
       body: JSON.stringify({ rows }),
     }, true),
 
+  rentals: (status?: 'ACTIVE' | 'CLOSED') =>
+    request<Rental[]>(`/rentals${status ? `?status=${status}` : ''}`, undefined, true),
+
   activeRentals: () => request<Rental[]>('/rentals/active', undefined, true),
 
   batteries: (query = '') => request<Battery[]>(`/batteries${query ? `?${query}` : ''}`, undefined, true),
@@ -253,8 +259,11 @@ export const api = {
       body: JSON.stringify({ days }),
     }, true),
 
-  closeRental: (rentalId: string) =>
-    request<any>(`/rentals/${rentalId}/close`, { method: 'POST' }, true),
+  closeRental: (rentalId: string, reason: string) =>
+    request<any>(`/rentals/${rentalId}/close`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }, true),
 
   addRentalBattery: (rentalId: string, batteryId: string) =>
     request<any>(`/rentals/${rentalId}/batteries`, {

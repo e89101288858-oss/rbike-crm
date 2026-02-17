@@ -31,6 +31,7 @@ export default function RentalsPage() {
   const [docHtmlMap, setDocHtmlMap] = useState<Record<string, string>>({})
   const [dailyRateRub, setDailyRateRub] = useState(500)
   const [minRentalDays, setMinRentalDays] = useState(7)
+  const [listTab, setListTab] = useState<'ACTIVE' | 'CLOSED'>('ACTIVE')
   const [error, setError] = useState('')
 
   async function loadAll() {
@@ -39,7 +40,7 @@ export default function RentalsPage() {
       const [clientsRes, bikesRes, rentalsRes, batteriesRes] = await Promise.all([
         api.clients(),
         api.bikes(),
-        api.activeRentals(),
+        api.rentals(listTab),
         api.batteries(),
       ])
       setClients(clientsRes)
@@ -102,7 +103,9 @@ export default function RentalsPage() {
   async function closeRental(rentalId: string) {
     setError('')
     try {
-      await api.closeRental(rentalId)
+      const reason = window.prompt('Укажи причину досрочного завершения аренды')?.trim() || ''
+      if (!reason) throw new Error('Причина досрочного завершения обязательна')
+      await api.closeRental(rentalId, reason)
       await loadAll()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка закрытия аренды')
@@ -207,6 +210,10 @@ export default function RentalsPage() {
     })()
   }, [router])
 
+  useEffect(() => {
+    void loadAll()
+  }, [listTab])
+
   const rentalDays = startDate && plannedEndDate ? diffDays(startDate, plannedEndDate) : 0
   const projectedTotalRub = dailyRateRub * rentalDays
   const availableBatteries = batteries.filter((b) => b.status === 'AVAILABLE')
@@ -215,7 +222,13 @@ export default function RentalsPage() {
   return (
     <main className="mx-auto max-w-6xl p-6 with-sidebar">
       <Topbar tenants={tenants} />
-      <h1 className="mb-4 text-2xl font-semibold">Аренды</h1>
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <h1 className="text-2xl font-semibold">Аренды</h1>
+        <div className="flex gap-2">
+          <button className={listTab === 'ACTIVE' ? 'btn-primary' : 'btn'} onClick={() => setListTab('ACTIVE')}>Активные</button>
+          <button className={listTab === 'CLOSED' ? 'btn-primary' : 'btn'} onClick={() => setListTab('CLOSED')}>Завершенные</button>
+        </div>
+      </div>
 
       <form onSubmit={createRental} className="mb-6 grid gap-2 rounded border p-3 md:grid-cols-4">
         <select className="rounded border p-2" value={clientId} onChange={(e) => setClientId(e.target.value)}>
@@ -276,18 +289,26 @@ export default function RentalsPage() {
         {rentals.map((r) => (
           <div key={r.id} className="rounded border p-3 text-sm">
             <div className="font-medium">{r.client.fullName} — {r.bike.code}</div>
+            <div>Статус: {r.status === 'ACTIVE' ? 'Активна' : 'Завершена'}</div>
             <div>Период: {formatDate(r.startDate)} → {formatDate(r.plannedEndDate)}</div>
+            <div>Факт завершения: {formatDate(r.actualEndDate)}</div>
+            {!!r.closeReason && <div>Причина досрочного завершения: {r.closeReason}</div>}
             <div>Тариф: {formatRub(dailyRateRub)} / сутки</div>
             <div>АКБ: {r.batteries?.map((x) => x.battery.code).join(', ') || '—'} ({r.batteries?.length || 0}/2)</div>
-            <div>Осталось дней: {Math.max(0, diffDays(new Date().toISOString(), r.plannedEndDate))}</div>
+            {r.status === 'ACTIVE' && <div>Осталось дней: {Math.max(0, diffDays(new Date().toISOString(), r.plannedEndDate))}</div>}
             <div className="mt-2 flex items-center gap-2">
-              <input type="number" className="w-40 rounded border p-1" placeholder="Дней продления" value={extendMap[r.id] ?? ''} onChange={(e) => setExtendMap((prev) => ({ ...prev, [r.id]: e.target.value }))} />
-              <button className="rounded border px-2 py-1" onClick={() => extendRental(r.id)}>Продлить</button>
+              {r.status === 'ACTIVE' && (
+                <>
+                  <input type="number" className="w-40 rounded border p-1" placeholder="Дней продления" value={extendMap[r.id] ?? ''} onChange={(e) => setExtendMap((prev) => ({ ...prev, [r.id]: e.target.value }))} />
+                  <button className="rounded border px-2 py-1" onClick={() => extendRental(r.id)}>Продлить</button>
+                </>
+              )}
               <button className="rounded border px-2 py-1" onClick={() => loadJournal(r.id)}>Журнал</button>
               <button className="rounded border px-2 py-1" onClick={() => generateContract(r.id)}>Сформировать договор</button>
-              <button className="rounded border border-red-300 px-2 py-1 text-red-700" onClick={() => closeRental(r.id)}>Завершить досрочно</button>
+              {r.status === 'ACTIVE' && <button className="rounded border border-red-300 px-2 py-1 text-red-700" onClick={() => closeRental(r.id)}>Завершить досрочно</button>}
             </div>
 
+            {r.status === 'ACTIVE' && (
             <div className="mt-2 grid gap-2 md:grid-cols-2">
               {(r.batteries?.length || 0) < 2 && (
                 <div className="rounded border p-2">
@@ -319,6 +340,7 @@ export default function RentalsPage() {
                 </div>
               )}
             </div>
+            )}
             {!!docsMap[r.id]?.length && (
               <div className="mt-3 rounded border p-2">
                 <div className="mb-2 font-medium">Документы по аренде</div>
@@ -357,7 +379,7 @@ export default function RentalsPage() {
             )}
           </div>
         ))}
-        {!rentals.length && <p className="text-sm text-gray-600">Активных аренд пока нет</p>}
+        {!rentals.length && <p className="text-sm text-gray-600">{listTab === 'ACTIVE' ? 'Активных аренд пока нет' : 'Завершенных аренд пока нет'}</p>}
       </div>
     </main>
   )
