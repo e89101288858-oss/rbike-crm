@@ -45,6 +45,9 @@ export class AdminController {
     const created = await this.prisma.franchisee.create({
       data: {
         name: dto.name,
+        companyName: dto.companyName ?? null,
+        signerFullName: dto.signerFullName ?? null,
+        bankDetails: dto.bankDetails ?? null,
         isActive: dto.isActive ?? true,
       },
     })
@@ -192,12 +195,27 @@ export class AdminController {
       where: { id },
       data: {
         ...(dto.name !== undefined && { name: dto.name }),
+        ...(dto.companyName !== undefined && { companyName: dto.companyName }),
+        ...(dto.signerFullName !== undefined && { signerFullName: dto.signerFullName }),
+        ...(dto.bankDetails !== undefined && { bankDetails: dto.bankDetails }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
       },
     })
     await this.audit(user.userId, 'UPDATE_FRANCHISEE', 'FRANCHISEE', id, {
-      from: { name: franchisee.name, isActive: franchisee.isActive },
-      to: { name: updated.name, isActive: updated.isActive },
+      from: {
+        name: franchisee.name,
+        companyName: franchisee.companyName,
+        signerFullName: franchisee.signerFullName,
+        bankDetails: franchisee.bankDetails,
+        isActive: franchisee.isActive,
+      },
+      to: {
+        name: updated.name,
+        companyName: updated.companyName,
+        signerFullName: updated.signerFullName,
+        bankDetails: updated.bankDetails,
+        isActive: updated.isActive,
+      },
     })
     return updated
   }

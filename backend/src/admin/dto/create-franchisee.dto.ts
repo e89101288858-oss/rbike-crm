@@ -6,6 +6,18 @@ export class CreateFranchiseeDto {
   name!: string
 
   @IsOptional()
+  @IsString()
+  companyName?: string
+
+  @IsOptional()
+  @IsString()
+  signerFullName?: string
+
+  @IsOptional()
+  @IsString()
+  bankDetails?: string
+
+  @IsOptional()
   @IsBoolean()
   isActive?: boolean
 }

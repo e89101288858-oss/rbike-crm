@@ -38,8 +38,23 @@ export class DocumentsController {
     const rental = await this.prisma.rental.findFirst({
       where: { id: rentalId, tenantId },
       include: {
-        tenant: { select: { name: true, dailyRateRub: true } },
-        client: { select: { fullName: true, phone: true, passportSeries: true, passportNumber: true } },
+        tenant: {
+          select: {
+            name: true,
+            dailyRateRub: true,
+            franchisee: { select: { name: true, companyName: true, signerFullName: true, bankDetails: true } },
+          },
+        },
+        client: {
+          select: {
+            fullName: true,
+            phone: true,
+            address: true,
+            emergencyContactPhone: true,
+            passportSeries: true,
+            passportNumber: true,
+          },
+        },
         bike: { select: { code: true, model: true } },
       },
     })
@@ -50,8 +65,14 @@ export class DocumentsController {
     const html = this.contractHtml({
       documentNo,
       tenantName: rental.tenant.name,
+      franchiseeName: rental.tenant.franchisee?.name ?? '—',
+      franchiseeCompanyName: rental.tenant.franchisee?.companyName ?? '—',
+      franchiseeSignerFullName: rental.tenant.franchisee?.signerFullName ?? '—',
+      franchiseeBankDetails: rental.tenant.franchisee?.bankDetails ?? '—',
       clientName: rental.client.fullName,
       clientPhone: rental.client.phone ?? '—',
+      clientAddress: rental.client.address ?? '—',
+      clientEmergencyPhone: rental.client.emergencyContactPhone ?? '—',
       passport: `${rental.client.passportSeries ?? ''} ${rental.client.passportNumber ?? ''}`.trim() || '—',
       bikeCode: rental.bike.code,
       bikeModel: rental.bike.model ?? '—',
@@ -115,8 +136,14 @@ export class DocumentsController {
   private contractHtml(input: {
     documentNo: string
     tenantName: string
+    franchiseeName: string
+    franchiseeCompanyName: string
+    franchiseeSignerFullName: string
+    franchiseeBankDetails: string
     clientName: string
     clientPhone: string
+    clientAddress: string
+    clientEmergencyPhone: string
     passport: string
     bikeCode: string
     bikeModel: string
@@ -147,9 +174,18 @@ export class DocumentsController {
   <div class="muted">№ ${input.documentNo} · дата: ${format(input.createdAt)}</div>
 
   <div class="box">
+    <div class="row"><b>Франчайзи:</b> ${input.franchiseeName}</div>
+    <div class="row"><b>Название компании:</b> ${input.franchiseeCompanyName}</div>
+    <div class="row"><b>Подписант со стороны франчайзи:</b> ${input.franchiseeSignerFullName}</div>
+    <div class="row"><b>Банковские реквизиты:</b> ${input.franchiseeBankDetails}</div>
     <div class="row"><b>Точка выдачи:</b> ${input.tenantName}</div>
+  </div>
+
+  <div class="box">
     <div class="row"><b>Арендатор:</b> ${input.clientName}</div>
     <div class="row"><b>Телефон:</b> ${input.clientPhone}</div>
+    <div class="row"><b>Адрес проживания:</b> ${input.clientAddress}</div>
+    <div class="row"><b>Телефон родственника/знакомого:</b> ${input.clientEmergencyPhone}</div>
     <div class="row"><b>Паспорт:</b> ${input.passport}</div>
   </div>
 

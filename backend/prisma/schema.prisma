@@ -85,12 +85,15 @@ model User {
 }
 
 model Franchisee {
-  id        String   @id @default(uuid())
-  name      String
-  tenants   Tenant[]
-  users     User[]
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
+  id             String   @id @default(uuid())
+  name           String
+  companyName    String?
+  signerFullName String?
+  bankDetails    String?
+  tenants        Tenant[]
+  users          User[]
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
 }
 
 model Tenant {
@@ -194,10 +197,11 @@ model Client {
   fullName       String
   phone          String?
   address        String?
-  passportSeries String?
-  passportNumber String?
-  notes          String?
-  isActive       Boolean @default(true)
+  passportSeries        String?
+  passportNumber        String?
+  emergencyContactPhone String?
+  notes                 String?
+  isActive              Boolean @default(true)
 
   rentals   Rental[]
   documents Document[]

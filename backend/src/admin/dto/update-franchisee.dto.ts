@@ -7,6 +7,18 @@ export class UpdateFranchiseeDto {
   name?: string
 
   @IsOptional()
+  @IsString()
+  companyName?: string
+
+  @IsOptional()
+  @IsString()
+  signerFullName?: string
+
+  @IsOptional()
+  @IsString()
+  bankDetails?: string
+
+  @IsOptional()
   @IsBoolean()
   isActive?: boolean
 }

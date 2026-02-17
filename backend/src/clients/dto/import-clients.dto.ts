@@ -23,6 +23,10 @@ export class ImportClientRowDto {
 
   @IsOptional()
   @IsString()
+  emergencyContactPhone?: string
+
+  @IsOptional()
+  @IsString()
   notes?: string
 }
 

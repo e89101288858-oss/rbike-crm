@@ -24,5 +24,9 @@ export class UpdateClientDto {
 
   @IsOptional()
   @IsString()
+  emergencyContactPhone?: string
+
+  @IsOptional()
+  @IsString()
   notes?: string
 }

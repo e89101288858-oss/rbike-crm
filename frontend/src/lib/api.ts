@@ -28,6 +28,7 @@ export type Client = {
   address?: string | null
   passportSeries?: string | null
   passportNumber?: string | null
+  emergencyContactPhone?: string | null
   notes?: string | null
   isActive?: boolean
 }
@@ -106,6 +107,7 @@ export const api = {
     address?: string
     passportSeries?: string
     passportNumber?: string
+    emergencyContactPhone?: string
     notes?: string
   }) =>
     request<Client>('/clients', {
@@ -312,13 +314,13 @@ export const api = {
 
   adminFranchisees: () => request<any[]>('/franchisees'),
 
-  adminCreateFranchisee: (payload: { name: string; isActive?: boolean }) =>
+  adminCreateFranchisee: (payload: { name: string; companyName?: string; signerFullName?: string; bankDetails?: string; isActive?: boolean }) =>
     request<any>('/franchisees', {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
 
-  adminUpdateFranchisee: (id: string, payload: { name?: string; isActive?: boolean }) =>
+  adminUpdateFranchisee: (id: string, payload: { name?: string; companyName?: string; signerFullName?: string; bankDetails?: string; isActive?: boolean }) =>
     request<any>(`/franchisees/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(payload),

@@ -19,6 +19,9 @@ export default function AdminPage() {
   const [franchisees, setFranchisees] = useState<any[]>([])
   const [tenantMap, setTenantMap] = useState<Record<string, any[]>>({})
   const [newFranchiseeName, setNewFranchiseeName] = useState('')
+  const [newFranchiseeCompanyName, setNewFranchiseeCompanyName] = useState('')
+  const [newFranchiseeSignerFullName, setNewFranchiseeSignerFullName] = useState('')
+  const [newFranchiseeBankDetails, setNewFranchiseeBankDetails] = useState('')
   const [newTenantDraft, setNewTenantDraft] = useState<Record<string, { name: string; dailyRateRub: number; minRentalDays: number }>>({})
   const [registrationRequests, setRegistrationRequests] = useState<any[]>([])
   const [approveMap, setApproveMap] = useState<Record<string, { franchiseeId: string; tenantId: string }>>({})
@@ -89,9 +92,18 @@ export default function AdminPage() {
     setSuccess('')
     try {
       if (!newFranchiseeName.trim()) throw new Error('Укажи название франчайзи')
-      await api.adminCreateFranchisee({ name: newFranchiseeName.trim(), isActive: true })
+      await api.adminCreateFranchisee({
+        name: newFranchiseeName.trim(),
+        companyName: newFranchiseeCompanyName.trim() || undefined,
+        signerFullName: newFranchiseeSignerFullName.trim() || undefined,
+        bankDetails: newFranchiseeBankDetails.trim() || undefined,
+        isActive: true,
+      })
       pushAudit(`Создан франчайзи: ${newFranchiseeName.trim()}`)
       setNewFranchiseeName('')
+      setNewFranchiseeCompanyName('')
+      setNewFranchiseeSignerFullName('')
+      setNewFranchiseeBankDetails('')
       await loadAll()
       setSuccess('Сохранено')
     } catch (err) {
@@ -103,7 +115,12 @@ export default function AdminPage() {
     setError('')
     setSuccess('')
     try {
-      await api.adminUpdateFranchisee(f.id, { name: f.name })
+      await api.adminUpdateFranchisee(f.id, {
+        name: f.name,
+        companyName: f.companyName || undefined,
+        signerFullName: f.signerFullName || undefined,
+        bankDetails: f.bankDetails || undefined,
+      })
       pushAudit(`Обновлён франчайзи: ${f.name}`)
       await loadAll()
       setSuccess('Сохранено')
@@ -393,20 +410,28 @@ export default function AdminPage() {
             </div>
           </section>
 
-          <form onSubmit={createFranchisee} className="panel mb-4 flex flex-wrap items-center gap-2">
-            <input className="input min-w-72" placeholder="Новый франчайзи" value={newFranchiseeName} onChange={(e) => setNewFranchiseeName(e.target.value)} />
-            <button className="btn-primary">Добавить франчайзи</button>
+          <form onSubmit={createFranchisee} className="panel mb-4 grid gap-2 md:grid-cols-2">
+            <input className="input" placeholder="Новый франчайзи" value={newFranchiseeName} onChange={(e) => setNewFranchiseeName(e.target.value)} />
+            <input className="input" placeholder="Название компании" value={newFranchiseeCompanyName} onChange={(e) => setNewFranchiseeCompanyName(e.target.value)} />
+            <input className="input" placeholder="ФИО подписанта" value={newFranchiseeSignerFullName} onChange={(e) => setNewFranchiseeSignerFullName(e.target.value)} />
+            <input className="input" placeholder="Банковские реквизиты" value={newFranchiseeBankDetails} onChange={(e) => setNewFranchiseeBankDetails(e.target.value)} />
+            <button className="btn-primary md:col-span-2">Добавить франчайзи</button>
           </form>
 
           <div className="space-y-4">
             {franchisees.map((f) => (
               <section key={f.id} className="panel text-sm">
-                <div className="mb-3 flex flex-wrap items-center gap-2">
-                  <input className="input min-w-72" value={f.name} onChange={(e) => setFranchisees((prev) => prev.map((x) => x.id === f.id ? { ...x, name: e.target.value } : x))} />
-                  <span className={`badge ${f.isActive ? 'badge-ok' : 'badge-muted'}`}>{f.isActive ? 'Активен' : 'Архив'}</span>
-                  <button className="btn" onClick={() => saveFranchisee(f)}>Сохранить</button>
-                  <button className="btn" onClick={() => archiveFranchisee(f)}>{f.isActive ? 'В архив' : 'Восстановить'}</button>
-                  <button className="btn border-red-300 text-red-700" onClick={() => deleteFranchisee(f)}>Удалить</button>
+                <div className="mb-3 grid gap-2 md:grid-cols-2">
+                  <input className="input" placeholder="Имя франчайзи" value={f.name || ''} onChange={(e) => setFranchisees((prev) => prev.map((x) => x.id === f.id ? { ...x, name: e.target.value } : x))} />
+                  <input className="input" placeholder="Название компании" value={f.companyName || ''} onChange={(e) => setFranchisees((prev) => prev.map((x) => x.id === f.id ? { ...x, companyName: e.target.value } : x))} />
+                  <input className="input" placeholder="ФИО подписанта" value={f.signerFullName || ''} onChange={(e) => setFranchisees((prev) => prev.map((x) => x.id === f.id ? { ...x, signerFullName: e.target.value } : x))} />
+                  <input className="input" placeholder="Банковские реквизиты" value={f.bankDetails || ''} onChange={(e) => setFranchisees((prev) => prev.map((x) => x.id === f.id ? { ...x, bankDetails: e.target.value } : x))} />
+                  <div className="md:col-span-2 flex flex-wrap items-center gap-2">
+                    <span className={`badge ${f.isActive ? 'badge-ok' : 'badge-muted'}`}>{f.isActive ? 'Активен' : 'Архив'}</span>
+                    <button className="btn" onClick={() => saveFranchisee(f)}>Сохранить</button>
+                    <button className="btn" onClick={() => archiveFranchisee(f)}>{f.isActive ? 'В архив' : 'Восстановить'}</button>
+                    <button className="btn border-red-300 text-red-700" onClick={() => deleteFranchisee(f)}>Удалить</button>
+                  </div>
                 </div>
 
                 <div className="soft-card">

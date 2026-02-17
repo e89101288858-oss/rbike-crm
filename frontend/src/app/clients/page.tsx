@@ -15,6 +15,7 @@ function toClientForm(c: Client): ClientForm {
     address: c.address ?? '',
     passportSeries: c.passportSeries ?? '',
     passportNumber: c.passportNumber ?? '',
+    emergencyContactPhone: c.emergencyContactPhone ?? '',
     notes: c.notes ?? '',
   }
 }
@@ -28,6 +29,7 @@ export default function ClientsPage() {
   const [address, setAddress] = useState('')
   const [passportSeries, setPassportSeries] = useState('')
   const [passportNumber, setPassportNumber] = useState('')
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState('')
   const [notes, setNotes] = useState('')
   const [query, setQuery] = useState('')
   const [includeArchived, setIncludeArchived] = useState(false)
@@ -68,6 +70,7 @@ export default function ClientsPage() {
         address: address.trim(),
         passportSeries: passportSeries.trim(),
         passportNumber: passportNumber.trim(),
+        emergencyContactPhone: emergencyContactPhone.trim(),
         notes: notes.trim(),
       })
       setFullName('')
@@ -75,6 +78,7 @@ export default function ClientsPage() {
       setAddress('')
       setPassportSeries('')
       setPassportNumber('')
+      setEmergencyContactPhone('')
       setNotes('')
       await load()
       setSuccess('Сохранено')
@@ -156,12 +160,13 @@ export default function ClientsPage() {
         <input className="input" placeholder="Адрес проживания" value={address} onChange={(e) => setAddress(e.target.value)} />
         <input className="input" placeholder="Паспорт серия" value={passportSeries} onChange={(e) => setPassportSeries(e.target.value)} />
         <input className="input" placeholder="Паспорт номер" value={passportNumber} onChange={(e) => setPassportNumber(e.target.value)} />
+        <input className="input" placeholder="Телефон родственника/знакомого" value={emergencyContactPhone} onChange={(e) => setEmergencyContactPhone(e.target.value)} />
         <input className="input" placeholder="Заметка" value={notes} onChange={(e) => setNotes(e.target.value)} />
         <button className="btn-primary md:col-span-3">Добавить курьера</button>
       </form>
 
       <div className="mb-3 flex gap-2">
-        <input className="input w-full" placeholder="Поиск: ФИО / телефон / паспорт" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <input className="input w-full" placeholder="Поиск: ФИО / телефон / паспорт / контакт" value={query} onChange={(e) => setQuery(e.target.value)} />
         <button className="btn" onClick={load} disabled={loading}>{loading ? 'Поиск…' : 'Найти'}</button>
       </div>
 
@@ -181,6 +186,7 @@ export default function ClientsPage() {
                 <input disabled={archived} className="input" value={e.address ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], address: ev.target.value } }))} />
                 <input disabled={archived} className="input" value={e.passportSeries ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], passportSeries: ev.target.value } }))} />
                 <input disabled={archived} className="input" value={e.passportNumber ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], passportNumber: ev.target.value } }))} />
+                <input disabled={archived} className="input" placeholder="Телефон родственника/знакомого" value={e.emergencyContactPhone ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], emergencyContactPhone: ev.target.value } }))} />
                 <input disabled={archived} className="input" value={e.notes ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], notes: ev.target.value } }))} />
               </div>
               <div className="mt-3 flex flex-wrap gap-2">

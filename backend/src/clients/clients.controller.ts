@@ -28,6 +28,7 @@ export class ClientsController {
         address: dto.address ?? undefined,
         passportSeries: dto.passportSeries ?? undefined,
         passportNumber: dto.passportNumber ?? undefined,
+        emergencyContactPhone: dto.emergencyContactPhone ?? undefined,
         notes: dto.notes ?? undefined,
       },
     })
@@ -45,6 +46,7 @@ export class ClientsController {
         address: r.address?.trim() || undefined,
         passportSeries: r.passportSeries?.trim() || undefined,
         passportNumber: r.passportNumber?.trim() || undefined,
+        emergencyContactPhone: r.emergencyContactPhone?.trim() || undefined,
         notes: r.notes?.trim() || undefined,
       }))
       .filter((r) => r.fullName)
@@ -72,6 +74,7 @@ export class ClientsController {
                 { phone: { contains: q, mode: 'insensitive' } },
                 { passportSeries: { contains: q, mode: 'insensitive' } },
                 { passportNumber: { contains: q, mode: 'insensitive' } },
+                { emergencyContactPhone: { contains: q, mode: 'insensitive' } },
               ],
             }
           : {}),
@@ -126,6 +129,7 @@ export class ClientsController {
         ...(dto.address !== undefined && { address: dto.address }),
         ...(dto.passportSeries !== undefined && { passportSeries: dto.passportSeries }),
         ...(dto.passportNumber !== undefined && { passportNumber: dto.passportNumber }),
+        ...(dto.emergencyContactPhone !== undefined && { emergencyContactPhone: dto.emergencyContactPhone }),
         ...(dto.notes !== undefined && { notes: dto.notes }),
       },
     })
