@@ -19,6 +19,7 @@ export default function RentalsPage() {
   const [bikeId, setBikeId] = useState('')
   const [startDate, setStartDate] = useState('')
   const [plannedEndDate, setPlannedEndDate] = useState('')
+  const [batteryCount, setBatteryCount] = useState(2)
   const [selectedBatteryIds, setSelectedBatteryIds] = useState<string[]>([])
   const [extendMap, setExtendMap] = useState<Record<string, string>>({})
   const [journalMap, setJournalMap] = useState<Record<string, any[]>>({})
@@ -54,6 +55,9 @@ export default function RentalsPage() {
 
       if (selectedBatteryIds.length < 1) {
         throw new Error('Для выдачи нужен минимум 1 АКБ')
+      }
+      if (selectedBatteryIds.length !== batteryCount) {
+        throw new Error(`Выбери ${batteryCount} АКБ`) 
       }
 
       if (diffDays(startDate, plannedEndDate) < minRentalDays) {
@@ -131,7 +135,7 @@ export default function RentalsPage() {
 
   const rentalDays = startDate && plannedEndDate ? diffDays(startDate, plannedEndDate) : 0
   const projectedTotalRub = dailyRateRub * rentalDays
-  const bikeBatteries = batteries.filter((b) => b.bikeId === bikeId && b.status === 'AVAILABLE')
+  const availableBatteries = batteries.filter((b) => b.status === 'AVAILABLE')
 
   return (
     <main className="mx-auto max-w-6xl p-6 with-sidebar">
@@ -149,16 +153,24 @@ export default function RentalsPage() {
         </select>
         <input type="date" className="rounded border p-2" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
         <input type="date" className="rounded border p-2" value={plannedEndDate} onChange={(e) => setPlannedEndDate(e.target.value)} />
-        <select
-          multiple
-          className="rounded border p-2 md:col-span-4"
-          value={selectedBatteryIds}
-          onChange={(e) => setSelectedBatteryIds(Array.from(e.target.selectedOptions).map((o) => o.value))}
-        >
-          {bikeBatteries.map((b) => <option key={b.id} value={b.id}>{b.code}{b.serialNumber ? ` (${b.serialNumber})` : ''}</option>)}
-        </select>
+        <div className="rounded border p-2 md:col-span-4">
+          <div className="mb-2 flex items-center gap-3 text-sm">
+            <span>Количество АКБ к выдаче:</span>
+            <label className="flex items-center gap-1"><input type="radio" checked={batteryCount === 1} onChange={() => { setBatteryCount(1); setSelectedBatteryIds((p) => p.slice(0, 1)) }} /> 1</label>
+            <label className="flex items-center gap-1"><input type="radio" checked={batteryCount === 2} onChange={() => setBatteryCount(2)} /> 2</label>
+            <button type="button" className="btn" onClick={() => setSelectedBatteryIds(availableBatteries.slice(0, batteryCount).map((b) => b.id))}>Автоподбор</button>
+          </div>
+          <select
+            multiple
+            className="w-full rounded border p-2"
+            value={selectedBatteryIds}
+            onChange={(e) => setSelectedBatteryIds(Array.from(e.target.selectedOptions).map((o) => o.value).slice(0, 2))}
+          >
+            {availableBatteries.map((b) => <option key={b.id} value={b.id}>{b.code}{b.serialNumber ? ` (${b.serialNumber})` : ''}{b.bike?.code ? ` — сейчас на ${b.bike.code}` : ''}</option>)}
+          </select>
+        </div>
         <button
-          disabled={!clientId || !bikeId || !startDate || !plannedEndDate || selectedBatteryIds.length < 1 || rentalDays < minRentalDays}
+          disabled={!clientId || !bikeId || !startDate || !plannedEndDate || selectedBatteryIds.length !== batteryCount || rentalDays < minRentalDays}
           className="rounded bg-black p-2 text-white disabled:opacity-50 md:col-span-4"
         >
           Создать аренду
@@ -167,7 +179,7 @@ export default function RentalsPage() {
 
       {startDate && plannedEndDate && (
         <p className="mb-3 text-sm text-gray-600">
-          Тариф: {formatRub(dailyRateRub)} / сутки · Срок: {rentalDays} дн. (минимум {minRentalDays}) · АКБ выбрано: {selectedBatteryIds.length} · Сумма: {formatRub(projectedTotalRub)}
+          Тариф: {formatRub(dailyRateRub)} / сутки · Срок: {rentalDays} дн. (минимум {minRentalDays}) · АКБ: выбрано {selectedBatteryIds.length} из {batteryCount} · Сумма: {formatRub(projectedTotalRub)}
         </p>
       )}
 

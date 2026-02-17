@@ -107,7 +107,6 @@ export class RentalsController {
       where: {
         tenantId,
         isActive: true,
-        bikeId: dto.bikeId,
         id: { in: dto.batteryIds || [] },
       },
       select: { id: true, status: true },
@@ -115,6 +114,12 @@ export class RentalsController {
 
     if (!dto.batteryIds?.length) {
       throw new BadRequestException('At least one battery is required')
+    }
+    if (dto.batteryIds.length > 2) {
+      throw new BadRequestException('Maximum 2 batteries can be issued')
+    }
+    if (new Set(dto.batteryIds).size !== dto.batteryIds.length) {
+      throw new BadRequestException('Battery ids must be unique')
     }
 
     if (batteries.length !== dto.batteryIds.length) {
@@ -176,7 +181,7 @@ export class RentalsController {
 
       await tx.battery.updateMany({
         where: { tenantId, id: { in: dto.batteryIds } },
-        data: { status: 'RENTED' },
+        data: { status: 'RENTED', bikeId: dto.bikeId },
       })
 
       return created
@@ -446,7 +451,7 @@ export class RentalsController {
       if (rentalBatteries.length) {
         await tx.battery.updateMany({
           where: { tenantId, id: { in: rentalBatteries.map((x) => x.batteryId) } },
-          data: { status: 'AVAILABLE' },
+          data: { status: 'AVAILABLE', bikeId: null },
         })
       }
 
