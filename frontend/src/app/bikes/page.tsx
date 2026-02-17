@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api, Bike } from '@/lib/api'
 import { getTenantId, getToken, setTenantId } from '@/lib/auth'
+import { statusLabel } from '@/lib/format'
 
 type UserRole = 'OWNER' | 'FRANCHISEE' | 'MANAGER' | 'MECHANIC' | ''
 
@@ -134,7 +135,7 @@ export default function BikesPage() {
           <div className="grid gap-2 md:grid-cols-4">
             <input className="input" value={newBike.code} placeholder="Код" onChange={(e) => setNewBike((p) => ({ ...p, code: e.target.value }))} />
             <input className="input" value={newBike.model} placeholder="Модель" onChange={(e) => setNewBike((p) => ({ ...p, model: e.target.value }))} />
-            <select className="select" value={newBike.status} onChange={(e) => setNewBike((p) => ({ ...p, status: e.target.value }))}>{BIKE_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select>
+            <select className="select" value={newBike.status} onChange={(e) => setNewBike((p) => ({ ...p, status: e.target.value }))}>{BIKE_STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}</select>
             <input className="input" value={newBike.frameNumber} placeholder="Номер рамы" onChange={(e) => setNewBike((p) => ({ ...p, frameNumber: e.target.value }))} />
             <input className="input" value={newBike.motorWheelNumber} placeholder="Номер мотор-колеса" onChange={(e) => setNewBike((p) => ({ ...p, motorWheelNumber: e.target.value }))} />
             <input className="input" value={newBike.simCardNumber} placeholder="Номер сим-карты" onChange={(e) => setNewBike((p) => ({ ...p, simCardNumber: e.target.value }))} />
@@ -153,13 +154,13 @@ export default function BikesPage() {
             <div key={b.id} className="panel text-sm">
               <div className="mb-2 flex items-center justify-between">
                 <div className="font-semibold">{b.code}</div>
-                <div className="flex items-center gap-2">{archived && <span className="badge badge-muted">АРХИВ</span>}<span className={`badge ${statusBadge(f.status ?? b.status)}`}>{f.status ?? b.status}</span></div>
+                <div className="flex items-center gap-2">{archived && <span className="badge badge-muted">АРХИВ</span>}<span className={`badge ${statusBadge(f.status ?? b.status)}`}>{statusLabel(f.status ?? b.status)}</span></div>
               </div>
 
               <div className="grid gap-2 md:grid-cols-4">
                 <input disabled={archived || !canManageCards} className="input" value={f.code} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], code: e.target.value } }))} />
                 <input disabled={archived || !canManageCards} className="input" value={f.model} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], model: e.target.value } }))} />
-                <select disabled={archived} className="select" value={f.status} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], status: e.target.value } }))}>{BIKE_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select>
+                <select disabled={archived} className="select" value={f.status} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], status: e.target.value } }))}>{BIKE_STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}</select>
                 <input disabled={archived || !canManageCards} className="input" value={f.frameNumber} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], frameNumber: e.target.value } }))} />
                 <input disabled={archived || !canManageCards} className="input" value={f.motorWheelNumber} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], motorWheelNumber: e.target.value } }))} />
                 <input disabled={archived || !canManageCards} className="input" value={f.simCardNumber} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], simCardNumber: e.target.value } }))} />

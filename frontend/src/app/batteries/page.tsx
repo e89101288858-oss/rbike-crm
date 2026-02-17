@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api, Battery } from '@/lib/api'
 import { getTenantId, getToken, setTenantId } from '@/lib/auth'
+import { statusLabel } from '@/lib/format'
 
 const BATTERY_STATUSES = ['AVAILABLE', 'RENTED', 'MAINTENANCE', 'LOST'] as const
 
@@ -139,7 +140,7 @@ export default function BatteriesPage() {
           {bikes.map((b: any) => <option key={b.id} value={b.id}>{b.code}</option>)}
         </select>
         <select className="select" value={status} onChange={(e) => setStatus(e.target.value)}>
-          {BATTERY_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+          {BATTERY_STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
         </select>
         <input className="input" placeholder="Заметка" value={notes} onChange={(e) => setNotes(e.target.value)} />
         <button className="btn-primary md:col-span-5">Добавить АКБ</button>
@@ -165,7 +166,7 @@ export default function BatteriesPage() {
                 {bikes.map((bike: any) => <option key={bike.id} value={bike.id}>{bike.code}</option>)}
               </select>
               <select disabled={archived} className="select" value={b.status} onChange={(e) => setItems((p) => p.map((x) => x.id === b.id ? { ...x, status: e.target.value } : x))}>
-                {BATTERY_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                {BATTERY_STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
               </select>
               <input disabled={archived} className="input" value={b.notes || ''} onChange={(e) => setItems((p) => p.map((x) => x.id === b.id ? { ...x, notes: e.target.value } : x))} />
               <div className="flex gap-2 md:col-span-2">

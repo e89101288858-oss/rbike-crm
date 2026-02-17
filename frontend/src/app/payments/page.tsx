@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'
 import { getTenantId, getToken, setTenantId } from '@/lib/auth'
-import { formatDate, formatDateTime, formatRub } from '@/lib/format'
+import { formatDate, formatDateTime, formatRub, statusLabel } from '@/lib/format'
 
 export default function PaymentsPage() {
   const router = useRouter()
@@ -106,7 +106,7 @@ export default function PaymentsPage() {
             <div>Сумма: <span className={Number(p.amount) < 0 ? 'text-red-700' : ''}>{formatRub(Number(p.amount ?? 0))}</span></div>
             <div>Период: {formatDate(p.periodStart)} → {formatDate(p.periodEnd)}</div>
             <div>Оплата: {formatDateTime(p.paidAt)}</div>
-            <div className="mb-2"><span className={`badge ${p.status === 'PAID' ? 'badge-ok' : 'badge-warn'}`}>{p.status === 'PAID' ? 'Оплачен' : 'Плановый'}</span></div>
+            <div className="mb-2"><span className={`badge ${p.status === 'PAID' ? 'badge-ok' : 'badge-warn'}`}>{statusLabel(p.status)}</span></div>
             {editId === p.id ? (
               <div className="space-y-2">
                 <input className="input w-full" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} placeholder="Сумма" />
@@ -149,7 +149,7 @@ export default function PaymentsPage() {
                 <td>{formatDateTime(p.paidAt)}</td>
                 <td>
                   <span className={`badge ${p.status === 'PAID' ? 'badge-ok' : 'badge-warn'}`}>
-                    {p.status === 'PAID' ? 'Оплачен' : 'Плановый'}
+                    {statusLabel(p.status)}
                   </span>
                 </td>
                 <td>

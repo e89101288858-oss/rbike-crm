@@ -22,6 +22,29 @@ export function formatDateTime(iso?: string | null) {
   })
 }
 
+export const STATUS_LABELS: Record<string, string> = {
+  AVAILABLE: 'Свободен',
+  RENTED: 'В аренде',
+  MAINTENANCE: 'Ремонт',
+  BLOCKED: 'Заблокирован',
+  LOST: 'Утерян',
+
+  ACTIVE: 'Активна',
+  CLOSED: 'Закрыта',
+
+  PLANNED: 'Плановый',
+  PAID: 'Оплачен',
+
+  PENDING: 'На рассмотрении',
+  APPROVED: 'Одобрена',
+  REJECTED: 'Отклонена',
+}
+
+export function statusLabel(status?: string | null) {
+  if (!status) return '—'
+  return STATUS_LABELS[status] ?? status
+}
+
 export function diffDays(start: string, end: string) {
   const a = new Date(start)
   const b = new Date(end)
