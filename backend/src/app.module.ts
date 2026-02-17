@@ -11,6 +11,7 @@ import { WeeklyPaymentsModule } from './weekly-payments/weekly-payments.module'
 import { RentalsModule } from './rentals/rentals.module'
 import { ClientsModule } from './clients/clients.module'
 import { PaymentsModule } from './payments/payments.module'
+import { DocumentsModule } from './documents/documents.module'
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { PaymentsModule } from './payments/payments.module'
     RentalsModule,
     ClientsModule,
     PaymentsModule,
+    DocumentsModule,
   ],
 })
 export class AppModule {}

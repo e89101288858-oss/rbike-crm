@@ -66,6 +66,13 @@ export type Battery = {
   bike?: { id: string; code: string } | null
 }
 
+export type RentalDocument = {
+  id: string
+  type: string
+  createdAt: string
+  filePath?: string
+}
+
 export const api = {
   login: (email: string, password: string) =>
     request<{ accessToken: string }>('/auth/login', {
@@ -252,6 +259,15 @@ export const api = {
     }, true),
 
   rentalJournal: (rentalId: string) => request<any>(`/rentals/${rentalId}/journal`, undefined, true),
+
+  generateRentalContract: (rentalId: string) =>
+    request<RentalDocument>(`/documents/contracts/${rentalId}/generate`, {
+      method: 'POST',
+    }, true),
+
+  rentalDocuments: (rentalId: string) => request<RentalDocument[]>(`/documents/by-rental/${rentalId}`, undefined, true),
+
+  documentContent: (documentId: string) => request<{ id: string; type: string; createdAt: string; html: string }>(`/documents/${documentId}/content`, undefined, true),
 
   payments: (query = '') => request<any[]>(`/payments${query ? `?${query}` : ''}`, undefined, true),
 

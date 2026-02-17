@@ -226,6 +226,7 @@ model Rental {
   changes  RentalChange[]
   payments Payment[]
   batteries RentalBattery[]
+  documents Document[]
 
   createdById String?
   createdBy   User?   @relation("RentalCreatedBy", fields: [createdById], references: [id])
@@ -308,6 +309,9 @@ model Document {
   clientId String?
   client   Client? @relation(fields: [clientId], references: [id])
 
+  rentalId String?
+  rental   Rental? @relation(fields: [rentalId], references: [id])
+
   type     DocumentType
   filePath String // локальный путь или относительный путь
 
@@ -318,6 +322,7 @@ model Document {
 
   @@index([tenantId, type])
   @@index([clientId])
+  @@index([rentalId])
 }
 
 model AuditLog {

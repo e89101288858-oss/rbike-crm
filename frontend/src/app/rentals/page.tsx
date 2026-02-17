@@ -3,9 +3,9 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
-import { api, Battery, Bike, Client, Rental } from '@/lib/api'
+import { api, Battery, Bike, Client, Rental, RentalDocument } from '@/lib/api'
 import { getToken, getTenantId, setTenantId } from '@/lib/auth'
-import { diffDays, formatDate, formatRub } from '@/lib/format'
+import { diffDays, formatDate, formatDateTime, formatRub } from '@/lib/format'
 
 export default function RentalsPage() {
   const router = useRouter()
@@ -27,6 +27,8 @@ export default function RentalsPage() {
   const [replaceFromMap, setReplaceFromMap] = useState<Record<string, string>>({})
   const [replaceToMap, setReplaceToMap] = useState<Record<string, string>>({})
   const [journalMap, setJournalMap] = useState<Record<string, any[]>>({})
+  const [docsMap, setDocsMap] = useState<Record<string, RentalDocument[]>>({})
+  const [docHtmlMap, setDocHtmlMap] = useState<Record<string, string>>({})
   const [dailyRateRub, setDailyRateRub] = useState(500)
   const [minRentalDays, setMinRentalDays] = useState(7)
   const [error, setError] = useState('')
@@ -44,6 +46,11 @@ export default function RentalsPage() {
       setBikes(bikesRes)
       setRentals(rentalsRes)
       setBatteries(batteriesRes)
+
+      const docsEntries = await Promise.all(
+        rentalsRes.map(async (r) => [r.id, await api.rentalDocuments(r.id)] as const),
+      )
+      setDocsMap(Object.fromEntries(docsEntries))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки')
     }
@@ -140,6 +147,27 @@ export default function RentalsPage() {
     }
   }
 
+  async function generateContract(rentalId: string) {
+    setError('')
+    try {
+      await api.generateRentalContract(rentalId)
+      const docs = await api.rentalDocuments(rentalId)
+      setDocsMap((p) => ({ ...p, [rentalId]: docs }))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка генерации договора')
+    }
+  }
+
+  async function openDocument(documentId: string) {
+    setError('')
+    try {
+      const data = await api.documentContent(documentId)
+      setDocHtmlMap((p) => ({ ...p, [documentId]: data.html }))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка загрузки документа')
+    }
+  }
+
   useEffect(() => {
     if (!getToken()) return router.replace('/login')
     ;(async () => {
@@ -231,6 +259,7 @@ export default function RentalsPage() {
               <input type="number" className="w-40 rounded border p-1" placeholder="Дней продления" value={extendMap[r.id] ?? ''} onChange={(e) => setExtendMap((prev) => ({ ...prev, [r.id]: e.target.value }))} />
               <button className="rounded border px-2 py-1" onClick={() => extendRental(r.id)}>Продлить</button>
               <button className="rounded border px-2 py-1" onClick={() => loadJournal(r.id)}>Журнал</button>
+              <button className="rounded border px-2 py-1" onClick={() => generateContract(r.id)}>Сформировать договор</button>
               <button className="rounded border border-red-300 px-2 py-1 text-red-700" onClick={() => closeRental(r.id)}>Завершить досрочно</button>
             </div>
 
@@ -265,6 +294,23 @@ export default function RentalsPage() {
                 </div>
               )}
             </div>
+            {!!docsMap[r.id]?.length && (
+              <div className="mt-3 rounded border p-2">
+                <div className="mb-2 font-medium">Документы по аренде</div>
+                <div className="space-y-2">
+                  {docsMap[r.id].map((d) => (
+                    <div key={d.id} className="rounded border p-2">
+                      <div className="mb-1 text-xs text-gray-600">{d.type} · {formatDateTime(d.createdAt)}</div>
+                      <button className="rounded border px-2 py-1 text-xs" onClick={() => openDocument(d.id)}>Показать</button>
+                      {!!docHtmlMap[d.id] && (
+                        <div className="mt-2 rounded border bg-white p-2" dangerouslySetInnerHTML={{ __html: docHtmlMap[d.id] }} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {!!journalMap[r.id]?.length && (
               <div className="mt-3 rounded border p-2">
                 <div className="mb-2 font-medium">Журнал операций</div>
