@@ -146,12 +146,25 @@ export default function BikesPage() {
           <div className="grid gap-2 md:grid-cols-4">
             <input className="input" value={newBike.code} placeholder="Код" onChange={(e) => setNewBike((p) => ({ ...p, code: e.target.value }))} />
             <input className="input" value={newBike.model} placeholder="Модель" onChange={(e) => setNewBike((p) => ({ ...p, model: e.target.value }))} />
-            <select className="select" value={newBike.status} onChange={(e) => setNewBike((p) => ({ ...p, status: e.target.value }))}>{BIKE_STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}</select>
+            <select
+              className="select"
+              value={newBike.status}
+              onChange={(e) => setNewBike((p) => ({
+                ...p,
+                status: e.target.value,
+                repairReason: e.target.value === 'MAINTENANCE' ? p.repairReason : '',
+                repairEndDate: e.target.value === 'MAINTENANCE' ? p.repairEndDate : '',
+              }))}
+            >{BIKE_STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}</select>
             <input className="input" value={newBike.frameNumber} placeholder="Номер рамы" onChange={(e) => setNewBike((p) => ({ ...p, frameNumber: e.target.value }))} />
             <input className="input" value={newBike.motorWheelNumber} placeholder="Номер мотор-колеса" onChange={(e) => setNewBike((p) => ({ ...p, motorWheelNumber: e.target.value }))} />
             <input className="input" value={newBike.simCardNumber} placeholder="Номер сим-карты" onChange={(e) => setNewBike((p) => ({ ...p, simCardNumber: e.target.value }))} />
-            <input className="input" value={newBike.repairReason} placeholder="Причина ремонта" onChange={(e) => setNewBike((p) => ({ ...p, repairReason: e.target.value }))} />
-            <input className="input" type="date" value={newBike.repairEndDate} onChange={(e) => setNewBike((p) => ({ ...p, repairEndDate: e.target.value }))} />
+            {newBike.status === 'MAINTENANCE' && (
+              <>
+                <input className="input" value={newBike.repairReason} placeholder="Причина ремонта" onChange={(e) => setNewBike((p) => ({ ...p, repairReason: e.target.value }))} />
+                <input className="input" type="date" value={newBike.repairEndDate} onChange={(e) => setNewBike((p) => ({ ...p, repairEndDate: e.target.value }))} />
+              </>
+            )}
           </div>
           <button className="btn-primary mt-3" onClick={createBike}>Добавить велосипед</button>
         </section>
@@ -221,19 +234,39 @@ export default function BikesPage() {
                       <div className="kpi"><div className="text-xs text-gray-500">Номер рамы</div><div>{f.frameNumber || '—'}</div></div>
                       <div className="kpi"><div className="text-xs text-gray-500">Номер мотор-колеса</div><div>{f.motorWheelNumber || '—'}</div></div>
                       <div className="kpi"><div className="text-xs text-gray-500">SIM</div><div>{f.simCardNumber || '—'}</div></div>
-                      <div className="kpi md:col-span-2"><div className="text-xs text-gray-500">Причина ремонта</div><div>{f.repairReason || '—'}</div></div>
-                      <div className="kpi"><div className="text-xs text-gray-500">Дата конца ремонта</div><div>{f.repairEndDate || '—'}</div></div>
+                      {f.status === 'MAINTENANCE' && (
+                        <>
+                          <div className="kpi md:col-span-2"><div className="text-xs text-gray-500">Причина ремонта</div><div>{f.repairReason || '—'}</div></div>
+                          <div className="kpi"><div className="text-xs text-gray-500">Дата конца ремонта</div><div>{f.repairEndDate || '—'}</div></div>
+                        </>
+                      )}
                     </div>
                   ) : (
                     <div className="grid gap-2 md:grid-cols-4">
                       <input className="input" value={f.code} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], code: e.target.value } }))} />
                       <input className="input" value={f.model} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], model: e.target.value } }))} />
-                      <select className="select" value={f.status} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], status: e.target.value } }))}>{BIKE_STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}</select>
+                      <select
+                        className="select"
+                        value={f.status}
+                        onChange={(e) => setFormMap((p) => ({
+                          ...p,
+                          [b.id]: {
+                            ...p[b.id],
+                            status: e.target.value,
+                            repairReason: e.target.value === 'MAINTENANCE' ? p[b.id]?.repairReason ?? '' : '',
+                            repairEndDate: e.target.value === 'MAINTENANCE' ? p[b.id]?.repairEndDate ?? '' : '',
+                          },
+                        }))}
+                      >{BIKE_STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}</select>
                       <input className="input" value={f.frameNumber} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], frameNumber: e.target.value } }))} />
                       <input className="input" value={f.motorWheelNumber} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], motorWheelNumber: e.target.value } }))} />
                       <input className="input" value={f.simCardNumber} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], simCardNumber: e.target.value } }))} />
-                      <input className="input" placeholder="Причина ремонта" value={f.repairReason} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], repairReason: e.target.value } }))} />
-                      <input className="input" type="date" value={f.repairEndDate} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], repairEndDate: e.target.value } }))} />
+                      {f.status === 'MAINTENANCE' && (
+                        <>
+                          <input className="input" placeholder="Причина ремонта" value={f.repairReason} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], repairReason: e.target.value } }))} />
+                          <input className="input" type="date" value={f.repairEndDate} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], repairEndDate: e.target.value } }))} />
+                        </>
+                      )}
                     </div>
                   )}
 
