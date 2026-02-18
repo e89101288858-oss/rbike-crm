@@ -234,7 +234,7 @@ export default function RentalsPage() {
   const canCreate = !!clientId && !!bikeId && !!startDate && !!plannedEndDate && selectedBatteryIds.length === batteryCount && rentalDays >= minRentalDays
 
   function daysHighlightClass(daysLeft: number) {
-    if (daysLeft <= 0) return 'border-rose-900/80 bg-rose-950/40 border-l-4 border-l-rose-800'
+    if (daysLeft <= 0) return 'border-[#7f1d1d] bg-[#4a1d24] border-l-4 border-l-[#be123c]'
     if (daysLeft >= 4) return 'border-emerald-500/50 bg-emerald-500/10 border-l-4 border-l-emerald-400'
     if (daysLeft === 3 || daysLeft === 2) return 'border-amber-500/50 bg-amber-500/10 border-l-4 border-l-amber-400'
     if (daysLeft === 1) return 'border-red-500/50 bg-red-500/10 border-l-4 border-l-red-400'
