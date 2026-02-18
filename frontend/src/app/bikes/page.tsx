@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api, Bike } from '@/lib/api'
 import { getTenantId, getToken, setTenantId } from '@/lib/auth'
@@ -44,6 +44,7 @@ function statusBadge(status: string) {
 
 export default function BikesPage() {
   const router = useRouter()
+  const pathname = usePathname()
   const [tenants, setTenants] = useState<any[]>([])
   const [bikes, setBikes] = useState<Bike[]>([])
   const [error, setError] = useState('')
@@ -60,6 +61,7 @@ export default function BikesPage() {
   const [selectedBikeId, setSelectedBikeId] = useState<string | null>(null)
   const [modalEdit, setModalEdit] = useState(false)
   const [createModalOpen, setCreateModalOpen] = useState(false)
+  const [urlReady, setUrlReady] = useState(false)
 
   async function load() {
     setError('')
@@ -119,8 +121,34 @@ export default function BikesPage() {
     })()
   }, [router])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    setIncludeArchived(params.get('archivedOnly') === 'true')
+    const p = Number(params.get('page') || 1)
+    setPage(Number.isFinite(p) && p > 0 ? Math.floor(p) : 1)
+    const ps = Number(params.get('pageSize') || 50)
+    if ([25, 50, 100].includes(ps)) setPageSize(ps)
+    setUrlReady(true)
+  }, [])
+
   useEffect(() => { void load() }, [includeArchived])
-  useEffect(() => { setPage(1); setPageInput('1') }, [includeArchived, bikes.length, pageSize])
+  useEffect(() => {
+    if (!urlReady) return
+    setPage(1)
+    setPageInput('1')
+  }, [includeArchived, pageSize, urlReady])
+
+  useEffect(() => {
+    if (!urlReady || typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    if (includeArchived) params.set('archivedOnly', 'true')
+    else params.delete('archivedOnly')
+    params.set('page', String(page))
+    params.set('pageSize', String(pageSize))
+    const next = `${pathname}${params.toString() ? `?${params.toString()}` : ''}`
+    window.history.replaceState(null, '', next)
+  }, [pathname, includeArchived, page, pageSize, urlReady])
 
   const canManageCards = role !== 'MECHANIC'
   const totalPages = Math.max(1, Math.ceil(bikes.length / pageSize))

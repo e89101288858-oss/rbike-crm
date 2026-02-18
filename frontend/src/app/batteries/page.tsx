@@ -1,7 +1,7 @@
 'use client'
 
 import { FormEvent, useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api, Battery } from '@/lib/api'
 import { getTenantId, getToken, setTenantId } from '@/lib/auth'
@@ -27,6 +27,7 @@ const toForm = (b: Battery): BatteryForm => ({
 
 export default function BatteriesPage() {
   const router = useRouter()
+  const pathname = usePathname()
   const [tenants, setTenants] = useState<any[]>([])
   const [items, setItems] = useState<Battery[]>([])
   const [bikes, setBikes] = useState<any[]>([])
@@ -41,6 +42,7 @@ export default function BatteriesPage() {
   const [pageSize, setPageSize] = useState(50)
   const [pageInput, setPageInput] = useState('1')
   const [createModalOpen, setCreateModalOpen] = useState(false)
+  const [urlReady, setUrlReady] = useState(false)
 
   const [code, setCode] = useState('')
   const [serialNumber, setSerialNumber] = useState('')
@@ -148,8 +150,37 @@ export default function BatteriesPage() {
     })()
   }, [router])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    setQuery(params.get('q') ?? '')
+    setIncludeArchived(params.get('archivedOnly') === 'true')
+    const p = Number(params.get('page') || 1)
+    setPage(Number.isFinite(p) && p > 0 ? Math.floor(p) : 1)
+    const ps = Number(params.get('pageSize') || 50)
+    if ([25, 50, 100].includes(ps)) setPageSize(ps)
+    setUrlReady(true)
+  }, [])
+
   useEffect(() => { void load() }, [includeArchived])
-  useEffect(() => { setPage(1); setPageInput('1') }, [items.length, pageSize, query, includeArchived])
+  useEffect(() => {
+    if (!urlReady) return
+    setPage(1)
+    setPageInput('1')
+  }, [pageSize, query, includeArchived, urlReady])
+
+  useEffect(() => {
+    if (!urlReady || typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    if (query.trim()) params.set('q', query.trim())
+    else params.delete('q')
+    if (includeArchived) params.set('archivedOnly', 'true')
+    else params.delete('archivedOnly')
+    params.set('page', String(page))
+    params.set('pageSize', String(pageSize))
+    const next = `${pathname}${params.toString() ? `?${params.toString()}` : ''}`
+    window.history.replaceState(null, '', next)
+  }, [pathname, query, includeArchived, page, pageSize, urlReady])
 
   const totalPages = Math.max(1, Math.ceil(items.length / pageSize))
   const safePage = Math.min(page, totalPages)

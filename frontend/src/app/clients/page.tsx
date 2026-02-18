@@ -1,7 +1,7 @@
 'use client'
 
 import { FormEvent, useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api, Client } from '@/lib/api'
 import { getToken, getTenantId, setTenantId } from '@/lib/auth'
@@ -32,6 +32,7 @@ function courierStatus(c: Client) {
 
 export default function ClientsPage() {
   const router = useRouter()
+  const pathname = usePathname()
   const [tenants, setTenants] = useState<any[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [fullName, setFullName] = useState('')
@@ -55,6 +56,7 @@ export default function ClientsPage() {
   const [pageSize, setPageSize] = useState(50)
   const [pageInput, setPageInput] = useState('1')
   const [createModalOpen, setCreateModalOpen] = useState(false)
+  const [urlReady, setUrlReady] = useState(false)
 
   async function load() {
     setLoading(true)
@@ -153,13 +155,42 @@ export default function ClientsPage() {
   }, [router])
 
   useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    setQuery(params.get('q') ?? '')
+    setBlacklistOnly(params.get('blacklistOnly') === 'true')
+    setIncludeArchived(params.get('archivedOnly') === 'true')
+    const p = Number(params.get('page') || 1)
+    setPage(Number.isFinite(p) && p > 0 ? Math.floor(p) : 1)
+    const ps = Number(params.get('pageSize') || 50)
+    if ([25, 50, 100].includes(ps)) setPageSize(ps)
+    setUrlReady(true)
+  }, [])
+
+  useEffect(() => {
     void load()
   }, [includeArchived])
 
   useEffect(() => {
+    if (!urlReady) return
     setPage(1)
     setPageInput('1')
-  }, [query, blacklistOnly, includeArchived, clients.length, pageSize])
+  }, [query, blacklistOnly, includeArchived, pageSize, urlReady])
+
+  useEffect(() => {
+    if (!urlReady || typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    if (query.trim()) params.set('q', query.trim())
+    else params.delete('q')
+    if (blacklistOnly) params.set('blacklistOnly', 'true')
+    else params.delete('blacklistOnly')
+    if (includeArchived) params.set('archivedOnly', 'true')
+    else params.delete('archivedOnly')
+    params.set('page', String(page))
+    params.set('pageSize', String(pageSize))
+    const next = `${pathname}${params.toString() ? `?${params.toString()}` : ''}`
+    window.history.replaceState(null, '', next)
+  }, [pathname, query, blacklistOnly, includeArchived, page, pageSize, urlReady])
 
   const visibleClients = blacklistOnly ? clients.filter((c) => c.isBlacklisted) : clients
   const totalPages = Math.max(1, Math.ceil(visibleClients.length / pageSize))
