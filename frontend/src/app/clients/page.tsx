@@ -168,10 +168,6 @@ export default function ClientsPage() {
   }, [visibleClients, safePage, pageSize])
   const selectedClient = selectedClientId ? visibleClients.find((c) => c.id === selectedClientId) : null
 
-  useEffect(() => {
-    setPageInput(String(safePage))
-  }, [safePage])
-
   return (
     <main className="page with-sidebar">
       <Topbar tenants={tenants} />
