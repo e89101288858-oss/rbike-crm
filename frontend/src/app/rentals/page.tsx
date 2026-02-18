@@ -40,6 +40,7 @@ export default function RentalsPage() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(50)
   const [pageInput, setPageInput] = useState('1')
+  const [createModalOpen, setCreateModalOpen] = useState(false)
   const [error, setError] = useState('')
 
   async function loadAll() {
@@ -95,6 +96,7 @@ export default function RentalsPage() {
       setBattery1Id('')
       setBattery2Id('')
       await loadAll()
+      setCreateModalOpen(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка создания аренды')
     }
@@ -301,72 +303,11 @@ export default function RentalsPage() {
         </div>
       </div>
 
-      <form onSubmit={createRental} className="panel mb-6 grid gap-2 md:grid-cols-4">
-        <select className="select" value={clientId} onChange={(e) => setClientId(e.target.value)}>
-          <option value="">Курьер</option>
-          {clients.map((c) => <option key={c.id} value={c.id}>{c.fullName}</option>)}
-        </select>
-        <select className="select" value={bikeId} onChange={(e) => { setBikeId(e.target.value); setBattery1Id(''); setBattery2Id('') }}>
-          <option value="">Велосипед</option>
-          {bikes.filter((b) => b.status === 'AVAILABLE').map((b) => <option key={b.id} value={b.id}>{b.code}</option>)}
-        </select>
-        <input type="date" className="input" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-        <input type="date" className="input" value={plannedEndDate} onChange={(e) => setPlannedEndDate(e.target.value)} />
-        <input
-          type="number"
-          className="input md:col-span-4"
-          min={1}
-          step={10}
-          value={createDailyRateRub}
-          onChange={(e) => setCreateDailyRateRub(Number(e.target.value || 0))}
-          placeholder="Суточная ставка, ₽"
-        />
-
-        <div className="md:col-span-4 rounded-md border border-gray-200 bg-gray-50 p-2 text-sm">
-          <div className="mb-2 flex items-center gap-3">
-            <span>АКБ к выдаче:</span>
-            <label className="flex items-center gap-1"><input type="radio" checked={batteryCount === 1} onChange={() => { setBatteryCount(1); setBattery2Id('') }} /> 1</label>
-            <label className="flex items-center gap-1"><input type="radio" checked={batteryCount === 2} onChange={() => setBatteryCount(2)} /> 2</label>
-          </div>
-          <div className="grid gap-2 md:grid-cols-2">
-            <select className="select" value={battery1Id} onChange={(e) => setBattery1Id(e.target.value)}>
-              <option value="">Выбери АКБ 1</option>
-              {availableBatteries.map((b) => <option key={b.id} value={b.id}>{b.code}{b.serialNumber ? ` (${b.serialNumber})` : ''}</option>)}
-            </select>
-            {batteryCount === 2 && (
-              <select className="select" value={battery2Id} onChange={(e) => setBattery2Id(e.target.value)}>
-                <option value="">Выбери АКБ 2</option>
-                {availableBatteries.filter((b) => b.id !== battery1Id).map((b) => <option key={b.id} value={b.id}>{b.code}{b.serialNumber ? ` (${b.serialNumber})` : ''}</option>)}
-              </select>
-            )}
-          </div>
-        </div>
-
-        <button
-          disabled={!canCreate}
-          className="btn-primary md:col-span-4"
-        >
-          Создать аренду
-        </button>
-
-        {!canCreate && (
-          <p className="md:col-span-4 text-xs text-amber-300">
-            Заполни курьера, велосипед, даты, ставку и выбери {batteryCount} АКБ.
-            {rentalDays > 0 && rentalDays < minRentalDays ? ` Текущий срок ${rentalDays} дн., минимум ${minRentalDays}.` : ''}
-          </p>
-        )}
-      </form>
-
-      {startDate && plannedEndDate && (
-        <p className="mb-3 text-sm text-gray-600">
-          Тариф: {formatRub(Number(createDailyRateRub || 0))} / сутки (базовая {formatRub(dailyRateRub)}) · Срок: {rentalDays} дн. (минимум {minRentalDays}) · АКБ: {selectedBatteryIds.length}/{batteryCount} · Сумма: {formatRub(projectedTotalRub)}
-        </p>
-      )}
-
       {error && <p className="alert">{error}</p>}
 
       <div className="mb-3 flex gap-2">
         <input className="input w-full" placeholder="Поиск: курьер / велосипед / даты" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <button type="button" className="btn-primary" onClick={() => setCreateModalOpen(true)}>Создать аренду</button>
       </div>
 
       <div className="table-wrap">
@@ -418,6 +359,69 @@ export default function RentalsPage() {
           <button className="btn" onClick={() => setPage(Math.min(totalPages, Math.max(1, Number(pageInput || 1))))}>ОК</button>
         </div>
       </div>
+
+      {createModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setCreateModalOpen(false)}>
+          <form onSubmit={createRental} className="panel w-full max-w-6xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h2 className="text-lg font-semibold">Создать аренду</h2>
+              <button type="button" className="btn" onClick={() => setCreateModalOpen(false)}>Закрыть</button>
+            </div>
+
+            <div className="grid gap-2 md:grid-cols-4">
+              <select className="select" value={clientId} onChange={(e) => setClientId(e.target.value)}>
+                <option value="">Курьер</option>
+                {clients.map((c) => <option key={c.id} value={c.id}>{c.fullName}</option>)}
+              </select>
+              <select className="select" value={bikeId} onChange={(e) => { setBikeId(e.target.value); setBattery1Id(''); setBattery2Id('') }}>
+                <option value="">Велосипед</option>
+                {bikes.filter((b) => b.status === 'AVAILABLE').map((b) => <option key={b.id} value={b.id}>{b.code}</option>)}
+              </select>
+              <input type="date" className="input" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              <input type="date" className="input" value={plannedEndDate} onChange={(e) => setPlannedEndDate(e.target.value)} />
+              <input type="number" className="input md:col-span-4" min={1} step={10} value={createDailyRateRub} onChange={(e) => setCreateDailyRateRub(Number(e.target.value || 0))} placeholder="Суточная ставка, ₽" />
+
+              <div className="md:col-span-4 rounded-sm border border-[#2f3136] bg-[#181a1f] p-2 text-sm">
+                <div className="mb-2 flex items-center gap-3">
+                  <span>АКБ к выдаче:</span>
+                  <label className="flex items-center gap-1"><input type="radio" checked={batteryCount === 1} onChange={() => { setBatteryCount(1); setBattery2Id('') }} /> 1</label>
+                  <label className="flex items-center gap-1"><input type="radio" checked={batteryCount === 2} onChange={() => setBatteryCount(2)} /> 2</label>
+                </div>
+                <div className="grid gap-2 md:grid-cols-2">
+                  <select className="select" value={battery1Id} onChange={(e) => setBattery1Id(e.target.value)}>
+                    <option value="">Выбери АКБ 1</option>
+                    {availableBatteries.map((b) => <option key={b.id} value={b.id}>{b.code}{b.serialNumber ? ` (${b.serialNumber})` : ''}</option>)}
+                  </select>
+                  {batteryCount === 2 && (
+                    <select className="select" value={battery2Id} onChange={(e) => setBattery2Id(e.target.value)}>
+                      <option value="">Выбери АКБ 2</option>
+                      {availableBatteries.filter((b) => b.id !== battery1Id).map((b) => <option key={b.id} value={b.id}>{b.code}{b.serialNumber ? ` (${b.serialNumber})` : ''}</option>)}
+                    </select>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {startDate && plannedEndDate && (
+              <p className="mt-3 text-sm text-gray-400">
+                Тариф: {formatRub(Number(createDailyRateRub || 0))} / сутки (базовая {formatRub(dailyRateRub)}) · Срок: {rentalDays} дн. (минимум {minRentalDays}) · АКБ: {selectedBatteryIds.length}/{batteryCount} · Сумма: {formatRub(projectedTotalRub)}
+              </p>
+            )}
+
+            {!canCreate && (
+              <p className="mt-3 text-xs text-amber-300">
+                Заполни курьера, велосипед, даты, ставку и выбери {batteryCount} АКБ.
+                {rentalDays > 0 && rentalDays < minRentalDays ? ` Текущий срок ${rentalDays} дн., минимум ${minRentalDays}.` : ''}
+              </p>
+            )}
+
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" className="btn" onClick={() => setCreateModalOpen(false)}>Отмена</button>
+              <button disabled={!canCreate} className="btn-primary">Создать аренду</button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {selectedRental && (() => {
         const r = selectedRental
