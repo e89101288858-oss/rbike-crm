@@ -1,0 +1,8 @@
+<svg width="720" height="180" viewBox="0 0 720 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="720" height="180" rx="18" fill="#0B1220"/>
+  <rect x="40" y="30" width="120" height="120" rx="20" fill="#1E293B"/>
+  <path d="M68 113V64H100C114 64 122 72 122 82C122 93 114 101 100 101H84" stroke="#F97316" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="86" cy="114" r="12" stroke="#38BDF8" stroke-width="8"/>
+  <text x="190" y="106" font-family="Inter, Arial, sans-serif" font-size="74" font-weight="800" fill="#E2E8F0">Эр Байк</text>
+  <text x="192" y="136" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="600" fill="#64748B" letter-spacing="3">E-BIKE RENT CRM</text>
+</svg>

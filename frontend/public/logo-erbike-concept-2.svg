@@ -1,0 +1,7 @@
+<svg width="720" height="180" viewBox="0 0 720 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="720" height="180" rx="18" fill="#111827"/>
+  <circle cx="96" cy="90" r="42" fill="#F97316"/>
+  <path d="M82 96H111M82 84H111" stroke="#FFF7ED" stroke-width="8" stroke-linecap="round"/>
+  <text x="168" y="106" font-family="Inter, Arial, sans-serif" font-size="72" font-weight="700" fill="#F8FAFC">Эр Байк</text>
+  <text x="170" y="136" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="500" fill="#94A3B8" letter-spacing="2">CRM ПЛАТФОРМА</text>
+</svg>
