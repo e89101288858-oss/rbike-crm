@@ -314,7 +314,7 @@ export default function DashboardPage() {
   const showFranchiseeDashboard = role === 'FRANCHISEE' || role === 'OWNER'
 
   return (
-    <main className="page with-sidebar min-h-screen bg-[#15171c] text-gray-100">
+    <main className="page with-sidebar min-h-screen text-gray-100">
       <Topbar tenants={tenants} />
       <h1 className="mb-6 text-3xl font-bold text-white">Дашборд</h1>
       {error && <p className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
