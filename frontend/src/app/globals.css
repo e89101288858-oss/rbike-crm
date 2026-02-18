@@ -25,7 +25,7 @@ body {
 }
 
 .page {
-  @apply mx-auto max-w-6xl p-6;
+  @apply w-full p-6;
 }
 
 .with-sidebar {

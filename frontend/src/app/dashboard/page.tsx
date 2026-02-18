@@ -401,7 +401,7 @@ export default function DashboardPage() {
             </div>
           </section>
 
-          <section className="max-w-md rounded-lg border border-white/10 bg-[#1f2126] p-5 text-white shadow-xl">
+          <section className="rounded-lg border border-white/10 bg-[#1f2126] p-5 text-white shadow-xl">
             <h2 className="mb-2 text-lg font-semibold">Общая выручка</h2>
             <div className="mb-4 text-4xl font-bold tracking-tight">{formatRub(revenueTotalBlock)}</div>
             <div className="mb-4 flex flex-wrap gap-2">
