@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f3f4f6;
-  --foreground: #111827;
+  --background: #15171c;
+  --foreground: #e5e7eb;
 }
 
 @theme inline {
@@ -19,7 +19,7 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: radial-gradient(1200px 500px at 20% -10%, #dbeafe 0%, transparent 60%), var(--background);
+  background: radial-gradient(1200px 500px at 20% -10%, #1f2937 0%, transparent 60%), var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
@@ -39,8 +39,8 @@ body {
   top: 0;
   bottom: 0;
   width: 250px;
-  background: #fff;
-  border-right: 1px solid #e5e7eb;
+  background: #111318;
+  border-right: 1px solid #2f3136;
   padding: 14px;
   display: flex;
   flex-direction: column;
@@ -50,27 +50,33 @@ body {
 .sidebar-head { margin-bottom: 12px; }
 .sidebar-nav { flex: 1; overflow: auto; }
 .sidebar-group { margin-bottom: 12px; }
-.sidebar-group-title { font-size: 11px; color: #6b7280; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .04em; }
-.sidebar-foot { border-top: 1px solid #e5e7eb; padding-top: 10px; display: grid; gap: 8px; }
+.sidebar-group-title { font-size: 11px; color: #9ca3af; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .04em; }
+.sidebar-foot { border-top: 1px solid #2f3136; padding-top: 10px; display: grid; gap: 8px; }
 .sidebar-toggle { position: fixed; left: 12px; top: 10px; z-index: 50; }
-.sidebar-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.3); z-index: 35; }
+.sidebar-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 35; }
 
 @media (max-width: 767px) {
   .with-sidebar { margin-left: 0; padding-top: 54px; }
-  .sidebar { transform: translateX(-105%); transition: transform .2s ease; box-shadow: 0 10px 30px rgba(0,0,0,.15); }
+  .sidebar { transform: translateX(-105%); transition: transform .2s ease; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
   .sidebar.sidebar-open { transform: translateX(0); }
 }
 
 .panel {
-  @apply rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md;
+  @apply rounded-2xl border p-4 shadow-sm transition;
+  border-color: #2f3136;
+  background: #1f2126;
 }
 
 .kpi {
-  @apply rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm transition hover:bg-gray-100;
+  @apply rounded-xl border p-3 text-sm transition;
+  border-color: #2f3136;
+  background: #181a1f;
 }
 
 .table-wrap {
-  @apply overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm;
+  @apply overflow-hidden rounded-2xl border shadow-sm;
+  border-color: #2f3136;
+  background: #1f2126;
 }
 
 .table {
@@ -78,7 +84,9 @@ body {
 }
 
 .table th {
-  @apply bg-gray-50 px-3 py-2 text-left font-semibold text-gray-700;
+  @apply px-3 py-2 text-left font-semibold;
+  background: #181a1f;
+  color: #d1d5db;
 }
 
 .table-sticky thead th {
@@ -88,47 +96,88 @@ body {
 }
 
 .table td {
-  @apply border-t border-gray-100 px-3 py-2;
+  @apply border-t px-3 py-2;
+  border-color: #2f3136;
+  color: #e5e7eb;
 }
 
 .badge {
   @apply inline-flex items-center rounded-full px-2 py-1 text-xs font-medium;
 }
 
-.badge-ok { @apply bg-green-100 text-green-800; }
-.badge-warn { @apply bg-amber-100 text-amber-800; }
-.badge-muted { @apply bg-gray-100 text-gray-700; }
-.badge-danger { @apply bg-red-100 text-red-700; }
+.badge-ok { @apply bg-green-500/20 text-green-300; }
+.badge-warn { @apply bg-amber-500/20 text-amber-300; }
+.badge-muted { @apply bg-white/10 text-gray-300; }
+.badge-danger { @apply bg-red-500/20 text-red-300; }
 
 .btn {
-  @apply rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm transition duration-150 hover:-translate-y-0.5 hover:bg-gray-50 active:translate-y-0 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50;
+  @apply rounded-lg border px-3 py-2 text-sm text-gray-200 transition duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50;
+  border-color: #3f434b;
+  background: #23262d;
+}
+
+.btn:hover {
+  background: #2b2f37;
 }
 
 .btn-primary {
-  @apply rounded-lg border border-gray-900 bg-gray-900 px-3 py-2 text-sm text-white transition duration-150 hover:-translate-y-0.5 hover:bg-black active:translate-y-0 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50;
+  @apply rounded-lg border px-3 py-2 text-sm text-white transition duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50;
+  border-color: #0ea5e9;
+  background: #0284c7;
+}
+
+.btn-primary:hover {
+  background: #0369a1;
 }
 
 .input,
 .select {
-  @apply rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm;
+  @apply rounded-lg border px-3 py-2 text-sm text-gray-100;
+  border-color: #3f434b;
+  background: #181a1f;
+}
+
+.input::placeholder {
+  color: #9ca3af;
 }
 
 .alert {
-  @apply mb-4 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-700;
+  @apply mb-4 rounded-lg border p-3 text-sm;
+  border-color: rgba(239, 68, 68, .5);
+  background: rgba(127, 29, 29, .35);
+  color: #fca5a5;
 }
 
 .alert-success {
-  @apply mb-4 rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-700;
+  @apply mb-4 rounded-lg border p-3 text-sm;
+  border-color: rgba(16, 185, 129, .5);
+  background: rgba(6, 78, 59, .35);
+  color: #6ee7b7;
 }
 
 .section-title {
-  @apply mb-3 text-base font-semibold text-gray-800;
+  @apply mb-3 text-base font-semibold;
+  color: #f3f4f6;
 }
 
 .soft-card {
-  @apply rounded-xl border border-gray-200 bg-gradient-to-b from-white to-gray-50/70 p-3 shadow-sm;
+  @apply rounded-xl border p-3 shadow-sm;
+  border-color: #2f3136;
+  background: linear-gradient(to bottom, #20232a, #181a1f);
 }
 
 .muted-chip {
-  @apply inline-flex items-center rounded-full border border-gray-200 bg-white px-2.5 py-1 text-xs text-gray-600;
+  @apply inline-flex items-center rounded-full border px-2.5 py-1 text-xs;
+  border-color: #3f434b;
+  background: #181a1f;
+  color: #9ca3af;
 }
+
+/* Broad utility overrides to keep legacy pages readable in dark mode */
+.bg-white { background-color: #1f2126 !important; }
+.bg-gray-50 { background-color: #181a1f !important; }
+.bg-gray-100 { background-color: #23262d !important; }
+.border-gray-100, .border-gray-200, .border-gray-300 { border-color: #2f3136 !important; }
+.text-gray-500 { color: #9ca3af !important; }
+.text-gray-600, .text-gray-700, .text-gray-800 { color: #d1d5db !important; }
+.text-black, .text-gray-900 { color: #f3f4f6 !important; }
