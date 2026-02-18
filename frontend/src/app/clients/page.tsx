@@ -320,7 +320,7 @@ export default function ClientsPage() {
                       <div className="kpi"><div className="text-xs text-gray-500">Паспорт</div><div>{e.passportSeries || '—'} {e.passportNumber || ''}</div></div>
                       <div className="kpi"><div className="text-xs text-gray-500">Контакт родственника</div><div>{e.emergencyContactPhone || '—'}</div></div>
                       <div className="kpi"><div className="text-xs text-gray-500">Заметка</div><div>{e.notes || '—'}</div></div>
-                      <div className="kpi"><div className="text-xs text-gray-500">Причина ЧС</div><div>{e.blacklistReason || '—'}</div></div>
+                      {e.isBlacklisted && <div className="kpi"><div className="text-xs text-gray-500">Причина ЧС</div><div>{e.blacklistReason || '—'}</div></div>}
                       <div className="kpi"><div className="text-xs text-gray-500">В черном списке</div><div>{e.isBlacklisted ? 'Да' : 'Нет'}</div></div>
                     </div>
                   ) : (
@@ -333,7 +333,9 @@ export default function ClientsPage() {
                       <input className="input" placeholder="Паспорт номер" value={e.passportNumber ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], passportNumber: ev.target.value } }))} />
                       <input className="input" placeholder="Телефон родственника/знакомого" value={e.emergencyContactPhone ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], emergencyContactPhone: ev.target.value } }))} />
                       <input className="input" placeholder="Заметка" value={e.notes ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], notes: ev.target.value } }))} />
-                      <input disabled={!(e.isBlacklisted as boolean)} className="input" placeholder="Причина ЧС" value={(e.blacklistReason as string) ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], blacklistReason: ev.target.value } }))} />
+                      {e.isBlacklisted && (
+                        <input className="input" placeholder="Причина ЧС" value={(e.blacklistReason as string) ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], blacklistReason: ev.target.value } }))} />
+                      )}
                       <label className="flex items-center gap-2 px-2">
                         <input type="checkbox" checked={!!e.isBlacklisted} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], isBlacklisted: ev.target.checked, blacklistReason: ev.target.checked ? (p[c.id]?.blacklistReason ?? '') : '' } }))} />
                         В черный список
