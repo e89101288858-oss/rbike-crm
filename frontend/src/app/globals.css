@@ -43,6 +43,7 @@ body {
 .with-sidebar {
   margin-left: 270px;
   width: calc(100vw - 270px);
+  padding-top: 52px;
   padding-right: 24px;
   transition: margin-left .2s ease;
 }
