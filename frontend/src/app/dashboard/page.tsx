@@ -93,6 +93,20 @@ function tabClass(active: boolean) {
     : 'rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-gray-300 hover:bg-white/10'
 }
 
+function formatInt(value: number) {
+  return new Intl.NumberFormat('ru-RU').format(Math.round(value || 0))
+}
+
+function formatPercent(value: number) {
+  return `${(value || 0).toFixed(1)}%`
+}
+
+function overdueCardClass(value: number) {
+  if (value >= 5) return 'rounded-xl border border-red-500/60 bg-red-500/15 p-3 text-sm text-red-200'
+  if (value >= 1) return 'rounded-xl border border-amber-500/50 bg-amber-500/10 p-3 text-sm text-amber-200'
+  return 'rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-200'
+}
+
 export default function DashboardPage() {
   const router = useRouter()
   const [role, setRole] = useState('')
@@ -289,12 +303,12 @@ export default function DashboardPage() {
           <section className="mb-6 grid gap-3 md:grid-cols-4">
             <div className="rounded-2xl border border-white/10 bg-[#1f2126] p-4">
               <div className="text-xs text-gray-400">Активные аренды</div>
-              <div className="mt-1 text-3xl font-semibold text-white">{activeNow}</div>
+              <div className="mt-1 text-3xl font-semibold text-white">{formatInt(activeNow)}</div>
               <div className="mt-1 text-xs text-gray-500">на текущий момент</div>
             </div>
             <div className="rounded-2xl border border-white/10 bg-[#1f2126] p-4">
               <div className="text-xs text-gray-400">Новые аренды</div>
-              <div className="mt-1 text-3xl font-semibold text-white">{newRentalsPeriod}</div>
+              <div className="mt-1 text-3xl font-semibold text-white">{formatInt(newRentalsPeriod)}</div>
               <div className="mt-1 text-xs text-gray-500">за выбранный период</div>
             </div>
             <div className="rounded-2xl border border-white/10 bg-[#1f2126] p-4">
@@ -342,8 +356,8 @@ export default function DashboardPage() {
             </div>
 
             <div className="mt-4 grid gap-2 md:grid-cols-3">
-              <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-gray-200">Всего велосипедов: <b>{allBikesCount}</b></div>
-              <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-gray-200">Создано аренд за период: <b>{newRentalsPeriod}</b></div>
+              <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-gray-200">Всего велосипедов: <b>{formatInt(allBikesCount)}</b></div>
+              <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-gray-200">Создано аренд за период: <b>{formatInt(newRentalsPeriod)}</b></div>
               <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-gray-200">Выручка за период: <b>{formatRub(chartRevenueTotal)}</b></div>
             </div>
           </section>
@@ -354,21 +368,21 @@ export default function DashboardPage() {
               <div className="grid gap-2 sm:grid-cols-3">
                 <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
                   <div className="text-xs text-red-300">Остался 1 день</div>
-                  <div className="mt-1 text-2xl font-semibold">{endingIn1}</div>
+                  <div className="mt-1 text-2xl font-semibold">{formatInt(endingIn1)}</div>
                 </div>
                 <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-200">
                   <div className="text-xs text-amber-300">Осталось 2–3 дня</div>
-                  <div className="mt-1 text-2xl font-semibold">{endingIn2to3}</div>
+                  <div className="mt-1 text-2xl font-semibold">{formatInt(endingIn2to3)}</div>
                 </div>
                 <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-200">
                   <div className="text-xs text-emerald-300">Осталось 4+ дня</div>
-                  <div className="mt-1 text-2xl font-semibold">{endingIn4plus}</div>
+                  <div className="mt-1 text-2xl font-semibold">{formatInt(endingIn4plus)}</div>
                 </div>
               </div>
 
-              <div className="mt-3 rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
-                <div className="text-xs text-red-300">Просроченные активные аренды</div>
-                <div className="mt-1 text-2xl font-semibold">{overdueActive}</div>
+              <div className={`mt-3 ${overdueCardClass(overdueActive)}`}>
+                <div className="text-xs">Просроченные активные аренды</div>
+                <div className="mt-1 text-2xl font-semibold">{formatInt(overdueActive)}</div>
               </div>
             </div>
 
@@ -377,13 +391,13 @@ export default function DashboardPage() {
               <div className="grid gap-2 sm:grid-cols-2">
                 <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-gray-200">
                   <div className="text-xs text-gray-400">Продления</div>
-                  <div className="mt-1 text-2xl font-semibold text-white">{extensionsCount}</div>
-                  <div className="mt-1 text-xs text-gray-500">{extensionsRate.toFixed(1)}% от новых аренд</div>
+                  <div className="mt-1 text-2xl font-semibold text-white">{formatInt(extensionsCount)}</div>
+                  <div className="mt-1 text-xs text-gray-500">{formatPercent(extensionsRate)} от новых аренд</div>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-gray-200">
                   <div className="text-xs text-gray-400">Досрочные завершения</div>
-                  <div className="mt-1 text-2xl font-semibold text-white">{earlyClosuresCount}</div>
-                  <div className="mt-1 text-xs text-gray-500">{earlyClosuresRate.toFixed(1)}% от закрытых аренд</div>
+                  <div className="mt-1 text-2xl font-semibold text-white">{formatInt(earlyClosuresCount)}</div>
+                  <div className="mt-1 text-xs text-gray-500">{formatPercent(earlyClosuresRate)} от закрытых аренд</div>
                 </div>
               </div>
             </div>
