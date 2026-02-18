@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api, Bike } from '@/lib/api'
@@ -54,7 +54,11 @@ export default function BikesPage() {
     code: '', model: '', frameNumber: '', motorWheelNumber: '', simCardNumber: '', status: 'AVAILABLE', repairReason: '', repairEndDate: '',
   })
   const [formMap, setFormMap] = useState<Record<string, BikeForm>>({})
-  const [originalMap, setOriginalMap] = useState<Record<string, BikeForm>>({})
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(50)
+  const [pageInput, setPageInput] = useState('1')
+  const [selectedBikeId, setSelectedBikeId] = useState<string | null>(null)
+  const [modalEdit, setModalEdit] = useState(false)
 
   async function load() {
     setError('')
@@ -64,7 +68,6 @@ export default function BikesPage() {
       setBikes(rows)
       const mapped = Object.fromEntries(rows.map((b: any) => [b.id, toBikeForm(b)])) as Record<string, BikeForm>
       setFormMap(mapped)
-      setOriginalMap(mapped)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки')
     }
@@ -97,13 +100,12 @@ export default function BikesPage() {
         ...f,
         repairEndDate: f.repairEndDate ? `${f.repairEndDate}T00:00:00.000Z` : '',
       } as any)
-      await load(); setSuccess('Сохранено')
-    } catch (err) { setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка обновления карточки велосипеда'}`) }
+      await load(); setSuccess('Сохранено'); setModalEdit(false)
+    } catch (err) { setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка обновления велосипеда'}`) }
   }
 
-  async function removeBike(id: string) { setError(''); setSuccess(''); try { await api.deleteBike(id); await load(); setSuccess('Сохранено') } catch (err) { setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка удаления велосипеда'}`) } }
-  async function restoreBike(id: string) { setError(''); setSuccess(''); try { await api.restoreBike(id); await load(); setSuccess('Сохранено') } catch (err) { setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка восстановления велосипеда'}`) } }
-  function cancelChanges(id: string) { setFormMap((p) => ({ ...p, [id]: { ...originalMap[id] } })); setError(''); setSuccess('Сохранено') }
+  async function removeBike(id: string) { setError(''); setSuccess(''); try { await api.deleteBike(id); await load(); setSuccess('Сохранено'); setSelectedBikeId(null) } catch (err) { setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка удаления велосипеда'}`) } }
+  async function restoreBike(id: string) { setError(''); setSuccess(''); try { await api.restoreBike(id); await load(); setSuccess('Сохранено'); setSelectedBikeId(null) } catch (err) { setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка восстановления велосипеда'}`) } }
 
   useEffect(() => {
     if (!getToken()) return router.replace('/login')
@@ -117,7 +119,16 @@ export default function BikesPage() {
   }, [router])
 
   useEffect(() => { void load() }, [includeArchived])
+  useEffect(() => { setPage(1); setPageInput('1') }, [includeArchived, bikes.length, pageSize])
+
   const canManageCards = role !== 'MECHANIC'
+  const totalPages = Math.max(1, Math.ceil(bikes.length / pageSize))
+  const safePage = Math.min(page, totalPages)
+  const pagedBikes = useMemo(() => {
+    const start = (safePage - 1) * pageSize
+    return bikes.slice(start, start + pageSize)
+  }, [bikes, safePage, pageSize])
+  const selectedBike = selectedBikeId ? bikes.find((b) => b.id === selectedBikeId) : null
 
   return (
     <main className="page with-sidebar">
@@ -146,42 +157,102 @@ export default function BikesPage() {
         </section>
       )}
 
-      <div className="space-y-3">
-        {bikes.map((b: any) => {
-          const f = formMap[b.id] ?? toBikeForm(b)
-          const archived = b.isActive === false
-          return (
-            <div key={b.id} className="panel text-sm">
-              <div className="mb-2 flex items-center justify-between">
-                <div className="font-semibold">{b.code}</div>
-                <div className="flex items-center gap-2">{archived && <span className="badge badge-muted">АРХИВ</span>}<span className={`badge ${statusBadge(f.status ?? b.status)}`}>{statusLabel(f.status ?? b.status)}</span></div>
-              </div>
-
-              <div className="grid gap-2 md:grid-cols-4">
-                <input disabled={archived || !canManageCards} className="input" value={f.code} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], code: e.target.value } }))} />
-                <input disabled={archived || !canManageCards} className="input" value={f.model} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], model: e.target.value } }))} />
-                <select disabled={archived} className="select" value={f.status} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], status: e.target.value } }))}>{BIKE_STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}</select>
-                <input disabled={archived || !canManageCards} className="input" value={f.frameNumber} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], frameNumber: e.target.value } }))} />
-                <input disabled={archived || !canManageCards} className="input" value={f.motorWheelNumber} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], motorWheelNumber: e.target.value } }))} />
-                <input disabled={archived || !canManageCards} className="input" value={f.simCardNumber} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], simCardNumber: e.target.value } }))} />
-                <input disabled={archived} className="input" placeholder="Причина ремонта" value={f.repairReason} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], repairReason: e.target.value } }))} />
-                <input disabled={archived} className="input" type="date" value={f.repairEndDate} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], repairEndDate: e.target.value } }))} />
-              </div>
-
-              <div className="mt-3 flex flex-wrap gap-2">
-                {!archived ? (
-                  <>
-                    <button className="btn" onClick={() => saveBike(b.id)}>{canManageCards ? 'Сохранить карточку' : 'Сохранить статус'}</button>
-                    {canManageCards && <button className="btn" onClick={() => cancelChanges(b.id)}>Отменить изменения</button>}
-                    {canManageCards && <button className="btn border-red-300 text-red-700" onClick={() => removeBike(b.id)}>В архив</button>}
-                  </>
-                ) : canManageCards && <button className="btn" onClick={() => restoreBike(b.id)}>Восстановить из архива</button>}
-              </div>
-            </div>
-          )
-        })}
-        {!bikes.length && <p className="text-sm text-gray-600">Велосипедов пока нет</p>}
+      <div className="table-wrap">
+        <table className="table table-sticky">
+          <thead>
+            <tr>
+              <th>Код</th><th>Модель</th><th>Статус</th><th>Рама</th><th>Мотор-колесо</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {pagedBikes.map((b: any) => {
+              const f = formMap[b.id] ?? toBikeForm(b)
+              const archived = b.isActive === false
+              return (
+                <tr key={b.id} className="cursor-pointer hover:bg-white/5" onClick={() => { setSelectedBikeId(b.id); setModalEdit(false) }}>
+                  <td className="font-medium">{f.code}</td>
+                  <td>{f.model || '—'}</td>
+                  <td><span className={`badge ${statusBadge(f.status ?? b.status)}`}>{statusLabel(f.status ?? b.status)}</span>{archived && <span className="badge badge-muted ml-2">АРХИВ</span>}</td>
+                  <td>{f.frameNumber || '—'}</td>
+                  <td>{f.motorWheelNumber || '—'}</td>
+                  <td><button type="button" className="btn" onClick={(e) => { e.stopPropagation(); setSelectedBikeId(b.id); setModalEdit(false) }}>Открыть</button></td>
+                </tr>
+              )
+            })}
+            {!pagedBikes.length && <tr><td colSpan={6} className="text-center text-gray-600">Велосипедов пока нет</td></tr>}
+          </tbody>
+        </table>
       </div>
+
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm text-gray-400">
+        <span>Показано {pagedBikes.length} из {bikes.length}</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="text-xs text-gray-500">На странице</label>
+          <select className="select" value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}><option value={25}>25</option><option value={50}>50</option><option value={100}>100</option></select>
+          <button className="btn" disabled={safePage <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>Назад</button>
+          <span>Стр. {safePage} / {totalPages}</span>
+          <button className="btn" disabled={safePage >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>Вперед</button>
+          <label className="text-xs text-gray-500">Перейти</label>
+          <input className="input w-20" value={pageInput} onChange={(e) => setPageInput(e.target.value.replace(/[^0-9]/g, ''))} />
+          <button className="btn" onClick={() => setPage(Math.min(totalPages, Math.max(1, Number(pageInput || 1))))}>ОК</button>
+        </div>
+      </div>
+
+      {selectedBike && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setSelectedBikeId(null)}>
+          <div className="panel w-full max-w-5xl" onClick={(e) => e.stopPropagation()}>
+            {(() => {
+              const b: any = selectedBike
+              const f = formMap[b.id] ?? toBikeForm(b)
+              const archived = b.isActive === false
+              const readOnly = archived || !modalEdit
+              return (
+                <>
+                  <div className="mb-3 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2"><h2 className="text-lg font-semibold">Карточка велосипеда</h2><span className={`badge ${statusBadge(f.status ?? b.status)}`}>{statusLabel(f.status ?? b.status)}</span>{archived && <span className="badge badge-muted">АРХИВ</span>}</div>
+                    <button className="btn" onClick={() => setSelectedBikeId(null)}>Закрыть</button>
+                  </div>
+
+                  {!modalEdit || archived ? (
+                    <div className="grid gap-2 md:grid-cols-3 text-sm">
+                      <div className="kpi"><div className="text-xs text-gray-500">Код</div><div>{f.code || '—'}</div></div>
+                      <div className="kpi"><div className="text-xs text-gray-500">Модель</div><div>{f.model || '—'}</div></div>
+                      <div className="kpi"><div className="text-xs text-gray-500">Статус</div><div>{statusLabel(f.status)}</div></div>
+                      <div className="kpi"><div className="text-xs text-gray-500">Номер рамы</div><div>{f.frameNumber || '—'}</div></div>
+                      <div className="kpi"><div className="text-xs text-gray-500">Номер мотор-колеса</div><div>{f.motorWheelNumber || '—'}</div></div>
+                      <div className="kpi"><div className="text-xs text-gray-500">SIM</div><div>{f.simCardNumber || '—'}</div></div>
+                      <div className="kpi md:col-span-2"><div className="text-xs text-gray-500">Причина ремонта</div><div>{f.repairReason || '—'}</div></div>
+                      <div className="kpi"><div className="text-xs text-gray-500">Дата конца ремонта</div><div>{f.repairEndDate || '—'}</div></div>
+                    </div>
+                  ) : (
+                    <div className="grid gap-2 md:grid-cols-4">
+                      <input className="input" value={f.code} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], code: e.target.value } }))} />
+                      <input className="input" value={f.model} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], model: e.target.value } }))} />
+                      <select className="select" value={f.status} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], status: e.target.value } }))}>{BIKE_STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}</select>
+                      <input className="input" value={f.frameNumber} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], frameNumber: e.target.value } }))} />
+                      <input className="input" value={f.motorWheelNumber} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], motorWheelNumber: e.target.value } }))} />
+                      <input className="input" value={f.simCardNumber} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], simCardNumber: e.target.value } }))} />
+                      <input className="input" placeholder="Причина ремонта" value={f.repairReason} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], repairReason: e.target.value } }))} />
+                      <input className="input" type="date" value={f.repairEndDate} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], repairEndDate: e.target.value } }))} />
+                    </div>
+                  )}
+
+                  <div className="mt-4 flex flex-wrap justify-between gap-2">
+                    <div className="flex gap-2">
+                      {!archived && !modalEdit && <button className="btn" onClick={() => setModalEdit(true)}>Редактировать</button>}
+                      {!archived && modalEdit && <button className="btn" onClick={() => saveBike(b.id)}>Сохранить</button>}
+                      {!archived && modalEdit && <button className="btn" onClick={() => { setFormMap((p) => ({ ...p, [b.id]: toBikeForm(b) })); setModalEdit(false) }}>Отмена</button>}
+                      {!archived ? (
+                        canManageCards && <button className="btn border-red-300 text-red-700" onClick={() => removeBike(b.id)}>В архив</button>
+                      ) : canManageCards && <button className="btn" onClick={() => restoreBike(b.id)}>Восстановить</button>}
+                    </div>
+                  </div>
+                </>
+              )
+            })()}
+          </div>
+        </div>
+      )}
     </main>
   )
 }
