@@ -234,10 +234,10 @@ export default function RentalsPage() {
   const canCreate = !!clientId && !!bikeId && !!startDate && !!plannedEndDate && selectedBatteryIds.length === batteryCount && rentalDays >= minRentalDays
 
   function daysHighlightClass(daysLeft: number) {
-    if (daysLeft >= 4) return 'border-green-300 bg-green-50/80 border-l-4 border-l-green-500'
-    if (daysLeft === 3 || daysLeft === 2) return 'border-amber-300 bg-amber-50/80 border-l-4 border-l-amber-500'
-    if (daysLeft === 1) return 'border-red-300 bg-red-50/80 border-l-4 border-l-red-500'
-    return 'border-gray-200 bg-white'
+    if (daysLeft >= 4) return 'border-emerald-500/50 bg-emerald-500/10 border-l-4 border-l-emerald-400'
+    if (daysLeft === 3 || daysLeft === 2) return 'border-amber-500/50 bg-amber-500/10 border-l-4 border-l-amber-400'
+    if (daysLeft === 1) return 'border-red-500/50 bg-red-500/10 border-l-4 border-l-red-400'
+    return 'border-[#2f3136] bg-[#1f2126]'
   }
 
   return (
@@ -291,7 +291,7 @@ export default function RentalsPage() {
         </button>
 
         {!canCreate && (
-          <p className="md:col-span-4 text-xs text-amber-700">
+          <p className="md:col-span-4 text-xs text-amber-300">
             Заполни курьера, велосипед, даты и выбери {batteryCount} АКБ.
             {rentalDays > 0 && rentalDays < minRentalDays ? ` Текущий срок ${rentalDays} дн., минимум ${minRentalDays}.` : ''}
           </p>
@@ -304,20 +304,20 @@ export default function RentalsPage() {
         </p>
       )}
 
-      {error && <p className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+      {error && <p className="alert">{error}</p>}
 
       <div className="space-y-2">
         {rentals.map((r) => {
           const expanded = !!expandedMap[r.id]
           const daysLeft = Math.max(0, diffDays(new Date().toISOString(), r.plannedEndDate))
-          const highlight = r.status === 'ACTIVE' ? daysHighlightClass(daysLeft) : 'border-gray-200 bg-white'
+          const highlight = r.status === 'ACTIVE' ? daysHighlightClass(daysLeft) : 'border-[#2f3136] bg-[#1f2126]'
           return (
             <div key={r.id} className={`rounded-2xl border p-3 shadow-sm text-sm ${highlight}`}>
-              <div className="flex cursor-pointer flex-wrap items-center gap-2 rounded-lg px-1 py-1 hover:bg-gray-50" onClick={() => setExpandedMap((p) => ({ ...p, [r.id]: !expanded }))}>
+              <div className="flex cursor-pointer flex-wrap items-center gap-2 rounded-lg px-1 py-1 hover:bg-white/5" onClick={() => setExpandedMap((p) => ({ ...p, [r.id]: !expanded }))}>
                 <div className="font-medium min-w-56">{r.client.fullName} — {r.bike.code}</div>
                 <span className={`badge ${r.status === 'ACTIVE' ? 'badge-warn' : 'badge-ok'}`}>{r.status === 'ACTIVE' ? 'Активна' : 'Завершена'}</span>
                 <div className="text-gray-600">{formatDate(r.startDate)} → {formatDate(r.plannedEndDate)}</div>
-                {r.status === 'ACTIVE' && <div className={`font-medium ${daysLeft === 1 ? 'text-red-700' : daysLeft <= 3 ? 'text-amber-700' : 'text-green-700'}`}>Осталось: {daysLeft} дн.</div>}
+                {r.status === 'ACTIVE' && <div className={`font-medium ${daysLeft === 1 ? 'text-red-300' : daysLeft <= 3 ? 'text-amber-300' : 'text-emerald-300'}`}>Осталось: {daysLeft} дн.</div>}
               </div>
 
               {expanded && (
@@ -336,8 +336,8 @@ export default function RentalsPage() {
                     )}
                     <button className="btn" onClick={() => loadJournal(r.id)}>Журнал</button>
                     <button className="btn" onClick={() => generateContract(r.id)}>Сформировать договор</button>
-                    {r.status === 'ACTIVE' && <button className="btn border-red-300 text-red-700" onClick={() => closeRental(r.id)}>Завершить досрочно</button>}
-                    {r.status === 'CLOSED' && role === 'OWNER' && <button className="btn border-red-300 text-red-700" onClick={() => deleteClosedRental(r.id)}>Удалить аренду</button>}
+                    {r.status === 'ACTIVE' && <button className="btn border-red-500/60 text-red-300" onClick={() => closeRental(r.id)}>Завершить досрочно</button>}
+                    {r.status === 'CLOSED' && role === 'OWNER' && <button className="btn border-red-500/60 text-red-300" onClick={() => deleteClosedRental(r.id)}>Удалить аренду</button>}
                   </div>
 
                   {r.status === 'ACTIVE' && (
