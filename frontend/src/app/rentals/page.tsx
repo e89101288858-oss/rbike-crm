@@ -1,7 +1,7 @@
 'use client'
 
 import { FormEvent, useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api, Battery, Bike, Client, Rental, RentalDocument } from '@/lib/api'
 import { getToken, getTenantId, setTenantId } from '@/lib/auth'
@@ -9,6 +9,7 @@ import { diffDays, formatDate, formatDateTime, formatRub } from '@/lib/format'
 
 export default function RentalsPage() {
   const router = useRouter()
+  const pathname = usePathname()
   const [tenants, setTenants] = useState<any[]>([])
   const [role, setRole] = useState('')
   const [clients, setClients] = useState<Client[]>([])
@@ -41,6 +42,9 @@ export default function RentalsPage() {
   const [pageSize, setPageSize] = useState(50)
   const [pageInput, setPageInput] = useState('1')
   const [createModalOpen, setCreateModalOpen] = useState(false)
+  const [closeModalRentalId, setCloseModalRentalId] = useState<string | null>(null)
+  const [closeReason, setCloseReason] = useState('')
+  const [deleteModalRentalId, setDeleteModalRentalId] = useState<string | null>(null)
   const [error, setError] = useState('')
 
   async function loadAll() {
@@ -129,13 +133,15 @@ export default function RentalsPage() {
     }
   }
 
-  async function closeRental(rentalId: string) {
+  async function closeRental(rentalId: string, reason: string) {
     setError('')
     try {
-      const reason = window.prompt('Укажи причину досрочного завершения аренды')?.trim() || ''
-      if (!reason) throw new Error('Причина досрочного завершения обязательна')
-      await api.closeRental(rentalId, reason)
+      const trimmedReason = reason.trim()
+      if (!trimmedReason) throw new Error('Причина досрочного завершения обязательна')
+      await api.closeRental(rentalId, trimmedReason)
       await loadAll()
+      setCloseModalRentalId(null)
+      setCloseReason('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка закрытия аренды')
     }
@@ -144,9 +150,10 @@ export default function RentalsPage() {
   async function deleteClosedRental(rentalId: string) {
     setError('')
     try {
-      if (!confirm('Удалить завершенную аренду? Действие необратимо.')) return
       await api.deleteRental(rentalId)
       await loadAll()
+      setDeleteModalRentalId(null)
+      if (selectedRentalId === rentalId) setSelectedRentalId(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка удаления аренды')
     }
@@ -254,6 +261,20 @@ export default function RentalsPage() {
   }, [router])
 
   useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const urlTab = params.get('tab')
+    const urlQuery = params.get('q') ?? ''
+    const urlPage = Number(params.get('page') || 1)
+    const urlPageSize = Number(params.get('pageSize') || 50)
+
+    if (urlTab === 'ACTIVE' || urlTab === 'CLOSED') setListTab(urlTab)
+    setSearch(urlQuery)
+    setPage(Number.isFinite(urlPage) && urlPage > 0 ? Math.floor(urlPage) : 1)
+    if ([25, 50, 100].includes(urlPageSize)) setPageSize(urlPageSize)
+  }, [])
+
+  useEffect(() => {
     void loadAll()
   }, [listTab])
 
@@ -261,6 +282,20 @@ export default function RentalsPage() {
     setPage(1)
     setPageInput('1')
   }, [listTab, search, rentals.length, pageSize])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+
+    params.set('tab', listTab)
+    if (search.trim()) params.set('q', search.trim())
+    else params.delete('q')
+    params.set('page', String(page))
+    params.set('pageSize', String(pageSize))
+
+    const next = `${pathname}${params.toString() ? `?${params.toString()}` : ''}`
+    window.history.replaceState(null, '', next)
+  }, [pathname, listTab, search, page, pageSize])
 
   const rentalDays = startDate && plannedEndDate ? diffDays(startDate, plannedEndDate) : 0
   const projectedTotalRub = Number(createDailyRateRub || 0) * rentalDays
@@ -360,6 +395,38 @@ export default function RentalsPage() {
         </div>
       </div>
 
+      {closeModalRentalId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setCloseModalRentalId(null)}>
+          <div className="panel w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <h3 className="mb-2 text-base font-semibold">Досрочно завершить аренду</h3>
+            <p className="mb-2 text-xs text-gray-400">Укажи причину завершения. Это обязательное поле.</p>
+            <textarea
+              className="input min-h-24 w-full"
+              value={closeReason}
+              onChange={(e) => setCloseReason(e.target.value)}
+              placeholder="Причина досрочного завершения"
+            />
+            <div className="mt-3 flex justify-end gap-2">
+              <button type="button" className="btn" onClick={() => setCloseModalRentalId(null)}>Отмена</button>
+              <button type="button" className="btn border-red-500/60 text-red-300" onClick={() => closeRental(closeModalRentalId, closeReason)}>Завершить</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteModalRentalId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setDeleteModalRentalId(null)}>
+          <div className="panel w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <h3 className="mb-2 text-base font-semibold">Удалить завершенную аренду?</h3>
+            <p className="text-sm text-gray-400">Действие необратимо. Будут удалены связанные записи платежей, документов и журнала.</p>
+            <div className="mt-3 flex justify-end gap-2">
+              <button type="button" className="btn" onClick={() => setDeleteModalRentalId(null)}>Отмена</button>
+              <button type="button" className="btn border-red-500/60 text-red-300" onClick={() => deleteClosedRental(deleteModalRentalId)}>Удалить</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {createModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setCreateModalOpen(false)}>
           <form onSubmit={createRental} className="panel w-full max-w-6xl" onClick={(e) => e.stopPropagation()}>
@@ -451,8 +518,8 @@ export default function RentalsPage() {
                 )}
                 <button className="btn" onClick={() => loadJournal(r.id)}>Журнал</button>
                 <button className="btn" onClick={() => generateContract(r.id)}>Сформировать договор</button>
-                {r.status === 'ACTIVE' && <button className="btn border-red-500/60 text-red-300" onClick={() => closeRental(r.id)}>Завершить досрочно</button>}
-                {r.status === 'CLOSED' && role === 'OWNER' && <button className="btn border-red-500/60 text-red-300" onClick={() => deleteClosedRental(r.id)}>Удалить аренду</button>}
+                {r.status === 'ACTIVE' && <button className="btn border-red-500/60 text-red-300" onClick={() => { setCloseModalRentalId(r.id); setCloseReason('') }}>Завершить досрочно</button>}
+                {r.status === 'CLOSED' && role === 'OWNER' && <button className="btn border-red-500/60 text-red-300" onClick={() => setDeleteModalRentalId(r.id)}>Удалить аренду</button>}
               </div>
 
               {r.status === 'ACTIVE' && (
