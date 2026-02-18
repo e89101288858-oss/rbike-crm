@@ -133,6 +133,7 @@ export default function DashboardPage() {
   const [earlyClosuresRate, setEarlyClosuresRate] = useState(0)
 
   const [revenueTotalBlock, setRevenueTotalBlock] = useState(0)
+  const [revenueRows, setRevenueRows] = useState<Array<{ label: string; value: number }>>([])
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -265,6 +266,31 @@ export default function DashboardPage() {
         const { from, to } = toIsoRange(revenueMode)
         const rev = await api.revenueByDays(`from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`)
         setRevenueTotalBlock(Number(rev.totalRevenueRub || 0))
+
+        const days = rev.days ?? []
+        let rows: Array<{ label: string; value: number }> = []
+        if (revenueMode === 'day') {
+          const value = days.reduce((s: number, d: any) => s + Number(d.revenueRub || 0), 0)
+          rows = [{ label: 'Сегодня', value }]
+        } else if (revenueMode === 'week') {
+          rows = days.map((d: any) => ({ label: d.date.slice(5), value: Number(d.revenueRub || 0) }))
+        } else if (revenueMode === 'month') {
+          const weekMap = new Map<number, number>()
+          for (const d of days) {
+            const day = Number(String(d.date).slice(8, 10))
+            const weekNo = Math.floor((day - 1) / 7) + 1
+            weekMap.set(weekNo, (weekMap.get(weekNo) || 0) + Number(d.revenueRub || 0))
+          }
+          rows = Array.from(weekMap.entries()).sort((a, b) => a[0] - b[0]).map(([k, v]) => ({ label: `Нед ${k}`, value: v }))
+        } else {
+          const monthMap = new Map<string, number>()
+          for (const d of days) {
+            const key = String(d.date).slice(0, 7)
+            monthMap.set(key, (monthMap.get(key) || 0) + Number(d.revenueRub || 0))
+          }
+          rows = Array.from(monthMap.entries()).sort((a, b) => a[0].localeCompare(b[0])).map(([k, v]) => ({ label: k, value: v }))
+        }
+        setRevenueRows(rows)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Ошибка загрузки выручки')
       }
@@ -272,6 +298,7 @@ export default function DashboardPage() {
   }, [revenueMode])
 
   const maxBar = useMemo(() => Math.max(1, ...chartRows.map((r) => r.value)), [chartRows])
+  const maxRevenueBar = useMemo(() => Math.max(1, ...revenueRows.map((r) => r.value)), [revenueRows])
 
   const linePoints = useMemo(() => {
     if (!chartRows.length) return ''
@@ -289,8 +316,7 @@ export default function DashboardPage() {
   return (
     <main className="page with-sidebar min-h-screen bg-[#15171c] text-gray-100">
       <Topbar tenants={tenants} />
-      <h1 className="mb-2 text-3xl font-bold text-white">Дашборд</h1>
-      <p className="mb-6 text-sm text-gray-400">Роль: {role || '...'}</p>
+      <h1 className="mb-6 text-3xl font-bold text-white">Дашборд</h1>
       {error && <p className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
 
       {!showFranchiseeDashboard ? (
@@ -336,7 +362,7 @@ export default function DashboardPage() {
                   const h = `${Math.max(8, Math.round((r.value / maxBar) * 100))}%`
                   return (
                     <div key={r.label} className="flex flex-col items-center gap-2">
-                      <div className="w-full rounded-md bg-black/80" style={{ height: h }} />
+                      <div className="w-full rounded-md border border-orange-500/30 bg-gradient-to-t from-orange-600/60 to-orange-300/20" style={{ height: h }} />
                       <div className="text-xs text-gray-400">{r.label}</div>
                     </div>
                   )
@@ -345,7 +371,7 @@ export default function DashboardPage() {
 
               {!!linePoints && (
                 <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="pointer-events-none absolute inset-4 h-[224px] w-[calc(100%-2rem)]">
-                  <polyline fill="none" stroke="#34d399" strokeWidth="1" points={linePoints} />
+                  <polyline fill="none" stroke="#fb923c" strokeWidth="1.4" points={linePoints} />
                 </svg>
               )}
 
@@ -409,8 +435,19 @@ export default function DashboardPage() {
               <button className={tabClass(revenueMode === 'month')} onClick={() => setRevenueMode('month')}>Месяц</button>
               <button className={tabClass(revenueMode === 'year')} onClick={() => setRevenueMode('year')}>Год</button>
             </div>
-            <div className="h-28 rounded-md border border-white/10 bg-gradient-to-b from-sky-500/15 to-transparent p-3">
-              <div className="h-full w-full border-l border-b border-white/10" />
+            <div className="rounded-md border border-white/10 bg-[#181a1f] p-3">
+              <div className="grid h-28 grid-cols-12 items-end gap-2">
+                {revenueRows.map((r) => {
+                  const h = `${Math.max(8, Math.round((r.value / maxRevenueBar) * 100))}%`
+                  return (
+                    <div key={r.label} className="flex flex-col items-center gap-1">
+                      <div className="w-full rounded-sm border border-orange-500/30 bg-gradient-to-t from-orange-600/60 to-orange-300/20" style={{ height: h }} />
+                      <div className="text-[10px] text-gray-500">{r.label}</div>
+                    </div>
+                  )
+                })}
+                {!revenueRows.length && <div className="col-span-12 text-xs text-gray-500">Нет данных за период</div>}
+              </div>
             </div>
           </section>
         </>
