@@ -7,7 +7,8 @@ import { api, Rental } from '@/lib/api'
 import { getTenantId, getToken, setTenantId } from '@/lib/auth'
 import { formatRub } from '@/lib/format'
 
-type Mode = 'week' | 'month' | 'year'
+type ChartMode = 'week' | 'month' | 'year'
+type RevenueMode = 'day' | 'week' | 'month' | 'year'
 
 function atStartOfDay(d: Date) {
   const x = new Date(d)
@@ -21,8 +22,12 @@ function atEndOfDay(d: Date) {
   return x
 }
 
-function getRange(mode: Mode) {
+function getRange(mode: ChartMode | RevenueMode) {
   const now = new Date()
+
+  if (mode === 'day') {
+    return { from: atStartOfDay(now), to: atEndOfDay(now) }
+  }
 
   if (mode === 'week') {
     const to = atEndOfDay(now)
@@ -41,7 +46,7 @@ function getRange(mode: Mode) {
   return { from, to }
 }
 
-function toIsoRange(mode: Mode) {
+function toIsoRange(mode: ChartMode | RevenueMode) {
   const r = getRange(mode)
   return {
     from: r.from.toISOString(),
@@ -49,7 +54,7 @@ function toIsoRange(mode: Mode) {
   }
 }
 
-function aggregateRevenue(days: Array<{ date: string; revenueRub: number }>, mode: Mode) {
+function aggregateRevenue(days: Array<{ date: string; revenueRub: number }>, mode: ChartMode) {
   if (mode === 'week') {
     return days.map((d) => ({ label: d.date.slice(5), value: Number(d.revenueRub || 0) }))
   }
@@ -76,6 +81,12 @@ function aggregateRevenue(days: Array<{ date: string; revenueRub: number }>, mod
     .map(([key, value]) => ({ label: key, value }))
 }
 
+function darkTab(active: boolean) {
+  return active
+    ? 'rounded-lg border border-sky-500 bg-sky-500/20 px-3 py-1.5 text-sm text-sky-300'
+    : 'rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-gray-300 hover:bg-white/10'
+}
+
 export default function DashboardPage() {
   const router = useRouter()
   const [role, setRole] = useState('')
@@ -83,8 +94,8 @@ export default function DashboardPage() {
   const [bikeSummary, setBikeSummary] = useState<any>(null)
   const [allBikesCount, setAllBikesCount] = useState(0)
   const [allRentals, setAllRentals] = useState<Rental[]>([])
-  const [chartMode, setChartMode] = useState<Mode>('week')
-  const [revenueMode, setRevenueMode] = useState<Mode>('week')
+  const [chartMode, setChartMode] = useState<ChartMode>('week')
+  const [revenueMode, setRevenueMode] = useState<RevenueMode>('week')
   const [chartRows, setChartRows] = useState<Array<{ label: string; value: number }>>([])
   const [chartRevenueTotal, setChartRevenueTotal] = useState(0)
   const [periodRentalsCount, setPeriodRentalsCount] = useState(0)
@@ -160,7 +171,17 @@ export default function DashboardPage() {
 
   const maxBar = useMemo(() => Math.max(1, ...chartRows.map((r) => r.value)), [chartRows])
 
-  // временно owner показываем тот же экран до отдельного owner-dashboard этапа
+  const linePoints = useMemo(() => {
+    if (!chartRows.length) return ''
+    return chartRows
+      .map((r, i) => {
+        const x = chartRows.length === 1 ? 0 : (i / (chartRows.length - 1)) * 100
+        const y = 100 - (r.value / maxBar) * 100
+        return `${x},${Math.max(0, Math.min(100, y))}`
+      })
+      .join(' ')
+  }, [chartRows, maxBar])
+
   const showFranchiseeDashboard = role === 'FRANCHISEE' || role === 'OWNER'
 
   return (
@@ -183,52 +204,62 @@ export default function DashboardPage() {
             </div>
           </section>
 
-          <section className="panel mb-6">
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <section className="mb-6 overflow-hidden rounded-2xl border border-[#2f3136] bg-[#1f2126] text-white shadow-xl">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 p-4">
               <h2 className="text-lg font-semibold">Финансовые показатели парка</h2>
               <div className="flex gap-2">
-                <button className={chartMode === 'week' ? 'btn-primary' : 'btn'} onClick={() => setChartMode('week')}>Неделя</button>
-                <button className={chartMode === 'month' ? 'btn-primary' : 'btn'} onClick={() => setChartMode('month')}>Месяц</button>
-                <button className={chartMode === 'year' ? 'btn-primary' : 'btn'} onClick={() => setChartMode('year')}>Год</button>
+                <button className={darkTab(chartMode === 'week')} onClick={() => setChartMode('week')}>Неделя</button>
+                <button className={darkTab(chartMode === 'month')} onClick={() => setChartMode('month')}>Месяц</button>
+                <button className={darkTab(chartMode === 'year')} onClick={() => setChartMode('year')}>Год</button>
               </div>
             </div>
 
-            <div className="space-y-2">
-              {chartRows.map((r) => {
-                const width = `${Math.max(6, Math.round((r.value / maxBar) * 100))}%`
-                return (
-                  <div key={r.label} className="rounded-xl border border-gray-200 p-2 text-sm">
-                    <div className="mb-1 flex items-center justify-between">
-                      <span>{r.label}</span>
-                      <span className="font-semibold">{formatRub(r.value)}</span>
+            <div className="relative p-4">
+              <div className="grid h-56 grid-cols-12 items-end gap-3">
+                {chartRows.map((r) => {
+                  const h = `${Math.max(8, Math.round((r.value / maxBar) * 100))}%`
+                  return (
+                    <div key={r.label} className="flex flex-col items-center gap-2">
+                      <div className="w-full rounded-md bg-black/70" style={{ height: h }} />
+                      <div className="text-xs text-gray-400">{r.label}</div>
                     </div>
-                    <div className="h-2 rounded bg-gray-100">
-                      <div className="h-2 rounded bg-blue-500" style={{ width }} />
-                    </div>
-                  </div>
-                )
-              })}
-              {!chartRows.length && <p className="text-sm text-gray-600">Нет данных за период</p>}
+                  )
+                })}
+              </div>
+
+              {!!linePoints && (
+                <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="pointer-events-none absolute inset-4 h-[224px] w-[calc(100%-2rem)]">
+                  <defs>
+                    <linearGradient id="lineFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#22c55e" stopOpacity="0.25" />
+                      <stop offset="100%" stopColor="#22c55e" stopOpacity="0.02" />
+                    </linearGradient>
+                  </defs>
+                  <polyline fill="none" stroke="#34d399" strokeWidth="1" points={linePoints} />
+                </svg>
+              )}
+
+              {!chartRows.length && <p className="text-sm text-gray-400">Нет данных за период</p>}
             </div>
 
-            <div className="mt-4 grid gap-2 md:grid-cols-3">
-              <div className="kpi">Всего велосипедов: <b>{allBikesCount}</b></div>
-              <div className="kpi">Создано аренд за период: <b>{periodRentalsCount}</b></div>
-              <div className="kpi">Выручка за период: <b>{formatRub(chartRevenueTotal)}</b></div>
+            <div className="grid gap-2 border-t border-white/10 p-4 md:grid-cols-3">
+              <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-sm">Всего велосипедов: <b>{allBikesCount}</b></div>
+              <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-sm">Создано аренд за период: <b>{periodRentalsCount}</b></div>
+              <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-sm">Выручка за период: <b>{formatRub(chartRevenueTotal)}</b></div>
             </div>
           </section>
 
-          <section className="panel">
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-lg font-semibold">Общая выручка</h2>
-              <div className="flex gap-2">
-                <button className={revenueMode === 'week' ? 'btn-primary' : 'btn'} onClick={() => setRevenueMode('week')}>Неделя</button>
-                <button className={revenueMode === 'month' ? 'btn-primary' : 'btn'} onClick={() => setRevenueMode('month')}>Месяц</button>
-                <button className={revenueMode === 'year' ? 'btn-primary' : 'btn'} onClick={() => setRevenueMode('year')}>Год</button>
-              </div>
+          <section className="max-w-md rounded-2xl border border-[#2f3136] bg-[#1f2126] p-5 text-white shadow-xl">
+            <h2 className="mb-2 text-lg font-semibold">Общая выручка</h2>
+            <div className="mb-4 text-4xl font-bold tracking-tight">{formatRub(revenueTotalBlock)}</div>
+            <div className="mb-4 flex flex-wrap gap-2">
+              <button className={darkTab(revenueMode === 'day')} onClick={() => setRevenueMode('day')}>День</button>
+              <button className={darkTab(revenueMode === 'week')} onClick={() => setRevenueMode('week')}>Неделя</button>
+              <button className={darkTab(revenueMode === 'month')} onClick={() => setRevenueMode('month')}>Месяц</button>
+              <button className={darkTab(revenueMode === 'year')} onClick={() => setRevenueMode('year')}>Год</button>
             </div>
-            <div className="kpi text-base">
-              <span className="text-gray-600">Итого:</span> <b>{formatRub(revenueTotalBlock)}</b>
+            <div className="h-28 rounded-xl border border-white/10 bg-gradient-to-b from-sky-500/15 to-transparent p-3">
+              <div className="h-full w-full border-l border-b border-white/10" />
             </div>
           </section>
         </>
