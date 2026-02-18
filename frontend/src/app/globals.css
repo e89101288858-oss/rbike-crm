@@ -3,9 +3,18 @@
 :root {
   --background: #15171c;
   --foreground: #e5e7eb;
+
+  --surface-1: #1f2126;
+  --surface-2: #181a1f;
+  --surface-3: #23262d;
+  --border-1: #2f3136;
+  --border-2: #3f434b;
+
   --accent: #f97316;
   --accent-hover: #ea580c;
   --accent-soft: rgba(249, 115, 22, 0.16);
+  --accent-softer: rgba(249, 115, 22, 0.1);
+  --accent-text: #ffedd5;
 }
 
 @theme inline {
@@ -22,7 +31,7 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: radial-gradient(1200px 500px at 20% -10%, #1f2937 0%, transparent 60%), var(--background);
+  background: radial-gradient(1200px 500px at 20% -10%, #2d1f17 0%, transparent 60%), var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
@@ -52,8 +61,8 @@ body {
   top: 0;
   bottom: 0;
   width: 250px;
-  background: #111318;
-  border-right: 1px solid #2f3136;
+  background: #121317;
+  border-right: 1px solid var(--border-1);
   padding: 14px;
   display: flex;
   flex-direction: column;
@@ -132,20 +141,20 @@ body {
 
 .panel {
   @apply rounded-sm border p-3.5 shadow-sm transition;
-  border-color: #2f3136;
-  background: #1f2126;
+  border-color: var(--border-1);
+  background: var(--surface-1);
 }
 
 .kpi {
   @apply rounded-sm border p-3 text-sm transition;
-  border-color: #2f3136;
-  background: #181a1f;
+  border-color: var(--border-1);
+  background: var(--surface-2);
 }
 
 .table-wrap {
   @apply overflow-hidden rounded-sm border shadow-sm;
-  border-color: #2f3136;
-  background: #1f2126;
+  border-color: var(--border-1);
+  background: var(--surface-1);
 }
 
 .table {
@@ -154,7 +163,7 @@ body {
 
 .table th {
   @apply px-3 py-2 text-left font-semibold;
-  background: #181a1f;
+  background: var(--surface-2);
   color: #d1d5db;
 }
 
@@ -166,8 +175,12 @@ body {
 
 .table td {
   @apply border-t px-3 py-2;
-  border-color: #2f3136;
+  border-color: var(--border-1);
   color: #e5e7eb;
+}
+
+.table tbody tr:hover {
+  background: var(--accent-softer);
 }
 
 .badge {
@@ -175,18 +188,19 @@ body {
 }
 
 .badge-ok { @apply bg-green-500/20 text-green-300; }
-.badge-warn { @apply bg-amber-500/20 text-amber-300; }
+.badge-warn { background: var(--accent-soft); color: #fdba74; }
 .badge-muted { @apply bg-white/10 text-gray-300; }
 .badge-danger { @apply bg-red-500/20 text-red-300; }
 
 .btn {
   @apply rounded-sm border px-3 py-1.5 text-sm text-gray-200 transition duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50;
-  border-color: #3f434b;
-  background: #23262d;
+  border-color: var(--border-2);
+  background: var(--surface-3);
 }
 
 .btn:hover {
-  background: #2b2f37;
+  background: color-mix(in srgb, var(--surface-3) 82%, var(--accent) 18%);
+  border-color: color-mix(in srgb, var(--border-2) 70%, var(--accent) 30%);
 }
 
 .btn-primary {
@@ -202,8 +216,8 @@ body {
 .input,
 .select {
   @apply rounded-sm border px-3 py-1.5 text-sm text-gray-100;
-  border-color: #3f434b;
-  background: #181a1f;
+  border-color: var(--border-2);
+  background: var(--surface-2);
 }
 
 .input::placeholder {
@@ -231,15 +245,15 @@ body {
 
 .soft-card {
   @apply rounded-sm border p-3 shadow-sm;
-  border-color: #2f3136;
-  background: linear-gradient(to bottom, #20232a, #181a1f);
+  border-color: var(--border-1);
+  background: linear-gradient(to bottom, #22252d, var(--surface-2));
 }
 
 .muted-chip {
   @apply inline-flex items-center rounded-sm border px-2.5 py-1 text-xs;
-  border-color: #3f434b;
-  background: #181a1f;
-  color: #9ca3af;
+  border-color: color-mix(in srgb, var(--border-2) 70%, var(--accent) 30%);
+  background: color-mix(in srgb, var(--surface-2) 88%, var(--accent) 12%);
+  color: #fdba74;
 }
 
 .btn:focus-visible,
