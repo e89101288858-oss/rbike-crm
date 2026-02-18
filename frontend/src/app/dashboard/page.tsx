@@ -102,8 +102,7 @@ function formatPercent(value: number) {
 }
 
 function overdueCardClass(value: number) {
-  if (value >= 5) return 'rounded-md border border-red-500/60 bg-red-500/15 p-3 text-sm text-red-200'
-  if (value >= 1) return 'rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-sm text-amber-200'
+  if (value >= 1) return 'rounded-md border border-red-500/60 bg-red-500/15 p-3 text-sm text-red-200'
   return 'rounded-md border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-200'
 }
 
