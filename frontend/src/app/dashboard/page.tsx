@@ -89,8 +89,8 @@ function aggregateRevenue(days: Array<{ date: string; revenueRub: number }>, mod
 
 function tabClass(active: boolean) {
   return active
-    ? 'rounded-sm border border-sky-500 bg-sky-500/20 px-3 py-1.5 text-sm text-sky-300'
-    : 'rounded-sm border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-gray-300 hover:bg-white/10'
+    ? 'rounded-sm border border-orange-500 bg-orange-500/20 px-2.5 py-1 text-xs text-orange-200'
+    : 'rounded-sm border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-gray-300 hover:bg-white/10'
 }
 
 function formatInt(value: number) {
@@ -364,12 +364,12 @@ export default function DashboardPage() {
             <div className="rounded-lg border border-white/10 bg-[#1f2126] p-4 shadow-xl">
               <h2 className="mb-3 text-lg font-semibold text-white">Контроль завершений</h2>
               <div className="grid gap-2 sm:grid-cols-3">
-                <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
-                  <div className="text-xs text-red-300">Остался 1 день</div>
+                <div className="rounded-md border border-orange-500/40 bg-orange-500/10 p-3 text-sm text-orange-200">
+                  <div className="text-xs text-orange-300">Остался 1 день</div>
                   <div className="mt-1 text-2xl font-semibold">{formatInt(endingIn1)}</div>
                 </div>
-                <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-200">
-                  <div className="text-xs text-amber-300">Осталось 2–3 дня</div>
+                <div className="rounded-md border border-blue-500/40 bg-blue-500/10 p-3 text-sm text-blue-200">
+                  <div className="text-xs text-blue-300">Осталось 2–3 дня</div>
                   <div className="mt-1 text-2xl font-semibold">{formatInt(endingIn2to3)}</div>
                 </div>
                 <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-200">

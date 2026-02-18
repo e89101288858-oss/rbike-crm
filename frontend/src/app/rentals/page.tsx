@@ -287,8 +287,8 @@ export default function RentalsPage() {
   function daysHighlightClass(daysLeft: number) {
     if (daysLeft <= 0) return 'border-[#7f1d1d] bg-[#4a1d24] border-l-4 border-l-[#be123c]'
     if (daysLeft >= 4) return 'border-emerald-500/50 bg-emerald-500/10 border-l-4 border-l-emerald-400'
-    if (daysLeft === 3 || daysLeft === 2) return 'border-amber-500/50 bg-amber-500/10 border-l-4 border-l-amber-400'
-    if (daysLeft === 1) return 'border-red-500/50 bg-red-500/10 border-l-4 border-l-red-400'
+    if (daysLeft === 3 || daysLeft === 2) return 'border-blue-500/50 bg-blue-500/10 border-l-4 border-l-blue-400'
+    if (daysLeft === 1) return 'border-orange-500/50 bg-orange-500/10 border-l-4 border-l-orange-400'
     return 'border-[#2f3136] bg-[#1f2126]'
   }
 
@@ -332,7 +332,7 @@ export default function RentalsPage() {
                   <td>
                     <span className={`badge ${r.status === 'ACTIVE' ? 'badge-warn' : 'badge-ok'}`}>{r.status === 'ACTIVE' ? 'Активна' : 'Завершена'}</span>
                     {r.status === 'ACTIVE' && (
-                      <span className={`ml-2 text-xs font-medium ${daysLeft <= 0 ? 'text-rose-300' : daysLeft === 1 ? 'text-red-300' : daysLeft <= 3 ? 'text-amber-300' : 'text-emerald-300'}`}>
+                      <span className={`ml-2 text-xs font-medium ${daysLeft <= 0 ? 'text-rose-300' : daysLeft === 1 ? 'text-orange-300' : daysLeft <= 3 ? 'text-blue-300' : 'text-emerald-300'}`}>
                         {daysLeft <= 0 ? `Долг (${daysLeft} дн.)` : `Осталось: ${daysLeft} дн.`}
                       </span>
                     )}
