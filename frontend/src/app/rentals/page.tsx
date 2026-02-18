@@ -296,7 +296,7 @@ export default function RentalsPage() {
           placeholder="Суточная ставка, ₽"
         />
 
-        <div className="md:col-span-4 rounded-xl border border-gray-200 bg-gray-50 p-2 text-sm">
+        <div className="md:col-span-4 rounded-md border border-gray-200 bg-gray-50 p-2 text-sm">
           <div className="mb-2 flex items-center gap-3">
             <span>АКБ к выдаче:</span>
             <label className="flex items-center gap-1"><input type="radio" checked={batteryCount === 1} onChange={() => { setBatteryCount(1); setBattery2Id('') }} /> 1</label>
@@ -345,7 +345,7 @@ export default function RentalsPage() {
           const daysLeft = diffDays(new Date().toISOString(), r.plannedEndDate)
           const highlight = r.status === 'ACTIVE' ? daysHighlightClass(daysLeft) : 'border-[#2f3136] bg-[#1f2126]'
           return (
-            <div key={r.id} className={`rounded-2xl border p-3 shadow-sm text-sm ${highlight}`}>
+            <div key={r.id} className={`rounded-lg border p-3 shadow-sm text-sm ${highlight}`}>
               <div className="flex cursor-pointer flex-wrap items-center gap-2 rounded-lg px-1 py-1 hover:bg-white/5" onClick={() => setExpandedMap((p) => ({ ...p, [r.id]: !expanded }))}>
                 <div className="font-medium min-w-56">{r.client.fullName} — {r.bike.code}</div>
                 <span className={`badge ${r.status === 'ACTIVE' ? 'badge-warn' : 'badge-ok'}`}>{r.status === 'ACTIVE' ? 'Активна' : 'Завершена'}</span>

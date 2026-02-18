@@ -102,9 +102,9 @@ function formatPercent(value: number) {
 }
 
 function overdueCardClass(value: number) {
-  if (value >= 5) return 'rounded-xl border border-red-500/60 bg-red-500/15 p-3 text-sm text-red-200'
-  if (value >= 1) return 'rounded-xl border border-amber-500/50 bg-amber-500/10 p-3 text-sm text-amber-200'
-  return 'rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-200'
+  if (value >= 5) return 'rounded-md border border-red-500/60 bg-red-500/15 p-3 text-sm text-red-200'
+  if (value >= 1) return 'rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-sm text-amber-200'
+  return 'rounded-md border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-200'
 }
 
 export default function DashboardPage() {
@@ -295,33 +295,33 @@ export default function DashboardPage() {
       {error && <p className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
 
       {!showFranchiseeDashboard ? (
-        <section className="rounded-2xl border border-white/10 bg-[#1f2126] p-4 text-sm text-gray-300">Дашборд для роли {role || '—'} пока не настроен.</section>
+        <section className="rounded-lg border border-white/10 bg-[#1f2126] p-4 text-sm text-gray-300">Дашборд для роли {role || '—'} пока не настроен.</section>
       ) : (
         <>
           <section className="mb-6 grid gap-3 md:grid-cols-4">
-            <div className="rounded-2xl border border-white/10 bg-[#1f2126] p-4">
+            <div className="rounded-lg border border-white/10 bg-[#1f2126] p-4">
               <div className="text-xs text-gray-400">Активные аренды</div>
               <div className="mt-1 text-3xl font-semibold text-white">{formatInt(activeNow)}</div>
               <div className="mt-1 text-xs text-gray-500">на текущий момент</div>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-[#1f2126] p-4">
+            <div className="rounded-lg border border-white/10 bg-[#1f2126] p-4">
               <div className="text-xs text-gray-400">Новые аренды</div>
               <div className="mt-1 text-3xl font-semibold text-white">{formatInt(newRentalsPeriod)}</div>
               <div className="mt-1 text-xs text-gray-500">за выбранный период</div>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-[#1f2126] p-4">
+            <div className="rounded-lg border border-white/10 bg-[#1f2126] p-4">
               <div className="text-xs text-gray-400">Выручка за период</div>
               <div className="mt-1 text-3xl font-semibold text-white">{formatRub(chartRevenueTotal)}</div>
               <div className="mt-1 text-xs text-gray-500">оплаченные платежи</div>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-[#1f2126] p-4">
+            <div className="rounded-lg border border-white/10 bg-[#1f2126] p-4">
               <div className="text-xs text-gray-400">Средняя длительность</div>
               <div className="mt-1 text-3xl font-semibold text-white">{avgClosedDays ? `${avgClosedDays.toFixed(1)} дн.` : '—'}</div>
               <div className="mt-1 text-xs text-gray-500">по закрытым арендам</div>
             </div>
           </section>
 
-          <section className="mb-6 rounded-2xl border border-white/10 bg-[#1f2126] p-4 shadow-xl">
+          <section className="mb-6 rounded-lg border border-white/10 bg-[#1f2126] p-4 shadow-xl">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-lg font-semibold text-white">Финансовые показатели парка</h2>
               <div className="flex gap-2">
@@ -331,7 +331,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="relative rounded-xl border border-white/10 bg-[#181a1f] p-4">
+            <div className="relative rounded-md border border-white/10 bg-[#181a1f] p-4">
               <div className="grid h-56 grid-cols-12 items-end gap-3">
                 {chartRows.map((r) => {
                   const h = `${Math.max(8, Math.round((r.value / maxBar) * 100))}%`
@@ -354,25 +354,25 @@ export default function DashboardPage() {
             </div>
 
             <div className="mt-4 grid gap-2 md:grid-cols-3">
-              <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-gray-200">Всего велосипедов: <b>{formatInt(allBikesCount)}</b></div>
-              <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-gray-200">Создано аренд за период: <b>{formatInt(newRentalsPeriod)}</b></div>
-              <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-gray-200">Выручка за период: <b>{formatRub(chartRevenueTotal)}</b></div>
+              <div className="rounded-md border border-white/10 bg-white/5 p-3 text-sm text-gray-200">Всего велосипедов: <b>{formatInt(allBikesCount)}</b></div>
+              <div className="rounded-md border border-white/10 bg-white/5 p-3 text-sm text-gray-200">Создано аренд за период: <b>{formatInt(newRentalsPeriod)}</b></div>
+              <div className="rounded-md border border-white/10 bg-white/5 p-3 text-sm text-gray-200">Выручка за период: <b>{formatRub(chartRevenueTotal)}</b></div>
             </div>
           </section>
 
           <section className="mb-6 grid gap-3 md:grid-cols-2">
-            <div className="rounded-2xl border border-white/10 bg-[#1f2126] p-4 shadow-xl">
+            <div className="rounded-lg border border-white/10 bg-[#1f2126] p-4 shadow-xl">
               <h2 className="mb-3 text-lg font-semibold text-white">Контроль завершений</h2>
               <div className="grid gap-2 sm:grid-cols-3">
-                <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
+                <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
                   <div className="text-xs text-red-300">Остался 1 день</div>
                   <div className="mt-1 text-2xl font-semibold">{formatInt(endingIn1)}</div>
                 </div>
-                <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-200">
+                <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-200">
                   <div className="text-xs text-amber-300">Осталось 2–3 дня</div>
                   <div className="mt-1 text-2xl font-semibold">{formatInt(endingIn2to3)}</div>
                 </div>
-                <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-200">
+                <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-200">
                   <div className="text-xs text-emerald-300">Осталось 4+ дня</div>
                   <div className="mt-1 text-2xl font-semibold">{formatInt(endingIn4plus)}</div>
                 </div>
@@ -384,15 +384,15 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-[#1f2126] p-4 shadow-xl">
+            <div className="rounded-lg border border-white/10 bg-[#1f2126] p-4 shadow-xl">
               <h2 className="mb-3 text-lg font-semibold text-white">Дисциплина аренд</h2>
               <div className="grid gap-2 sm:grid-cols-2">
-                <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-gray-200">
+                <div className="rounded-md border border-white/10 bg-white/5 p-3 text-sm text-gray-200">
                   <div className="text-xs text-gray-400">Продления</div>
                   <div className="mt-1 text-2xl font-semibold text-white">{formatInt(extensionsCount)}</div>
                   <div className="mt-1 text-xs text-gray-500">{formatPercent(extensionsRate)} от новых аренд</div>
                 </div>
-                <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-gray-200">
+                <div className="rounded-md border border-white/10 bg-white/5 p-3 text-sm text-gray-200">
                   <div className="text-xs text-gray-400">Досрочные завершения</div>
                   <div className="mt-1 text-2xl font-semibold text-white">{formatInt(earlyClosuresCount)}</div>
                   <div className="mt-1 text-xs text-gray-500">{formatPercent(earlyClosuresRate)} от закрытых аренд</div>
@@ -401,7 +401,7 @@ export default function DashboardPage() {
             </div>
           </section>
 
-          <section className="max-w-md rounded-2xl border border-white/10 bg-[#1f2126] p-5 text-white shadow-xl">
+          <section className="max-w-md rounded-lg border border-white/10 bg-[#1f2126] p-5 text-white shadow-xl">
             <h2 className="mb-2 text-lg font-semibold">Общая выручка</h2>
             <div className="mb-4 text-4xl font-bold tracking-tight">{formatRub(revenueTotalBlock)}</div>
             <div className="mb-4 flex flex-wrap gap-2">
@@ -410,7 +410,7 @@ export default function DashboardPage() {
               <button className={tabClass(revenueMode === 'month')} onClick={() => setRevenueMode('month')}>Месяц</button>
               <button className={tabClass(revenueMode === 'year')} onClick={() => setRevenueMode('year')}>Год</button>
             </div>
-            <div className="h-28 rounded-xl border border-white/10 bg-gradient-to-b from-sky-500/15 to-transparent p-3">
+            <div className="h-28 rounded-md border border-white/10 bg-gradient-to-b from-sky-500/15 to-transparent p-3">
               <div className="h-full w-full border-l border-b border-white/10" />
             </div>
           </section>

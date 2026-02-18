@@ -62,19 +62,19 @@ body {
 }
 
 .panel {
-  @apply rounded-2xl border p-4 shadow-sm transition;
+  @apply rounded-lg border p-3.5 shadow-sm transition;
   border-color: #2f3136;
   background: #1f2126;
 }
 
 .kpi {
-  @apply rounded-xl border p-3 text-sm transition;
+  @apply rounded-md border p-3 text-sm transition;
   border-color: #2f3136;
   background: #181a1f;
 }
 
 .table-wrap {
-  @apply overflow-hidden rounded-2xl border shadow-sm;
+  @apply overflow-hidden rounded-lg border shadow-sm;
   border-color: #2f3136;
   background: #1f2126;
 }
@@ -102,7 +102,7 @@ body {
 }
 
 .badge {
-  @apply inline-flex items-center rounded-full px-2 py-1 text-xs font-medium;
+  @apply inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium;
 }
 
 .badge-ok { @apply bg-green-500/20 text-green-300; }
@@ -111,7 +111,7 @@ body {
 .badge-danger { @apply bg-red-500/20 text-red-300; }
 
 .btn {
-  @apply rounded-lg border px-3 py-2 text-sm text-gray-200 transition duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50;
+  @apply rounded-md border px-3 py-1.5 text-sm text-gray-200 transition duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50;
   border-color: #3f434b;
   background: #23262d;
 }
@@ -121,7 +121,7 @@ body {
 }
 
 .btn-primary {
-  @apply rounded-lg border px-3 py-2 text-sm text-white transition duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50;
+  @apply rounded-md border px-3 py-1.5 text-sm text-white transition duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50;
   border-color: #0ea5e9;
   background: #0284c7;
 }
@@ -132,7 +132,7 @@ body {
 
 .input,
 .select {
-  @apply rounded-lg border px-3 py-2 text-sm text-gray-100;
+  @apply rounded-md border px-3 py-1.5 text-sm text-gray-100;
   border-color: #3f434b;
   background: #181a1f;
 }
@@ -161,16 +161,52 @@ body {
 }
 
 .soft-card {
-  @apply rounded-xl border p-3 shadow-sm;
+  @apply rounded-md border p-3 shadow-sm;
   border-color: #2f3136;
   background: linear-gradient(to bottom, #20232a, #181a1f);
 }
 
 .muted-chip {
-  @apply inline-flex items-center rounded-full border px-2.5 py-1 text-xs;
+  @apply inline-flex items-center rounded-md border px-2.5 py-1 text-xs;
   border-color: #3f434b;
   background: #181a1f;
   color: #9ca3af;
+}
+
+.btn:focus-visible,
+.btn-primary:focus-visible,
+.input:focus-visible,
+.select:focus-visible {
+  outline: 2px solid rgba(14, 165, 233, 0.45);
+  outline-offset: 1px;
+}
+
+.table td,
+.table th {
+  line-height: 1.25;
+}
+
+.table td {
+  padding-top: 0.55rem;
+  padding-bottom: 0.55rem;
+}
+
+.sidebar .btn,
+.sidebar .btn-primary {
+  border-radius: 0.45rem;
+}
+
+.panel,
+.kpi,
+.table-wrap,
+.soft-card {
+  box-shadow: 0 1px 0 rgba(255,255,255,0.03), 0 8px 18px rgba(0,0,0,0.16);
+}
+
+.panel:hover,
+.kpi:hover,
+.soft-card:hover {
+  box-shadow: 0 1px 0 rgba(255,255,255,0.04), 0 10px 20px rgba(0,0,0,0.2);
 }
 
 /* Broad utility overrides to keep legacy pages readable in dark mode */
