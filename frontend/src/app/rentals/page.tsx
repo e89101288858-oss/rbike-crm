@@ -27,10 +27,12 @@ export default function RentalsPage() {
   const [addBatteryMap, setAddBatteryMap] = useState<Record<string, string>>({})
   const [replaceFromMap, setReplaceFromMap] = useState<Record<string, string>>({})
   const [replaceToMap, setReplaceToMap] = useState<Record<string, string>>({})
+  const [dailyRateMap, setDailyRateMap] = useState<Record<string, string>>({})
   const [journalMap, setJournalMap] = useState<Record<string, any[]>>({})
   const [docsMap, setDocsMap] = useState<Record<string, RentalDocument[]>>({})
   const [docHtmlMap, setDocHtmlMap] = useState<Record<string, string>>({})
   const [dailyRateRub, setDailyRateRub] = useState(500)
+  const [createDailyRateRub, setCreateDailyRateRub] = useState(500)
   const [minRentalDays, setMinRentalDays] = useState(7)
   const [listTab, setListTab] = useState<'ACTIVE' | 'CLOSED'>('ACTIVE')
   const [expandedMap, setExpandedMap] = useState<Record<string, boolean>>({})
@@ -74,11 +76,15 @@ export default function RentalsPage() {
       if (battery1Id && battery2Id && battery1Id === battery2Id) throw new Error('АКБ 1 и АКБ 2 должны отличаться')
       if (diffDays(startDate, plannedEndDate) < minRentalDays) throw new Error(`Минимальный срок аренды — ${minRentalDays} дней`)
 
+      const chosenDailyRate = Number(createDailyRateRub || 0)
+      if (!Number.isFinite(chosenDailyRate) || chosenDailyRate <= 0) throw new Error('Суточная ставка должна быть больше 0')
+
       await api.createRental({
         clientId,
         bikeId,
         startDate: `${startDate}T00:00:00.000Z`,
         plannedEndDate: `${plannedEndDate}T00:00:00.000Z`,
+        weeklyRateRub: Math.round(chosenDailyRate * 7),
         batteryIds: selectedBatteryIds,
       })
 
@@ -87,6 +93,21 @@ export default function RentalsPage() {
       await loadAll()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка создания аренды')
+    }
+  }
+
+  async function setRentalDailyRate(rentalId: string, currentWeeklyRateRub: number) {
+    setError('')
+    try {
+      const raw = dailyRateMap[rentalId]
+      const nextDailyRate = Number(raw || 0)
+      if (!Number.isFinite(nextDailyRate) || nextDailyRate <= 0) throw new Error('Суточная ставка должна быть больше 0')
+      const nextWeeklyRate = Math.round(nextDailyRate * 7)
+      if (nextWeeklyRate === Number(currentWeeklyRateRub || 0)) return
+      await api.setWeeklyRate(rentalId, nextWeeklyRate)
+      await loadAll()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка обновления суточной ставки')
     }
   }
 
@@ -216,7 +237,9 @@ export default function RentalsPage() {
       const currentTenantId = getTenantId() || myTenants[0]?.id || ''
       if (!getTenantId() && myTenants.length > 0) setTenantId(myTenants[0].id)
       const currentTenant = myTenants.find((t) => t.id === currentTenantId)
-      setDailyRateRub(Number(currentTenant?.dailyRateRub ?? 500))
+      const baseDailyRate = Number(currentTenant?.dailyRateRub ?? 500)
+      setDailyRateRub(baseDailyRate)
+      setCreateDailyRateRub(baseDailyRate)
       setMinRentalDays(Number(currentTenant?.minRentalDays ?? 7))
       const fromQueryClientId = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('clientId') : null
       if (fromQueryClientId) setClientId(fromQueryClientId)
@@ -229,9 +252,9 @@ export default function RentalsPage() {
   }, [listTab])
 
   const rentalDays = startDate && plannedEndDate ? diffDays(startDate, plannedEndDate) : 0
-  const projectedTotalRub = dailyRateRub * rentalDays
+  const projectedTotalRub = Number(createDailyRateRub || 0) * rentalDays
   const availableBatteries = batteries.filter((b) => b.status === 'AVAILABLE')
-  const canCreate = !!clientId && !!bikeId && !!startDate && !!plannedEndDate && selectedBatteryIds.length === batteryCount && rentalDays >= minRentalDays
+  const canCreate = !!clientId && !!bikeId && !!startDate && !!plannedEndDate && Number(createDailyRateRub) > 0 && selectedBatteryIds.length === batteryCount && rentalDays >= minRentalDays
 
   function daysHighlightClass(daysLeft: number) {
     if (daysLeft <= 0) return 'border-[#7f1d1d] bg-[#4a1d24] border-l-4 border-l-[#be123c]'
@@ -263,6 +286,15 @@ export default function RentalsPage() {
         </select>
         <input type="date" className="input" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
         <input type="date" className="input" value={plannedEndDate} onChange={(e) => setPlannedEndDate(e.target.value)} />
+        <input
+          type="number"
+          className="input md:col-span-4"
+          min={1}
+          step={10}
+          value={createDailyRateRub}
+          onChange={(e) => setCreateDailyRateRub(Number(e.target.value || 0))}
+          placeholder="Суточная ставка, ₽"
+        />
 
         <div className="md:col-span-4 rounded-xl border border-gray-200 bg-gray-50 p-2 text-sm">
           <div className="mb-2 flex items-center gap-3">
@@ -293,7 +325,7 @@ export default function RentalsPage() {
 
         {!canCreate && (
           <p className="md:col-span-4 text-xs text-amber-300">
-            Заполни курьера, велосипед, даты и выбери {batteryCount} АКБ.
+            Заполни курьера, велосипед, даты, ставку и выбери {batteryCount} АКБ.
             {rentalDays > 0 && rentalDays < minRentalDays ? ` Текущий срок ${rentalDays} дн., минимум ${minRentalDays}.` : ''}
           </p>
         )}
@@ -301,7 +333,7 @@ export default function RentalsPage() {
 
       {startDate && plannedEndDate && (
         <p className="mb-3 text-sm text-gray-600">
-          Тариф: {formatRub(dailyRateRub)} / сутки · Срок: {rentalDays} дн. (минимум {minRentalDays}) · АКБ: {selectedBatteryIds.length}/{batteryCount} · Сумма: {formatRub(projectedTotalRub)}
+          Тариф: {formatRub(Number(createDailyRateRub || 0))} / сутки (базовая {formatRub(dailyRateRub)}) · Срок: {rentalDays} дн. (минимум {minRentalDays}) · АКБ: {selectedBatteryIds.length}/{batteryCount} · Сумма: {formatRub(projectedTotalRub)}
         </p>
       )}
 
@@ -329,12 +361,22 @@ export default function RentalsPage() {
                 <>
                   <div>Факт завершения: {formatDate(r.actualEndDate)}</div>
                   {!!r.closeReason && <div>Причина досрочного завершения: {r.closeReason}</div>}
-                  <div>Тариф: {formatRub(dailyRateRub)} / сутки</div>
+                  <div>Тариф: {formatRub(Math.round((Number(r.weeklyRateRub || 0) / 7) * 100) / 100)} / сутки</div>
                   <div>АКБ: {r.batteries?.map((x) => x.battery.code).join(', ') || '—'} ({r.batteries?.length || 0}/2)</div>
 
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     {r.status === 'ACTIVE' && (
                       <>
+                        <input
+                          type="number"
+                          className="input w-44"
+                          min={1}
+                          step={10}
+                          placeholder="Ставка ₽/сутки"
+                          value={dailyRateMap[r.id] ?? Math.round((Number(r.weeklyRateRub || 0) / 7) * 100) / 100}
+                          onChange={(e) => setDailyRateMap((prev) => ({ ...prev, [r.id]: e.target.value }))}
+                        />
+                        <button className="btn" onClick={() => setRentalDailyRate(r.id, Number(r.weeklyRateRub || 0))}>Обновить ставку</button>
                         <input type="number" className="input w-40" placeholder="Дней продления" value={extendMap[r.id] ?? ''} onChange={(e) => setExtendMap((prev) => ({ ...prev, [r.id]: e.target.value }))} />
                         <button className="btn" onClick={() => extendRental(r.id)}>Продлить</button>
                       </>
