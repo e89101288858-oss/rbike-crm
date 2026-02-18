@@ -193,22 +193,25 @@ body {
 
 .sidebar .btn,
 .sidebar .btn-primary {
-  border-radius: 0.25rem;
+  border-radius: 0.2rem;
 }
 
 .sidebar .btn {
-  border-color: transparent;
+  border: 0;
   background: transparent;
   box-shadow: none;
+  color: #cbd5e1;
 }
 
 .sidebar .btn:hover {
   background: #1b1f26;
+  color: #f3f4f6;
 }
 
 .sidebar .btn-primary {
-  border-color: #0ea5e9;
+  border: 1px solid #0ea5e9;
   background: #0284c7;
+  color: #fff;
 }
 
 .panel,
