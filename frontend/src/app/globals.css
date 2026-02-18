@@ -30,6 +30,8 @@ body {
 
 .with-sidebar {
   margin-left: 270px;
+  width: calc(100vw - 270px);
+  padding-right: 24px;
   transition: margin-left .2s ease;
 }
 
@@ -56,7 +58,7 @@ body {
 .sidebar-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 35; }
 
 @media (max-width: 767px) {
-  .with-sidebar { margin-left: 0; padding-top: 54px; }
+  .with-sidebar { margin-left: 0; width: 100vw; padding-top: 54px; padding-right: 16px; }
   .sidebar { transform: translateX(-105%); transition: transform .2s ease; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
   .sidebar.sidebar-open { transform: translateX(0); }
 }
