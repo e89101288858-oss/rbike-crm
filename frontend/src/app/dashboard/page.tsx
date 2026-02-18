@@ -89,8 +89,8 @@ function aggregateRevenue(days: Array<{ date: string; revenueRub: number }>, mod
 
 function tabClass(active: boolean) {
   return active
-    ? 'rounded-lg border border-sky-500 bg-sky-500/20 px-3 py-1.5 text-sm text-sky-300'
-    : 'rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-gray-300 hover:bg-white/10'
+    ? 'rounded-sm border border-sky-500 bg-sky-500/20 px-3 py-1.5 text-sm text-sky-300'
+    : 'rounded-sm border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-gray-300 hover:bg-white/10'
 }
 
 function formatInt(value: number) {

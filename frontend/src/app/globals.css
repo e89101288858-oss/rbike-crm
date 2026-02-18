@@ -62,19 +62,19 @@ body {
 }
 
 .panel {
-  @apply rounded-lg border p-3.5 shadow-sm transition;
+  @apply rounded-sm border p-3.5 shadow-sm transition;
   border-color: #2f3136;
   background: #1f2126;
 }
 
 .kpi {
-  @apply rounded-md border p-3 text-sm transition;
+  @apply rounded-sm border p-3 text-sm transition;
   border-color: #2f3136;
   background: #181a1f;
 }
 
 .table-wrap {
-  @apply overflow-hidden rounded-lg border shadow-sm;
+  @apply overflow-hidden rounded-sm border shadow-sm;
   border-color: #2f3136;
   background: #1f2126;
 }
@@ -102,7 +102,7 @@ body {
 }
 
 .badge {
-  @apply inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium;
+  @apply inline-flex items-center rounded-sm px-2 py-0.5 text-xs font-medium;
 }
 
 .badge-ok { @apply bg-green-500/20 text-green-300; }
@@ -111,7 +111,7 @@ body {
 .badge-danger { @apply bg-red-500/20 text-red-300; }
 
 .btn {
-  @apply rounded-md border px-3 py-1.5 text-sm text-gray-200 transition duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50;
+  @apply rounded-sm border px-3 py-1.5 text-sm text-gray-200 transition duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50;
   border-color: #3f434b;
   background: #23262d;
 }
@@ -121,7 +121,7 @@ body {
 }
 
 .btn-primary {
-  @apply rounded-md border px-3 py-1.5 text-sm text-white transition duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50;
+  @apply rounded-sm border px-3 py-1.5 text-sm text-white transition duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50;
   border-color: #0ea5e9;
   background: #0284c7;
 }
@@ -132,7 +132,7 @@ body {
 
 .input,
 .select {
-  @apply rounded-md border px-3 py-1.5 text-sm text-gray-100;
+  @apply rounded-sm border px-3 py-1.5 text-sm text-gray-100;
   border-color: #3f434b;
   background: #181a1f;
 }
@@ -161,13 +161,13 @@ body {
 }
 
 .soft-card {
-  @apply rounded-md border p-3 shadow-sm;
+  @apply rounded-sm border p-3 shadow-sm;
   border-color: #2f3136;
   background: linear-gradient(to bottom, #20232a, #181a1f);
 }
 
 .muted-chip {
-  @apply inline-flex items-center rounded-md border px-2.5 py-1 text-xs;
+  @apply inline-flex items-center rounded-sm border px-2.5 py-1 text-xs;
   border-color: #3f434b;
   background: #181a1f;
   color: #9ca3af;
@@ -193,7 +193,22 @@ body {
 
 .sidebar .btn,
 .sidebar .btn-primary {
-  border-radius: 0.45rem;
+  border-radius: 0.25rem;
+}
+
+.sidebar .btn {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.sidebar .btn:hover {
+  background: #1b1f26;
+}
+
+.sidebar .btn-primary {
+  border-color: #0ea5e9;
+  background: #0284c7;
 }
 
 .panel,

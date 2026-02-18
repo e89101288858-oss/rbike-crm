@@ -345,8 +345,8 @@ export default function RentalsPage() {
           const daysLeft = diffDays(new Date().toISOString(), r.plannedEndDate)
           const highlight = r.status === 'ACTIVE' ? daysHighlightClass(daysLeft) : 'border-[#2f3136] bg-[#1f2126]'
           return (
-            <div key={r.id} className={`rounded-lg border p-3 shadow-sm text-sm ${highlight}`}>
-              <div className="flex cursor-pointer flex-wrap items-center gap-2 rounded-lg px-1 py-1 hover:bg-white/5" onClick={() => setExpandedMap((p) => ({ ...p, [r.id]: !expanded }))}>
+            <div key={r.id} className={`rounded-sm border p-3 shadow-sm text-sm ${highlight}`}>
+              <div className="flex cursor-pointer flex-wrap items-center gap-2 rounded-sm px-1 py-1 hover:bg-white/5" onClick={() => setExpandedMap((p) => ({ ...p, [r.id]: !expanded }))}>
                 <div className="font-medium min-w-56">{r.client.fullName} — {r.bike.code}</div>
                 <span className={`badge ${r.status === 'ACTIVE' ? 'badge-warn' : 'badge-ok'}`}>{r.status === 'ACTIVE' ? 'Активна' : 'Завершена'}</span>
                 <div className="text-gray-600">{formatDate(r.startDate)} → {formatDate(r.plannedEndDate)}</div>

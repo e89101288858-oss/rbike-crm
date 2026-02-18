@@ -198,7 +198,7 @@ export default function ClientsPage() {
           return (
             <div key={c.id} className="panel text-sm">
               <div
-                className="flex cursor-pointer flex-wrap items-center gap-2 rounded-lg px-1 py-1 hover:bg-gray-50"
+                className="flex cursor-pointer flex-wrap items-center gap-2 rounded-sm px-1 py-1 hover:bg-gray-50"
                 onClick={() => setExpandedMap((p) => ({ ...p, [c.id]: !expanded }))}
               >
                 <div className="font-medium min-w-52">{e.fullName || '—'}</div>
