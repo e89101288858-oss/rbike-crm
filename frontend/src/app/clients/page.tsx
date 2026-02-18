@@ -49,7 +49,8 @@ export default function ClientsPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
-  const [expandedMap, setExpandedMap] = useState<Record<string, boolean>>({})
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null)
+  const [modalEdit, setModalEdit] = useState(false)
 
   async function load() {
     setLoading(true)
@@ -151,6 +152,7 @@ export default function ClientsPage() {
   }, [includeArchived])
 
   const visibleClients = blacklistOnly ? clients.filter((c) => c.isBlacklisted) : clients
+  const selectedClient = selectedClientId ? visibleClients.find((c) => c.id === selectedClientId) : null
 
   return (
     <main className="page with-sidebar">
@@ -189,65 +191,112 @@ export default function ClientsPage() {
       {error && <p className="alert">{error}</p>}
       {success && <p className="alert-success">{success}</p>}
 
-      <div className="space-y-2">
-        {visibleClients.map((c) => {
-          const e = editMap[c.id] ?? toClientForm(c)
-          const archived = c.isActive === false
-          const expanded = !!expandedMap[c.id]
-          const st = courierStatus(c)
-          return (
-            <div key={c.id} className="panel text-sm">
-              <div
-                className="flex cursor-pointer flex-wrap items-center gap-2 rounded-sm px-1 py-1 hover:bg-gray-50"
-                onClick={() => setExpandedMap((p) => ({ ...p, [c.id]: !expanded }))}
-              >
-                <div className="font-medium min-w-52">{e.fullName || '—'}</div>
-                <div className="text-gray-600">{e.phone || 'без телефона'}</div>
-                <div className="text-gray-600">ДР: {(e.birthDate as string) || '—'}</div>
-                <div className="text-gray-600">Паспорт: {e.passportSeries || '—'} {e.passportNumber || ''}</div>
-                <span className={`badge ${st.cls}`}>{st.label}</span>
-                {archived && <span className="badge badge-muted">АРХИВ</span>}
-              </div>
+      <div className="table-wrap">
+        <table className="table table-sticky">
+          <thead>
+            <tr>
+              <th>ФИО</th>
+              <th>Телефон</th>
+              <th>Дата рождения</th>
+              <th>Паспорт</th>
+              <th>Статус</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {visibleClients.map((c) => {
+              const e = editMap[c.id] ?? toClientForm(c)
+              const archived = c.isActive === false
+              const st = courierStatus(c)
+              return (
+                <tr key={c.id} className="cursor-pointer hover:bg-white/5" onClick={() => { setSelectedClientId(c.id); setModalEdit(false) }}>
+                  <td className="font-medium">{e.fullName || '—'}</td>
+                  <td>{e.phone || '—'}</td>
+                  <td>{(e.birthDate as string) || '—'}</td>
+                  <td>{e.passportSeries || '—'} {e.passportNumber || ''}</td>
+                  <td>
+                    <span className={`badge ${st.cls}`}>{st.label}</span>
+                    {archived && <span className="badge badge-muted ml-2">АРХИВ</span>}
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={(ev) => { ev.stopPropagation(); setSelectedClientId(c.id); setModalEdit(false) }}
+                    >
+                      Открыть
+                    </button>
+                  </td>
+                </tr>
+              )
+            })}
+            {!visibleClients.length && (
+              <tr>
+                <td colSpan={6} className="text-center text-gray-600">Курьеров по фильтру нет</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
-              {expanded && (
+      {selectedClient && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setSelectedClientId(null)}>
+          <div className="panel w-full max-w-5xl" onClick={(e) => e.stopPropagation()}>
+            {(() => {
+              const c = selectedClient
+              const e = editMap[c.id] ?? toClientForm(c)
+              const archived = c.isActive === false
+              const readOnly = archived || !modalEdit
+              const st = courierStatus(c)
+
+              return (
                 <>
-                  <div className="mt-3 grid gap-2 md:grid-cols-3">
-                    <input disabled={archived} className="input" placeholder="ФИО" value={e.fullName ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], fullName: ev.target.value } }))} />
-                    <input disabled={archived} className="input" placeholder="Телефон" value={e.phone ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], phone: ev.target.value } }))} />
-                    <input disabled={archived} className="input" type="date" placeholder="Дата рождения" value={(e.birthDate as string) ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], birthDate: ev.target.value } }))} />
-                    <input disabled={archived} className="input" placeholder="Адрес проживания" value={e.address ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], address: ev.target.value } }))} />
-                    <input disabled={archived} className="input" placeholder="Паспорт серия" value={e.passportSeries ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], passportSeries: ev.target.value } }))} />
-                    <input disabled={archived} className="input" placeholder="Паспорт номер" value={e.passportNumber ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], passportNumber: ev.target.value } }))} />
-                    <input disabled={archived} className="input" placeholder="Телефон родственника/знакомого" value={e.emergencyContactPhone ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], emergencyContactPhone: ev.target.value } }))} />
-                    <input disabled={archived} className="input" placeholder="Заметка" value={e.notes ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], notes: ev.target.value } }))} />
-                    <input disabled={archived || !(e.isBlacklisted as boolean)} className="input" placeholder="Причина ЧС" value={(e.blacklistReason as string) ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], blacklistReason: ev.target.value } }))} />
+                  <div className="mb-3 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-lg font-semibold">Карточка курьера</h2>
+                      <span className={`badge ${st.cls}`}>{st.label}</span>
+                      {archived && <span className="badge badge-muted">АРХИВ</span>}
+                    </div>
+                    <button className="btn" type="button" onClick={() => setSelectedClientId(null)}>Закрыть</button>
+                  </div>
+
+                  <div className="grid gap-2 md:grid-cols-3">
+                    <input disabled={readOnly} className="input" placeholder="ФИО" value={e.fullName ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], fullName: ev.target.value } }))} />
+                    <input disabled={readOnly} className="input" placeholder="Телефон" value={e.phone ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], phone: ev.target.value } }))} />
+                    <input disabled={readOnly} className="input" type="date" placeholder="Дата рождения" value={(e.birthDate as string) ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], birthDate: ev.target.value } }))} />
+                    <input disabled={readOnly} className="input" placeholder="Адрес проживания" value={e.address ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], address: ev.target.value } }))} />
+                    <input disabled={readOnly} className="input" placeholder="Паспорт серия" value={e.passportSeries ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], passportSeries: ev.target.value } }))} />
+                    <input disabled={readOnly} className="input" placeholder="Паспорт номер" value={e.passportNumber ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], passportNumber: ev.target.value } }))} />
+                    <input disabled={readOnly} className="input" placeholder="Телефон родственника/знакомого" value={e.emergencyContactPhone ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], emergencyContactPhone: ev.target.value } }))} />
+                    <input disabled={readOnly} className="input" placeholder="Заметка" value={e.notes ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], notes: ev.target.value } }))} />
+                    <input disabled={readOnly || !(e.isBlacklisted as boolean)} className="input" placeholder="Причина ЧС" value={(e.blacklistReason as string) ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], blacklistReason: ev.target.value } }))} />
                     <label className="flex items-center gap-2 px-2">
-                      <input disabled={archived} type="checkbox" checked={!!e.isBlacklisted} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], isBlacklisted: ev.target.checked, blacklistReason: ev.target.checked ? (p[c.id]?.blacklistReason ?? '') : '' } }))} />
+                      <input disabled={readOnly} type="checkbox" checked={!!e.isBlacklisted} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], isBlacklisted: ev.target.checked, blacklistReason: ev.target.checked ? (p[c.id]?.blacklistReason ?? '') : '' } }))} />
                       В черный список
                     </label>
                   </div>
-                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
                     <div className="flex flex-wrap gap-2">
+                      {!archived && !modalEdit && <button type="button" className="btn" onClick={() => setModalEdit(true)}>Редактировать</button>}
+                      {!archived && modalEdit && <button type="button" className="btn" onClick={() => saveClient(c.id)}>Сохранить</button>}
+                      {!archived && modalEdit && <button type="button" className="btn" onClick={() => { setEditMap((p) => ({ ...p, [c.id]: toClientForm(c) })); setModalEdit(false) }}>Отмена</button>}
                       {!archived ? (
-                        <>
-                          <button className="btn" onClick={() => saveClient(c.id)}>Сохранить карточку</button>
-                          <button className="btn border-red-300 text-red-700" onClick={() => removeClient(c.id)}>В архив</button>
-                        </>
+                        <button type="button" className="btn border-red-300 text-red-700" onClick={() => removeClient(c.id)}>В архив</button>
                       ) : (
-                        <button className="btn" onClick={() => restoreClient(c.id)}>Восстановить из архива</button>
+                        <button type="button" className="btn" onClick={() => restoreClient(c.id)}>Восстановить из архива</button>
                       )}
                     </div>
                     {!archived && (
-                      <button className="btn-primary" onClick={() => router.push(`/rentals?clientId=${c.id}`)}>Создать аренду</button>
+                      <button type="button" className="btn-primary" onClick={() => router.push(`/rentals?clientId=${c.id}`)}>Создать аренду</button>
                     )}
                   </div>
                 </>
-              )}
-            </div>
-          )
-        })}
-        {!visibleClients.length && <p className="text-sm text-gray-600">Курьеров по фильтру нет</p>}
-      </div>
+              )
+            })()}
+          </div>
+        </div>
+      )}
     </main>
   )
 }
