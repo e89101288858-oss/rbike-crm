@@ -31,8 +31,16 @@ body {
 .with-sidebar {
   margin-left: 270px;
   width: calc(100vw - 270px);
-  padding-right: 32px;
+  padding-right: 24px;
   transition: margin-left .2s ease;
+}
+
+@media (min-width: 1280px) {
+  .with-sidebar { padding-right: 32px; }
+}
+
+@media (min-width: 1600px) {
+  .with-sidebar { padding-right: 40px; }
 }
 
 .sidebar {
