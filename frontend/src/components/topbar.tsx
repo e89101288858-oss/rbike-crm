@@ -11,37 +11,37 @@ type UserRole = 'OWNER' | 'FRANCHISEE' | 'MANAGER' | 'MECHANIC' | ''
 
 type NavGroup = {
   title: string
-  items: Array<{ href: string; label: string; icon: string; roles: UserRole[] }>
+  items: Array<{ href: string; label: string; roles: UserRole[] }>
 }
 
 const nav: NavGroup[] = [
   {
     title: 'Операции',
     items: [
-      { href: '/dashboard', label: 'Дашборд', icon: '🏠', roles: ['OWNER', 'FRANCHISEE', 'MANAGER', 'MECHANIC'] },
-      { href: '/rentals', label: 'Аренды', icon: '🗓️', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
+      { href: '/dashboard', label: 'Дашборд', roles: ['OWNER', 'FRANCHISEE', 'MANAGER', 'MECHANIC'] },
+      { href: '/rentals', label: 'Аренды', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
     ],
   },
   {
     title: 'Справочники',
     items: [
-      { href: '/clients', label: 'Курьеры', icon: '🧑‍🔧', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
-      { href: '/bikes', label: 'Велосипеды', icon: '🚲', roles: ['OWNER', 'FRANCHISEE', 'MANAGER', 'MECHANIC'] },
-      { href: '/batteries', label: 'АКБ', icon: '🔋', roles: ['OWNER', 'FRANCHISEE', 'MANAGER', 'MECHANIC'] },
+      { href: '/clients', label: 'Курьеры', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
+      { href: '/bikes', label: 'Велосипеды', roles: ['OWNER', 'FRANCHISEE', 'MANAGER', 'MECHANIC'] },
+      { href: '/batteries', label: 'АКБ', roles: ['OWNER', 'FRANCHISEE', 'MANAGER', 'MECHANIC'] },
     ],
   },
   {
     title: 'Аналитика',
     items: [
-      { href: '/finance', label: 'Финансы', icon: '📈', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
-      { href: '/payments', label: 'Платежи', icon: '💳', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
+      { href: '/finance', label: 'Финансы', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
+      { href: '/payments', label: 'Платежи', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
     ],
   },
   {
     title: 'Инструменты',
     items: [
-      { href: '/import', label: 'Импорт CSV', icon: '📥', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
-      { href: '/admin', label: 'Админ', icon: '🛠️', roles: ['OWNER'] },
+      { href: '/import', label: 'Импорт CSV', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
+      { href: '/admin', label: 'Админ', roles: ['OWNER'] },
     ],
   },
 ]
@@ -86,17 +86,19 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
             <div key={g.title} className="sidebar-group">
               <div className="sidebar-group-title">{g.title}</div>
               <div className="space-y-1">
-                {g.items.map((l) => (
-                  <Link
-                    key={l.href}
-                    href={l.href}
-                    className={pathname === l.href ? 'btn-primary block w-full text-left' : 'btn block w-full text-left'}
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    <span className="mr-2">{l.icon}</span>
-                    {l.label}
-                  </Link>
-                ))}
+                {g.items.map((l) => {
+                  const active = pathname === l.href
+                  return (
+                    <Link
+                      key={l.href}
+                      href={l.href}
+                      className={`sidebar-link ${active ? 'sidebar-link-active' : ''}`}
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      {l.label}
+                    </Link>
+                  )
+                })}
               </div>
             </div>
           ))}
