@@ -3,6 +3,9 @@
 :root {
   --background: #15171c;
   --foreground: #e5e7eb;
+  --accent: #f97316;
+  --accent-hover: #ea580c;
+  --accent-soft: rgba(249, 115, 22, 0.16);
 }
 
 @theme inline {
@@ -109,12 +112,12 @@ body {
 }
 
 .sidebar-link-active {
-  background: rgba(14, 165, 233, 0.12);
-  color: #e0f2fe;
+  background: var(--accent-soft);
+  color: #ffedd5;
 }
 
 .sidebar-link-active::before {
-  background: #0ea5e9;
+  background: var(--accent);
 }
 
 .sidebar-foot { border-top: 1px solid #2f3136; padding-top: 10px; display: grid; gap: 8px; }
@@ -188,12 +191,12 @@ body {
 
 .btn-primary {
   @apply rounded-sm border px-3 py-1.5 text-sm text-white transition duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50;
-  border-color: #0ea5e9;
-  background: #0284c7;
+  border-color: var(--accent);
+  background: var(--accent);
 }
 
 .btn-primary:hover {
-  background: #0369a1;
+  background: var(--accent-hover);
 }
 
 .input,
@@ -243,7 +246,7 @@ body {
 .btn-primary:focus-visible,
 .input:focus-visible,
 .select:focus-visible {
-  outline: 2px solid rgba(14, 165, 233, 0.45);
+  outline: 2px solid rgba(249, 115, 22, 0.5);
   outline-offset: 1px;
 }
 
@@ -275,8 +278,8 @@ body {
 }
 
 .sidebar .btn-primary {
-  border: 1px solid #0ea5e9;
-  background: #0284c7;
+  border: 1px solid var(--accent);
+  background: var(--accent);
   color: #fff;
 }
 
