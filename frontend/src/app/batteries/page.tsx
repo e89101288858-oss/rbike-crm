@@ -40,6 +40,7 @@ export default function BatteriesPage() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(50)
   const [pageInput, setPageInput] = useState('1')
+  const [createModalOpen, setCreateModalOpen] = useState(false)
 
   const [code, setCode] = useState('')
   const [serialNumber, setSerialNumber] = useState('')
@@ -85,6 +86,7 @@ export default function BatteriesPage() {
       setNotes('')
       await load()
       setSuccess('Сохранено')
+      setCreateModalOpen(false)
     } catch (err) {
       setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка создания АКБ'}`)
     }
@@ -168,23 +170,10 @@ export default function BatteriesPage() {
         </label>
       </div>
 
-      <form onSubmit={createBattery} className="panel mb-4 grid gap-2 md:grid-cols-5">
-        <input className="input" placeholder="Код АКБ" value={code} onChange={(e) => setCode(e.target.value)} />
-        <input className="input" placeholder="Серийный номер" value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} />
-        <select className="select" value={bikeId} onChange={(e) => setBikeId(e.target.value)}>
-          <option value="">Не привязана</option>
-          {bikes.map((b: any) => <option key={b.id} value={b.id}>{b.code}</option>)}
-        </select>
-        <select className="select" value={status} onChange={(e) => setStatus(e.target.value)}>
-          {BATTERY_STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
-        </select>
-        <input className="input" placeholder="Заметка" value={notes} onChange={(e) => setNotes(e.target.value)} />
-        <button className="btn-primary md:col-span-5">Добавить АКБ</button>
-      </form>
-
       <div className="mb-3 flex gap-2">
         <input className="input w-full" placeholder="Поиск по коду/серийному" value={query} onChange={(e) => setQuery(e.target.value)} />
         <button className="btn" onClick={load}>Найти</button>
+        <button type="button" className="btn-primary" onClick={() => setCreateModalOpen(true)}>Добавить АКБ</button>
       </div>
 
       {error && <p className="alert">{error}</p>}
@@ -226,6 +215,33 @@ export default function BatteriesPage() {
           <button className="btn" onClick={() => setPage(Math.min(totalPages, Math.max(1, Number(pageInput || 1))))}>ОК</button>
         </div>
       </div>
+
+      {createModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setCreateModalOpen(false)}>
+          <form onSubmit={createBattery} className="panel w-full max-w-5xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h2 className="text-lg font-semibold">Добавить АКБ</h2>
+              <button type="button" className="btn" onClick={() => setCreateModalOpen(false)}>Закрыть</button>
+            </div>
+            <div className="grid gap-2 md:grid-cols-5">
+              <input className="input" placeholder="Код АКБ" value={code} onChange={(e) => setCode(e.target.value)} />
+              <input className="input" placeholder="Серийный номер" value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} />
+              <select className="select" value={bikeId} onChange={(e) => setBikeId(e.target.value)}>
+                <option value="">Не привязана</option>
+                {bikes.map((b: any) => <option key={b.id} value={b.id}>{b.code}</option>)}
+              </select>
+              <select className="select" value={status} onChange={(e) => setStatus(e.target.value)}>
+                {BATTERY_STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
+              </select>
+              <input className="input" placeholder="Заметка" value={notes} onChange={(e) => setNotes(e.target.value)} />
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" className="btn" onClick={() => setCreateModalOpen(false)}>Отмена</button>
+              <button className="btn-primary">Добавить АКБ</button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {selected && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setSelectedId(null)}>

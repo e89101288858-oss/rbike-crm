@@ -54,6 +54,7 @@ export default function ClientsPage() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(50)
   const [pageInput, setPageInput] = useState('1')
+  const [createModalOpen, setCreateModalOpen] = useState(false)
 
   async function load() {
     setLoading(true)
@@ -99,6 +100,7 @@ export default function ClientsPage() {
       setNotes('')
       await load()
       setSuccess('Сохранено')
+      setCreateModalOpen(false)
     } catch (err) {
       setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка создания'}`)
     }
@@ -185,21 +187,10 @@ export default function ClientsPage() {
         </div>
       </div>
 
-      <form onSubmit={createClient} className="panel mb-6 grid gap-2 md:grid-cols-3">
-        <input className="input" placeholder="ФИО" value={fullName} onChange={(e) => setFullName(e.target.value)} />
-        <input className="input" placeholder="Телефон" value={phone} onChange={(e) => setPhone(e.target.value)} />
-        <input className="input" type="date" placeholder="Дата рождения" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
-        <input className="input" placeholder="Адрес проживания" value={address} onChange={(e) => setAddress(e.target.value)} />
-        <input className="input" placeholder="Паспорт серия" value={passportSeries} onChange={(e) => setPassportSeries(e.target.value)} />
-        <input className="input" placeholder="Паспорт номер" value={passportNumber} onChange={(e) => setPassportNumber(e.target.value)} />
-        <input className="input" placeholder="Телефон родственника/знакомого" value={emergencyContactPhone} onChange={(e) => setEmergencyContactPhone(e.target.value)} />
-        <input className="input" placeholder="Заметка" value={notes} onChange={(e) => setNotes(e.target.value)} />
-        <button className="btn-primary md:col-span-3">Добавить курьера</button>
-      </form>
-
       <div className="mb-3 flex gap-2">
         <input className="input w-full" placeholder="Поиск: ФИО / телефон / паспорт / контакт" value={query} onChange={(e) => setQuery(e.target.value)} />
         <button className="btn" onClick={load} disabled={loading}>{loading ? 'Поиск…' : 'Найти'}</button>
+        <button type="button" className="btn-primary" onClick={() => setCreateModalOpen(true)}>Добавить курьера</button>
       </div>
 
       {error && <p className="alert">{error}</p>}
@@ -289,6 +280,31 @@ export default function ClientsPage() {
           </button>
         </div>
       </div>
+
+      {createModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setCreateModalOpen(false)}>
+          <form onSubmit={createClient} className="panel w-full max-w-5xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Добавить курьера</h2>
+              <button type="button" className="btn" onClick={() => setCreateModalOpen(false)}>Закрыть</button>
+            </div>
+            <div className="grid gap-2 md:grid-cols-3">
+              <input className="input" placeholder="ФИО" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+              <input className="input" placeholder="Телефон" value={phone} onChange={(e) => setPhone(e.target.value)} />
+              <input className="input" type="date" placeholder="Дата рождения" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
+              <input className="input" placeholder="Адрес проживания" value={address} onChange={(e) => setAddress(e.target.value)} />
+              <input className="input" placeholder="Паспорт серия" value={passportSeries} onChange={(e) => setPassportSeries(e.target.value)} />
+              <input className="input" placeholder="Паспорт номер" value={passportNumber} onChange={(e) => setPassportNumber(e.target.value)} />
+              <input className="input" placeholder="Телефон родственника/знакомого" value={emergencyContactPhone} onChange={(e) => setEmergencyContactPhone(e.target.value)} />
+              <input className="input" placeholder="Заметка" value={notes} onChange={(e) => setNotes(e.target.value)} />
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" className="btn" onClick={() => setCreateModalOpen(false)}>Отмена</button>
+              <button className="btn-primary">Добавить курьера</button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {selectedClient && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setSelectedClientId(null)}>

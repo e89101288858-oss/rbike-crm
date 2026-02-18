@@ -59,6 +59,7 @@ export default function BikesPage() {
   const [pageInput, setPageInput] = useState('1')
   const [selectedBikeId, setSelectedBikeId] = useState<string | null>(null)
   const [modalEdit, setModalEdit] = useState(false)
+  const [createModalOpen, setCreateModalOpen] = useState(false)
 
   async function load() {
     setError('')
@@ -88,7 +89,7 @@ export default function BikesPage() {
         repairEndDate: newBike.repairEndDate ? `${newBike.repairEndDate}T00:00:00.000Z` : undefined,
       } as any)
       setNewBike({ code: '', model: '', frameNumber: '', motorWheelNumber: '', simCardNumber: '', status: 'AVAILABLE', repairReason: '', repairEndDate: '' })
-      await load(); setSuccess('Сохранено')
+      await load(); setSuccess('Сохранено'); setCreateModalOpen(false)
     } catch (err) { setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка добавления велосипеда'}`) }
   }
 
@@ -141,33 +142,9 @@ export default function BikesPage() {
       {success && <p className="alert-success">{success}</p>}
 
       {canManageCards && (
-        <section className="panel mb-4 text-sm">
-          <h2 className="mb-2 text-base font-semibold">Добавить велосипед</h2>
-          <div className="grid gap-2 md:grid-cols-4">
-            <input className="input" value={newBike.code} placeholder="Код" onChange={(e) => setNewBike((p) => ({ ...p, code: e.target.value }))} />
-            <input className="input" value={newBike.model} placeholder="Модель" onChange={(e) => setNewBike((p) => ({ ...p, model: e.target.value }))} />
-            <select
-              className="select"
-              value={newBike.status}
-              onChange={(e) => setNewBike((p) => ({
-                ...p,
-                status: e.target.value,
-                repairReason: e.target.value === 'MAINTENANCE' ? p.repairReason : '',
-                repairEndDate: e.target.value === 'MAINTENANCE' ? p.repairEndDate : '',
-              }))}
-            >{BIKE_STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}</select>
-            <input className="input" value={newBike.frameNumber} placeholder="Номер рамы" onChange={(e) => setNewBike((p) => ({ ...p, frameNumber: e.target.value }))} />
-            <input className="input" value={newBike.motorWheelNumber} placeholder="Номер мотор-колеса" onChange={(e) => setNewBike((p) => ({ ...p, motorWheelNumber: e.target.value }))} />
-            <input className="input" value={newBike.simCardNumber} placeholder="Номер сим-карты" onChange={(e) => setNewBike((p) => ({ ...p, simCardNumber: e.target.value }))} />
-            {newBike.status === 'MAINTENANCE' && (
-              <>
-                <input className="input" value={newBike.repairReason} placeholder="Причина ремонта" onChange={(e) => setNewBike((p) => ({ ...p, repairReason: e.target.value }))} />
-                <input className="input" type="date" value={newBike.repairEndDate} onChange={(e) => setNewBike((p) => ({ ...p, repairEndDate: e.target.value }))} />
-              </>
-            )}
-          </div>
-          <button className="btn-primary mt-3" onClick={createBike}>Добавить велосипед</button>
-        </section>
+        <div className="mb-3 flex justify-end">
+          <button type="button" className="btn-primary" onClick={() => setCreateModalOpen(true)}>Добавить велосипед</button>
+        </div>
       )}
 
       <div className="table-wrap">
@@ -210,6 +187,44 @@ export default function BikesPage() {
           <button className="btn" onClick={() => setPage(Math.min(totalPages, Math.max(1, Number(pageInput || 1))))}>ОК</button>
         </div>
       </div>
+
+      {createModalOpen && canManageCards && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setCreateModalOpen(false)}>
+          <div className="panel w-full max-w-5xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h2 className="text-lg font-semibold">Добавить велосипед</h2>
+              <button type="button" className="btn" onClick={() => setCreateModalOpen(false)}>Закрыть</button>
+            </div>
+            <div className="grid gap-2 md:grid-cols-4">
+              <input className="input" value={newBike.code} placeholder="Код" onChange={(e) => setNewBike((p) => ({ ...p, code: e.target.value }))} />
+              <input className="input" value={newBike.model} placeholder="Модель" onChange={(e) => setNewBike((p) => ({ ...p, model: e.target.value }))} />
+              <select
+                className="select"
+                value={newBike.status}
+                onChange={(e) => setNewBike((p) => ({
+                  ...p,
+                  status: e.target.value,
+                  repairReason: e.target.value === 'MAINTENANCE' ? p.repairReason : '',
+                  repairEndDate: e.target.value === 'MAINTENANCE' ? p.repairEndDate : '',
+                }))}
+              >{BIKE_STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}</select>
+              <input className="input" value={newBike.frameNumber} placeholder="Номер рамы" onChange={(e) => setNewBike((p) => ({ ...p, frameNumber: e.target.value }))} />
+              <input className="input" value={newBike.motorWheelNumber} placeholder="Номер мотор-колеса" onChange={(e) => setNewBike((p) => ({ ...p, motorWheelNumber: e.target.value }))} />
+              <input className="input" value={newBike.simCardNumber} placeholder="Номер сим-карты" onChange={(e) => setNewBike((p) => ({ ...p, simCardNumber: e.target.value }))} />
+              {newBike.status === 'MAINTENANCE' && (
+                <>
+                  <input className="input" value={newBike.repairReason} placeholder="Причина ремонта" onChange={(e) => setNewBike((p) => ({ ...p, repairReason: e.target.value }))} />
+                  <input className="input" type="date" value={newBike.repairEndDate} onChange={(e) => setNewBike((p) => ({ ...p, repairEndDate: e.target.value }))} />
+                </>
+              )}
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" className="btn" onClick={() => setCreateModalOpen(false)}>Отмена</button>
+              <button type="button" className="btn-primary" onClick={createBike}>Добавить велосипед</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {selectedBike && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setSelectedBikeId(null)}>
