@@ -170,10 +170,10 @@ export default function BatteriesPage() {
         </label>
       </div>
 
-      <div className="mb-3 flex gap-2">
-        <input className="input w-full" placeholder="Поиск по коду/серийному" value={query} onChange={(e) => setQuery(e.target.value)} />
-        <button className="btn" onClick={load}>Найти</button>
-        <button type="button" className="btn-primary" onClick={() => setCreateModalOpen(true)}>Добавить АКБ</button>
+      <div className="mb-3 flex items-center gap-2">
+        <input className="input min-w-0 flex-1 max-w-[760px]" placeholder="Поиск по коду/серийному" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <button className="btn whitespace-nowrap" onClick={load}>Найти</button>
+        <button type="button" className="btn-primary whitespace-nowrap" onClick={() => setCreateModalOpen(true)}>Добавить АКБ</button>
       </div>
 
       {error && <p className="alert">{error}</p>}

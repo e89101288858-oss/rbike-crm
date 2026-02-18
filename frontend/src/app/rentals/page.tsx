@@ -297,17 +297,17 @@ export default function RentalsPage() {
       <Topbar tenants={tenants} />
       <div className="mb-4 flex items-center justify-between gap-2">
         <h1 className="text-2xl font-semibold">Аренды</h1>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2 whitespace-nowrap">
           <button className={listTab === 'ACTIVE' ? 'btn-primary' : 'btn'} onClick={() => setListTab('ACTIVE')}>Активные</button>
           <button className={listTab === 'CLOSED' ? 'btn-primary' : 'btn'} onClick={() => setListTab('CLOSED')}>Завершенные</button>
+          <button type="button" className="btn-primary" onClick={() => setCreateModalOpen(true)}>Создать аренду</button>
         </div>
       </div>
 
       {error && <p className="alert">{error}</p>}
 
-      <div className="mb-3 flex gap-2">
-        <input className="input w-full" placeholder="Поиск: курьер / велосипед / даты" value={search} onChange={(e) => setSearch(e.target.value)} />
-        <button type="button" className="btn-primary" onClick={() => setCreateModalOpen(true)}>Создать аренду</button>
+      <div className="mb-3 flex items-center gap-2">
+        <input className="input min-w-0 flex-1 max-w-[720px]" placeholder="Поиск: курьер / велосипед / даты" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
       <div className="table-wrap">
