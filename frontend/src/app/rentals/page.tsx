@@ -234,6 +234,7 @@ export default function RentalsPage() {
   const canCreate = !!clientId && !!bikeId && !!startDate && !!plannedEndDate && selectedBatteryIds.length === batteryCount && rentalDays >= minRentalDays
 
   function daysHighlightClass(daysLeft: number) {
+    if (daysLeft <= 0) return 'border-rose-900/80 bg-rose-950/40 border-l-4 border-l-rose-800'
     if (daysLeft >= 4) return 'border-emerald-500/50 bg-emerald-500/10 border-l-4 border-l-emerald-400'
     if (daysLeft === 3 || daysLeft === 2) return 'border-amber-500/50 bg-amber-500/10 border-l-4 border-l-amber-400'
     if (daysLeft === 1) return 'border-red-500/50 bg-red-500/10 border-l-4 border-l-red-400'
@@ -309,7 +310,7 @@ export default function RentalsPage() {
       <div className="space-y-2">
         {rentals.map((r) => {
           const expanded = !!expandedMap[r.id]
-          const daysLeft = Math.max(0, diffDays(new Date().toISOString(), r.plannedEndDate))
+          const daysLeft = diffDays(new Date().toISOString(), r.plannedEndDate)
           const highlight = r.status === 'ACTIVE' ? daysHighlightClass(daysLeft) : 'border-[#2f3136] bg-[#1f2126]'
           return (
             <div key={r.id} className={`rounded-2xl border p-3 shadow-sm text-sm ${highlight}`}>
@@ -317,7 +318,11 @@ export default function RentalsPage() {
                 <div className="font-medium min-w-56">{r.client.fullName} — {r.bike.code}</div>
                 <span className={`badge ${r.status === 'ACTIVE' ? 'badge-warn' : 'badge-ok'}`}>{r.status === 'ACTIVE' ? 'Активна' : 'Завершена'}</span>
                 <div className="text-gray-600">{formatDate(r.startDate)} → {formatDate(r.plannedEndDate)}</div>
-                {r.status === 'ACTIVE' && <div className={`font-medium ${daysLeft === 1 ? 'text-red-300' : daysLeft <= 3 ? 'text-amber-300' : 'text-emerald-300'}`}>Осталось: {daysLeft} дн.</div>}
+                {r.status === 'ACTIVE' && (
+                  <div className={`font-medium ${daysLeft <= 0 ? 'text-rose-300' : daysLeft === 1 ? 'text-red-300' : daysLeft <= 3 ? 'text-amber-300' : 'text-emerald-300'}`}>
+                    {daysLeft <= 0 ? `Долг (${daysLeft} дн.)` : `Осталось: ${daysLeft} дн.`}
+                  </div>
+                )}
               </div>
 
               {expanded && (

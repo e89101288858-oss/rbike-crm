@@ -205,18 +205,16 @@ export default function DashboardPage() {
         }, 0)
         setAvgClosedDays(closedInPeriod.length ? totalDays / closedInPeriod.length : 0)
 
-        const todayStart = atStartOfDay(new Date())
         let c1 = 0
         let c23 = 0
         let c4 = 0
         let overdue = 0
         for (const r of activeRentals) {
-          const planned = new Date(r.plannedEndDate)
-          if (planned < todayStart) {
+          const daysLeft = diffDays(new Date().toISOString(), r.plannedEndDate)
+          if (daysLeft <= 0) {
             overdue += 1
             continue
           }
-          const daysLeft = Math.max(0, diffDays(new Date().toISOString(), r.plannedEndDate))
           if (daysLeft === 1) c1 += 1
           else if (daysLeft === 2 || daysLeft === 3) c23 += 1
           else if (daysLeft >= 4) c4 += 1
@@ -381,7 +379,7 @@ export default function DashboardPage() {
               </div>
 
               <div className={`mt-3 ${overdueCardClass(overdueActive)}`}>
-                <div className="text-xs">Просроченные активные аренды</div>
+                <div className="text-xs">Должники по аренде (0 и меньше дней)</div>
                 <div className="mt-1 text-2xl font-semibold">{formatInt(overdueActive)}</div>
               </div>
             </div>
