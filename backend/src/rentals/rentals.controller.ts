@@ -135,6 +135,9 @@ export class RentalsController {
       throw new BadRequestException('All selected batteries must be AVAILABLE')
     }
 
+    const weeklyRateRub = dto.weeklyRateRub && dto.weeklyRateRub > 0 ? dto.weeklyRateRub : dailyRateRub * 7
+    const effectiveDailyRateRub = weeklyRateRub / 7
+
     const rental = await this.prisma.$transaction(async (tx) => {
       const created = await tx.rental.create({
         data: {
@@ -144,7 +147,7 @@ export class RentalsController {
           startDate,
           plannedEndDate,
           status: RentalStatus.ACTIVE,
-          weeklyRateRub: dailyRateRub * 7,
+          weeklyRateRub,
           createdById: user.userId,
         },
       })
@@ -169,7 +172,7 @@ export class RentalsController {
         data: {
           tenantId,
           rentalId: created.id,
-          amount: round2(diffDays * dailyRateRub),
+          amount: round2(diffDays * effectiveDailyRateRub),
           kind: PaymentKind.MANUAL,
           status: PaymentStatus.PAID,
           paidAt: new Date(),
@@ -258,15 +261,9 @@ export class RentalsController {
   ) {
     const tenantId = req.tenantId!
 
-    const tenant = await this.prisma.tenant.findUnique({
-      where: { id: tenantId },
-      select: { dailyRateRub: true },
-    })
-    const dailyRateRub = tenant?.dailyRateRub ?? DEFAULT_DAILY_RENT_RUB
-
     const rental = await this.prisma.rental.findFirst({
       where: { id, tenantId },
-      select: { id: true, status: true, plannedEndDate: true },
+      select: { id: true, status: true, plannedEndDate: true, weeklyRateRub: true },
     })
 
     if (!rental) {
@@ -290,7 +287,7 @@ export class RentalsController {
         data: {
           tenantId,
           rentalId: id,
-          amount: round2(days * dailyRateRub),
+          amount: round2(days * (rental.weeklyRateRub / 7)),
           kind: PaymentKind.MANUAL,
           status: PaymentStatus.PAID,
           paidAt: new Date(),
@@ -506,6 +503,7 @@ export class RentalsController {
         bikeId: true,
         startDate: true,
         plannedEndDate: true,
+        weeklyRateRub: true,
       },
     })
 
@@ -519,12 +517,6 @@ export class RentalsController {
 
     const reason = dto.reason?.trim()
     if (!reason) throw new BadRequestException('Reason is required')
-
-    const tenant = await this.prisma.tenant.findUnique({
-      where: { id: tenantId },
-      select: { dailyRateRub: true },
-    })
-    const dailyRateRub = tenant?.dailyRateRub ?? DEFAULT_DAILY_RENT_RUB
 
     const closedAt = new Date()
 
@@ -564,7 +556,7 @@ export class RentalsController {
 
       const paidRub = round2(paid._sum.amount ?? 0)
       const actualDays = diffDaysCeil(rental.startDate, closedAt)
-      const shouldPayRub = round2(actualDays * dailyRateRub)
+      const shouldPayRub = round2(actualDays * (rental.weeklyRateRub / 7))
       const refundRub = round2(Math.max(0, paidRub - shouldPayRub))
 
       if (refundRub > 0) {
