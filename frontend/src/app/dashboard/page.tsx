@@ -82,7 +82,9 @@ function aggregateRevenue(days: Array<{ date: string; revenueRub: number }>, mod
 }
 
 function tabClass(active: boolean) {
-  return active ? 'btn-primary' : 'btn'
+  return active
+    ? 'rounded-lg border border-sky-500 bg-sky-500/20 px-3 py-1.5 text-sm text-sky-300'
+    : 'rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-gray-300 hover:bg-white/10'
 }
 
 export default function DashboardPage() {
@@ -183,28 +185,28 @@ export default function DashboardPage() {
   const showFranchiseeDashboard = role === 'FRANCHISEE' || role === 'OWNER'
 
   return (
-    <main className="page with-sidebar">
+    <main className="page with-sidebar min-h-screen bg-[#15171c] text-gray-100">
       <Topbar tenants={tenants} />
-      <h1 className="mb-2 text-3xl font-bold">Дашборд</h1>
-      <p className="mb-6 text-sm text-gray-600">Роль: {role || '...'}</p>
-      {error && <p className="alert">{error}</p>}
+      <h1 className="mb-2 text-3xl font-bold text-white">Дашборд</h1>
+      <p className="mb-6 text-sm text-gray-400">Роль: {role || '...'}</p>
+      {error && <p className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
 
       {!showFranchiseeDashboard ? (
-        <section className="panel text-sm text-gray-700">Дашборд для роли {role || '—'} пока не настроен.</section>
+        <section className="rounded-2xl border border-white/10 bg-[#1f2126] p-4 text-sm text-gray-300">Дашборд для роли {role || '—'} пока не настроен.</section>
       ) : (
         <>
-          <section className="panel mb-6">
-            <h2 className="mb-3 text-lg font-semibold">Информация о флоте</h2>
+          <section className="mb-6 rounded-2xl border border-white/10 bg-[#1f2126] p-4 shadow-xl">
+            <h2 className="mb-3 text-lg font-semibold text-white">Информация о флоте</h2>
             <div className="grid gap-2 md:grid-cols-3">
-              <div className="kpi">Свободных: <b>{bikeSummary?.available ?? 0}</b></div>
-              <div className="kpi">В аренде: <b>{bikeSummary?.rented ?? 0}</b></div>
-              <div className="kpi">В ремонте: <b>{bikeSummary?.maintenance ?? 0}</b></div>
+              <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-gray-200">Свободных: <b>{bikeSummary?.available ?? 0}</b></div>
+              <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-gray-200">В аренде: <b>{bikeSummary?.rented ?? 0}</b></div>
+              <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-gray-200">В ремонте: <b>{bikeSummary?.maintenance ?? 0}</b></div>
             </div>
           </section>
 
-          <section className="panel mb-6">
+          <section className="mb-6 rounded-2xl border border-white/10 bg-[#1f2126] p-4 shadow-xl">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-lg font-semibold">Финансовые показатели парка</h2>
+              <h2 className="text-lg font-semibold text-white">Финансовые показатели парка</h2>
               <div className="flex gap-2">
                 <button className={tabClass(chartMode === 'week')} onClick={() => setChartMode('week')}>Неделя</button>
                 <button className={tabClass(chartMode === 'month')} onClick={() => setChartMode('month')}>Месяц</button>
@@ -212,14 +214,14 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="relative rounded-xl border border-gray-200 bg-white p-4">
+            <div className="relative rounded-xl border border-white/10 bg-[#181a1f] p-4">
               <div className="grid h-56 grid-cols-12 items-end gap-3">
                 {chartRows.map((r) => {
                   const h = `${Math.max(8, Math.round((r.value / maxBar) * 100))}%`
                   return (
                     <div key={r.label} className="flex flex-col items-center gap-2">
-                      <div className="w-full rounded-md bg-gray-800" style={{ height: h }} />
-                      <div className="text-xs text-gray-500">{r.label}</div>
+                      <div className="w-full rounded-md bg-black/80" style={{ height: h }} />
+                      <div className="text-xs text-gray-400">{r.label}</div>
                     </div>
                   )
                 })}
@@ -227,21 +229,21 @@ export default function DashboardPage() {
 
               {!!linePoints && (
                 <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="pointer-events-none absolute inset-4 h-[224px] w-[calc(100%-2rem)]">
-                  <polyline fill="none" stroke="#10b981" strokeWidth="1" points={linePoints} />
+                  <polyline fill="none" stroke="#34d399" strokeWidth="1" points={linePoints} />
                 </svg>
               )}
 
-              {!chartRows.length && <p className="text-sm text-gray-600">Нет данных за период</p>}
+              {!chartRows.length && <p className="text-sm text-gray-400">Нет данных за период</p>}
             </div>
 
             <div className="mt-4 grid gap-2 md:grid-cols-3">
-              <div className="kpi">Всего велосипедов: <b>{allBikesCount}</b></div>
-              <div className="kpi">Создано аренд за период: <b>{periodRentalsCount}</b></div>
-              <div className="kpi">Выручка за период: <b>{formatRub(chartRevenueTotal)}</b></div>
+              <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-gray-200">Всего велосипедов: <b>{allBikesCount}</b></div>
+              <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-gray-200">Создано аренд за период: <b>{periodRentalsCount}</b></div>
+              <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-gray-200">Выручка за период: <b>{formatRub(chartRevenueTotal)}</b></div>
             </div>
           </section>
 
-          <section className="panel max-w-md">
+          <section className="max-w-md rounded-2xl border border-white/10 bg-[#1f2126] p-5 text-white shadow-xl">
             <h2 className="mb-2 text-lg font-semibold">Общая выручка</h2>
             <div className="mb-4 text-4xl font-bold tracking-tight">{formatRub(revenueTotalBlock)}</div>
             <div className="mb-4 flex flex-wrap gap-2">
@@ -250,8 +252,8 @@ export default function DashboardPage() {
               <button className={tabClass(revenueMode === 'month')} onClick={() => setRevenueMode('month')}>Месяц</button>
               <button className={tabClass(revenueMode === 'year')} onClick={() => setRevenueMode('year')}>Год</button>
             </div>
-            <div className="h-28 rounded-xl border border-gray-200 bg-gradient-to-b from-blue-50 to-white p-3">
-              <div className="h-full w-full border-b border-l border-gray-200" />
+            <div className="h-28 rounded-xl border border-white/10 bg-gradient-to-b from-sky-500/15 to-transparent p-3">
+              <div className="h-full w-full border-l border-b border-white/10" />
             </div>
           </section>
         </>
