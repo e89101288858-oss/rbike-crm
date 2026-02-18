@@ -7,7 +7,6 @@ import { api, Client } from '@/lib/api'
 import { getToken, getTenantId, setTenantId } from '@/lib/auth'
 
 type ClientForm = Partial<Client>
-const PAGE_SIZE = 50
 
 function toClientForm(c: Client): ClientForm {
   return {
@@ -53,6 +52,8 @@ export default function ClientsPage() {
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null)
   const [modalEdit, setModalEdit] = useState(false)
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(50)
+  const [pageInput, setPageInput] = useState('1')
 
   async function load() {
     setLoading(true)
@@ -155,16 +156,21 @@ export default function ClientsPage() {
 
   useEffect(() => {
     setPage(1)
-  }, [query, blacklistOnly, includeArchived, clients.length])
+    setPageInput('1')
+  }, [query, blacklistOnly, includeArchived, clients.length, pageSize])
 
   const visibleClients = blacklistOnly ? clients.filter((c) => c.isBlacklisted) : clients
-  const totalPages = Math.max(1, Math.ceil(visibleClients.length / PAGE_SIZE))
+  const totalPages = Math.max(1, Math.ceil(visibleClients.length / pageSize))
   const safePage = Math.min(page, totalPages)
   const pagedClients = useMemo(() => {
-    const start = (safePage - 1) * PAGE_SIZE
-    return visibleClients.slice(start, start + PAGE_SIZE)
-  }, [visibleClients, safePage])
+    const start = (safePage - 1) * pageSize
+    return visibleClients.slice(start, start + pageSize)
+  }, [visibleClients, safePage, pageSize])
   const selectedClient = selectedClientId ? visibleClients.find((c) => c.id === selectedClientId) : null
+
+  useEffect(() => {
+    setPageInput(String(safePage))
+  }, [safePage])
 
   return (
     <main className="page with-sidebar">
@@ -251,12 +257,40 @@ export default function ClientsPage() {
         </table>
       </div>
 
-      <div className="mt-3 flex items-center justify-between text-sm text-gray-400">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm text-gray-400">
         <span>Показано {pagedClients.length} из {visibleClients.length}</span>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="text-xs text-gray-500">На странице</label>
+          <select className="select" value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </select>
           <button className="btn" disabled={safePage <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>Назад</button>
           <span>Стр. {safePage} / {totalPages}</span>
           <button className="btn" disabled={safePage >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>Вперед</button>
+          <label className="text-xs text-gray-500">Перейти</label>
+          <input
+            className="input w-20"
+            value={pageInput}
+            onChange={(e) => setPageInput(e.target.value.replace(/[^0-9]/g, ''))}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                const target = Number(pageInput || 1)
+                setPage(Math.min(totalPages, Math.max(1, target)))
+              }
+            }}
+          />
+          <button
+            className="btn"
+            onClick={() => {
+              const target = Number(pageInput || 1)
+              setPage(Math.min(totalPages, Math.max(1, target)))
+            }}
+          >
+            ОК
+          </button>
         </div>
       </div>
 
