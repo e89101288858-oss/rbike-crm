@@ -10,6 +10,7 @@ import { diffDays, formatDate, formatDateTime, formatRub } from '@/lib/format'
 export default function RentalsPage() {
   const router = useRouter()
   const [tenants, setTenants] = useState<any[]>([])
+  const [role, setRole] = useState('')
   const [clients, setClients] = useState<Client[]>([])
   const [bikes, setBikes] = useState<Bike[]>([])
   const [rentals, setRentals] = useState<Rental[]>([])
@@ -113,6 +114,17 @@ export default function RentalsPage() {
     }
   }
 
+  async function deleteClosedRental(rentalId: string) {
+    setError('')
+    try {
+      if (!confirm('Удалить завершенную аренду? Действие необратимо.')) return
+      await api.deleteRental(rentalId)
+      await loadAll()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка удаления аренды')
+    }
+  }
+
   async function addBatteryToRental(rentalId: string) {
     setError('')
     try {
@@ -198,8 +210,9 @@ export default function RentalsPage() {
   useEffect(() => {
     if (!getToken()) return router.replace('/login')
     ;(async () => {
-      const myTenants = await api.myTenants()
+      const [myTenants, me] = await Promise.all([api.myTenants(), api.me()])
       setTenants(myTenants)
+      setRole(me.role || '')
       const currentTenantId = getTenantId() || myTenants[0]?.id || ''
       if (!getTenantId() && myTenants.length > 0) setTenantId(myTenants[0].id)
       const currentTenant = myTenants.find((t) => t.id === currentTenantId)
@@ -221,9 +234,9 @@ export default function RentalsPage() {
   const canCreate = !!clientId && !!bikeId && !!startDate && !!plannedEndDate && selectedBatteryIds.length === batteryCount && rentalDays >= minRentalDays
 
   function daysHighlightClass(daysLeft: number) {
-    if (daysLeft >= 4) return 'border-green-300 bg-green-50/80'
-    if (daysLeft === 3 || daysLeft === 2) return 'border-amber-300 bg-amber-50/80'
-    if (daysLeft === 1) return 'border-red-300 bg-red-50/80'
+    if (daysLeft >= 4) return 'border-green-300 bg-green-50/80 border-l-4 border-l-green-500'
+    if (daysLeft === 3 || daysLeft === 2) return 'border-amber-300 bg-amber-50/80 border-l-4 border-l-amber-500'
+    if (daysLeft === 1) return 'border-red-300 bg-red-50/80 border-l-4 border-l-red-500'
     return 'border-gray-200 bg-white'
   }
 
@@ -304,7 +317,7 @@ export default function RentalsPage() {
                 <div className="font-medium min-w-56">{r.client.fullName} — {r.bike.code}</div>
                 <span className={`badge ${r.status === 'ACTIVE' ? 'badge-warn' : 'badge-ok'}`}>{r.status === 'ACTIVE' ? 'Активна' : 'Завершена'}</span>
                 <div className="text-gray-600">{formatDate(r.startDate)} → {formatDate(r.plannedEndDate)}</div>
-                {r.status === 'ACTIVE' && <div className="text-gray-600">Осталось: {daysLeft} дн.</div>}
+                {r.status === 'ACTIVE' && <div className={`font-medium ${daysLeft === 1 ? 'text-red-700' : daysLeft <= 3 ? 'text-amber-700' : 'text-green-700'}`}>Осталось: {daysLeft} дн.</div>}
               </div>
 
               {expanded && (
@@ -324,6 +337,7 @@ export default function RentalsPage() {
                     <button className="btn" onClick={() => loadJournal(r.id)}>Журнал</button>
                     <button className="btn" onClick={() => generateContract(r.id)}>Сформировать договор</button>
                     {r.status === 'ACTIVE' && <button className="btn border-red-300 text-red-700" onClick={() => closeRental(r.id)}>Завершить досрочно</button>}
+                    {r.status === 'CLOSED' && role === 'OWNER' && <button className="btn border-red-300 text-red-700" onClick={() => deleteClosedRental(r.id)}>Удалить аренду</button>}
                   </div>
 
                   {r.status === 'ACTIVE' && (

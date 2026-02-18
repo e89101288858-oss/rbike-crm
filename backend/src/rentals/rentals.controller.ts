@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   NotFoundException,
   Param,
@@ -692,6 +693,32 @@ export class RentalsController {
       weeklyRateRub: rental.weeklyRateRub,
       createdPayments: result.created,
     }
+  }
+
+  @Delete(':id')
+  @Roles('OWNER')
+  async deleteClosedRental(@Req() req: Request, @Param('id') id: string, @CurrentUser() user: JwtUser) {
+    const tenantId = req.tenantId!
+
+    const rental = await this.prisma.rental.findFirst({
+      where: { id, tenantId },
+      select: { id: true, status: true },
+    })
+
+    if (!rental) throw new NotFoundException('Rental not found')
+    if (rental.status !== RentalStatus.CLOSED) {
+      throw new BadRequestException('Only CLOSED rental can be deleted')
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.rentalBattery.deleteMany({ where: { tenantId, rentalId: id } })
+      await tx.payment.deleteMany({ where: { tenantId, rentalId: id } })
+      await tx.rentalChange.deleteMany({ where: { tenantId, rentalId: id } })
+      await tx.document.deleteMany({ where: { tenantId, rentalId: id } })
+      await tx.rental.deleteMany({ where: { id, tenantId } })
+    })
+
+    return { id, deleted: true, deletedBy: user.userId }
   }
 
   @Patch(':id/weekly-rate')

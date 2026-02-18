@@ -265,6 +265,8 @@ export const api = {
       body: JSON.stringify({ reason }),
     }, true),
 
+  deleteRental: (rentalId: string) => request<any>(`/rentals/${rentalId}`, { method: 'DELETE' }, true),
+
   addRentalBattery: (rentalId: string, batteryId: string) =>
     request<any>(`/rentals/${rentalId}/batteries`, {
       method: 'POST',
