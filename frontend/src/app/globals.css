@@ -101,17 +101,20 @@ body {
   text-decoration: none;
   font-size: 13px;
   font-weight: 500;
-  transition: color .15s ease, background .15s ease;
+  transform: translateX(0);
+  transition: color .2s ease, background .2s ease, transform .2s ease;
 }
 
 .sidebar-link:hover {
   background: rgba(255,255,255,0.03);
   color: #f3f4f6;
+  transform: translateX(2px);
 }
 
 .sidebar-link-active {
   background: transparent;
   color: var(--accent);
+  transform: translateX(2px);
 }
 
 .sidebar-toggle { position: fixed; left: 12px; top: 10px; z-index: 50; }
@@ -202,24 +205,42 @@ body {
 .badge-danger { @apply bg-red-500/20 text-red-300; }
 
 .btn {
-  @apply rounded-sm border px-2.5 py-1 text-xs text-gray-200 transition duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50;
+  @apply rounded-sm border px-2.5 py-1 text-xs text-gray-200 disabled:cursor-not-allowed disabled:opacity-50;
   border-color: var(--border-2);
   background: var(--surface-3);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.04);
+  transform: translateY(0) scale(1);
+  transition: background .18s ease, border-color .18s ease, transform .16s ease, box-shadow .18s ease;
 }
 
 .btn:hover {
   background: color-mix(in srgb, var(--surface-3) 82%, var(--accent) 18%);
   border-color: color-mix(in srgb, var(--border-2) 70%, var(--accent) 30%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.btn:active {
+  transform: translateY(0) scale(0.985);
 }
 
 .btn-primary {
-  @apply rounded-sm border px-2.5 py-1 text-xs text-white transition duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50;
+  @apply rounded-sm border px-2.5 py-1 text-xs text-white disabled:cursor-not-allowed disabled:opacity-50;
   border-color: var(--accent);
   background: var(--accent);
+  box-shadow: 0 2px 10px rgba(249, 115, 22, 0.22);
+  transform: translateY(0) scale(1);
+  transition: background .18s ease, border-color .18s ease, transform .16s ease, box-shadow .18s ease;
 }
 
 .btn-primary:hover {
   background: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(249, 115, 22, 0.28);
+}
+
+.btn-primary:active {
+  transform: translateY(0) scale(0.985);
 }
 
 .input,
@@ -317,6 +338,18 @@ body {
 .kpi:hover,
 .soft-card:hover {
   box-shadow: 0 1px 0 rgba(255,255,255,0.04), 0 10px 20px rgba(0,0,0,0.2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .btn-primary,
+  .sidebar-link,
+  .panel,
+  .kpi,
+  .soft-card {
+    transition: none !important;
+    transform: none !important;
+  }
 }
 
 /* Broad utility overrides to keep legacy pages readable in dark mode */
