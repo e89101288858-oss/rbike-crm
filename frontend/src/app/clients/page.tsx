@@ -1,12 +1,13 @@
 'use client'
 
-import { FormEvent, useEffect, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api, Client } from '@/lib/api'
 import { getToken, getTenantId, setTenantId } from '@/lib/auth'
 
 type ClientForm = Partial<Client>
+const PAGE_SIZE = 50
 
 function toClientForm(c: Client): ClientForm {
   return {
@@ -51,6 +52,7 @@ export default function ClientsPage() {
   const [loading, setLoading] = useState(false)
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null)
   const [modalEdit, setModalEdit] = useState(false)
+  const [page, setPage] = useState(1)
 
   async function load() {
     setLoading(true)
@@ -151,7 +153,17 @@ export default function ClientsPage() {
     void load()
   }, [includeArchived])
 
+  useEffect(() => {
+    setPage(1)
+  }, [query, blacklistOnly, includeArchived, clients.length])
+
   const visibleClients = blacklistOnly ? clients.filter((c) => c.isBlacklisted) : clients
+  const totalPages = Math.max(1, Math.ceil(visibleClients.length / PAGE_SIZE))
+  const safePage = Math.min(page, totalPages)
+  const pagedClients = useMemo(() => {
+    const start = (safePage - 1) * PAGE_SIZE
+    return visibleClients.slice(start, start + PAGE_SIZE)
+  }, [visibleClients, safePage])
   const selectedClient = selectedClientId ? visibleClients.find((c) => c.id === selectedClientId) : null
 
   return (
@@ -204,7 +216,7 @@ export default function ClientsPage() {
             </tr>
           </thead>
           <tbody>
-            {visibleClients.map((c) => {
+            {pagedClients.map((c) => {
               const e = editMap[c.id] ?? toClientForm(c)
               const archived = c.isActive === false
               const st = courierStatus(c)
@@ -239,6 +251,15 @@ export default function ClientsPage() {
         </table>
       </div>
 
+      <div className="mt-3 flex items-center justify-between text-sm text-gray-400">
+        <span>Показано {pagedClients.length} из {visibleClients.length}</span>
+        <div className="flex items-center gap-2">
+          <button className="btn" disabled={safePage <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>Назад</button>
+          <span>Стр. {safePage} / {totalPages}</span>
+          <button className="btn" disabled={safePage >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>Вперед</button>
+        </div>
+      </div>
+
       {selectedClient && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setSelectedClientId(null)}>
           <div className="panel w-full max-w-5xl" onClick={(e) => e.stopPropagation()}>
@@ -260,21 +281,35 @@ export default function ClientsPage() {
                     <button className="btn" type="button" onClick={() => setSelectedClientId(null)}>Закрыть</button>
                   </div>
 
-                  <div className="grid gap-2 md:grid-cols-3">
-                    <input disabled={readOnly} className="input" placeholder="ФИО" value={e.fullName ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], fullName: ev.target.value } }))} />
-                    <input disabled={readOnly} className="input" placeholder="Телефон" value={e.phone ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], phone: ev.target.value } }))} />
-                    <input disabled={readOnly} className="input" type="date" placeholder="Дата рождения" value={(e.birthDate as string) ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], birthDate: ev.target.value } }))} />
-                    <input disabled={readOnly} className="input" placeholder="Адрес проживания" value={e.address ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], address: ev.target.value } }))} />
-                    <input disabled={readOnly} className="input" placeholder="Паспорт серия" value={e.passportSeries ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], passportSeries: ev.target.value } }))} />
-                    <input disabled={readOnly} className="input" placeholder="Паспорт номер" value={e.passportNumber ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], passportNumber: ev.target.value } }))} />
-                    <input disabled={readOnly} className="input" placeholder="Телефон родственника/знакомого" value={e.emergencyContactPhone ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], emergencyContactPhone: ev.target.value } }))} />
-                    <input disabled={readOnly} className="input" placeholder="Заметка" value={e.notes ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], notes: ev.target.value } }))} />
-                    <input disabled={readOnly || !(e.isBlacklisted as boolean)} className="input" placeholder="Причина ЧС" value={(e.blacklistReason as string) ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], blacklistReason: ev.target.value } }))} />
-                    <label className="flex items-center gap-2 px-2">
-                      <input disabled={readOnly} type="checkbox" checked={!!e.isBlacklisted} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], isBlacklisted: ev.target.checked, blacklistReason: ev.target.checked ? (p[c.id]?.blacklistReason ?? '') : '' } }))} />
-                      В черный список
-                    </label>
-                  </div>
+                  {!modalEdit || archived ? (
+                    <div className="grid gap-2 md:grid-cols-3 text-sm">
+                      <div className="kpi"><div className="text-xs text-gray-500">ФИО</div><div>{e.fullName || '—'}</div></div>
+                      <div className="kpi"><div className="text-xs text-gray-500">Телефон</div><div>{e.phone || '—'}</div></div>
+                      <div className="kpi"><div className="text-xs text-gray-500">Дата рождения</div><div>{(e.birthDate as string) || '—'}</div></div>
+                      <div className="kpi md:col-span-2"><div className="text-xs text-gray-500">Адрес</div><div>{e.address || '—'}</div></div>
+                      <div className="kpi"><div className="text-xs text-gray-500">Паспорт</div><div>{e.passportSeries || '—'} {e.passportNumber || ''}</div></div>
+                      <div className="kpi"><div className="text-xs text-gray-500">Контакт родственника</div><div>{e.emergencyContactPhone || '—'}</div></div>
+                      <div className="kpi"><div className="text-xs text-gray-500">Заметка</div><div>{e.notes || '—'}</div></div>
+                      <div className="kpi"><div className="text-xs text-gray-500">Причина ЧС</div><div>{e.blacklistReason || '—'}</div></div>
+                      <div className="kpi"><div className="text-xs text-gray-500">В черном списке</div><div>{e.isBlacklisted ? 'Да' : 'Нет'}</div></div>
+                    </div>
+                  ) : (
+                    <div className="grid gap-2 md:grid-cols-3">
+                      <input className="input" placeholder="ФИО" value={e.fullName ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], fullName: ev.target.value } }))} />
+                      <input className="input" placeholder="Телефон" value={e.phone ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], phone: ev.target.value } }))} />
+                      <input className="input" type="date" placeholder="Дата рождения" value={(e.birthDate as string) ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], birthDate: ev.target.value } }))} />
+                      <input className="input" placeholder="Адрес проживания" value={e.address ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], address: ev.target.value } }))} />
+                      <input className="input" placeholder="Паспорт серия" value={e.passportSeries ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], passportSeries: ev.target.value } }))} />
+                      <input className="input" placeholder="Паспорт номер" value={e.passportNumber ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], passportNumber: ev.target.value } }))} />
+                      <input className="input" placeholder="Телефон родственника/знакомого" value={e.emergencyContactPhone ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], emergencyContactPhone: ev.target.value } }))} />
+                      <input className="input" placeholder="Заметка" value={e.notes ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], notes: ev.target.value } }))} />
+                      <input disabled={!(e.isBlacklisted as boolean)} className="input" placeholder="Причина ЧС" value={(e.blacklistReason as string) ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], blacklistReason: ev.target.value } }))} />
+                      <label className="flex items-center gap-2 px-2">
+                        <input type="checkbox" checked={!!e.isBlacklisted} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], isBlacklisted: ev.target.checked, blacklistReason: ev.target.checked ? (p[c.id]?.blacklistReason ?? '') : '' } }))} />
+                        В черный список
+                      </label>
+                    </div>
+                  )}
 
                   <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
                     <div className="flex flex-wrap gap-2">
