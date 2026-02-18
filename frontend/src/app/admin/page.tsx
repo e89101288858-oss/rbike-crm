@@ -591,15 +591,15 @@ export default function AdminPage() {
                       <button className="btn" onClick={() => resetUserPassword(u)} disabled={u.role === 'OWNER'}>Сбросить пароль</button>
                     </div>
 
-                    <div className="mt-2 rounded-xl border border-gray-200 bg-white/80 p-2.5">
-                      <div className="mb-1 text-xs text-gray-600">Привязка точек (только MANAGER/MECHANIC)</div>
+                    <div className="mt-2 rounded-sm border border-[#2f3136] bg-[#181a1f] p-2.5">
+                      <div className="mb-1 text-xs text-gray-400">Привязка точек (только MANAGER/MECHANIC)</div>
                       <div className="mb-2 flex flex-wrap gap-2">
                         {(userTenantMap[u.id] || []).map((tenantId) => {
                           const tenant = (Object.values(tenantMap).flat() as any[]).find((t) => t.id === tenantId)
                           return (
-                            <span key={tenantId} className="inline-flex items-center gap-1 rounded bg-gray-100 px-2 py-1 text-xs">
+                            <span key={tenantId} className="muted-chip inline-flex items-center gap-1 px-2 py-1 text-xs">
                               {tenant?.name || tenantId}
-                              <button className="text-red-700" onClick={() => unbindTenant(u, tenantId)} disabled={!(u.role === 'MANAGER' || u.role === 'MECHANIC')}>×</button>
+                              <button className="text-red-300" onClick={() => unbindTenant(u, tenantId)} disabled={!(u.role === 'MANAGER' || u.role === 'MECHANIC')}>×</button>
                             </span>
                           )
                         })}
