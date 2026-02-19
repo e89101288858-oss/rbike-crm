@@ -284,6 +284,12 @@ export default function RentalsPage() {
   }, [listTab, search, rentals.length, pageSize])
 
   useEffect(() => {
+    if (!error) return
+    const t = setTimeout(() => setError(''), 2600)
+    return () => clearTimeout(t)
+  }, [error])
+
+  useEffect(() => {
     if (typeof window === 'undefined') return
     const params = new URLSearchParams(window.location.search)
 
@@ -339,7 +345,9 @@ export default function RentalsPage() {
         </div>
       </div>
 
-      {error && <p className="alert">{error}</p>}
+      <div className="toast-stack">
+        {error && <div className="alert">{error}</div>}
+      </div>
 
       <div className="mb-3 flex items-center gap-2">
         <input className="input min-w-0 flex-1 max-w-[720px]" placeholder="Поиск: курьер / велосипед / даты" value={search} onChange={(e) => setSearch(e.target.value)} />

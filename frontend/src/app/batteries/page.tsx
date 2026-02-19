@@ -170,6 +170,15 @@ export default function BatteriesPage() {
   }, [pageSize, query, includeArchived, urlReady])
 
   useEffect(() => {
+    if (!error && !success) return
+    const t = setTimeout(() => {
+      setError('')
+      setSuccess('')
+    }, 2600)
+    return () => clearTimeout(t)
+  }, [error, success])
+
+  useEffect(() => {
     if (!urlReady || typeof window === 'undefined') return
     const params = new URLSearchParams(window.location.search)
     if (query.trim()) params.set('q', query.trim())
@@ -207,8 +216,10 @@ export default function BatteriesPage() {
         <button type="button" className="btn-primary whitespace-nowrap" onClick={() => setCreateModalOpen(true)}>Добавить АКБ</button>
       </div>
 
-      {error && <p className="alert">{error}</p>}
-      {success && <p className="alert-success">{success}</p>}
+      <div className="toast-stack">
+        {error && <div className="alert">{error}</div>}
+        {success && <div className="alert-success">{success}</div>}
+      </div>
 
       <div className="table-wrap">
         <table className="table table-sticky mobile-cards">

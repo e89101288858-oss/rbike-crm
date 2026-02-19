@@ -192,6 +192,15 @@ export default function ClientsPage() {
     window.history.replaceState(null, '', next)
   }, [pathname, query, blacklistOnly, includeArchived, page, pageSize, urlReady])
 
+  useEffect(() => {
+    if (!error && !success) return
+    const t = setTimeout(() => {
+      setError('')
+      setSuccess('')
+    }, 2600)
+    return () => clearTimeout(t)
+  }, [error, success])
+
   const visibleClients = blacklistOnly ? clients.filter((c) => c.isBlacklisted) : clients
   const totalPages = Math.max(1, Math.ceil(visibleClients.length / pageSize))
   const safePage = Math.min(page, totalPages)
@@ -224,8 +233,10 @@ export default function ClientsPage() {
         <button type="button" className="btn-primary whitespace-nowrap" onClick={() => setCreateModalOpen(true)}>Добавить курьера</button>
       </div>
 
-      {error && <p className="alert">{error}</p>}
-      {success && <p className="alert-success">{success}</p>}
+      <div className="toast-stack">
+        {error && <div className="alert">{error}</div>}
+        {success && <div className="alert-success">{success}</div>}
+      </div>
 
       <div className="table-wrap">
         <table className="table table-sticky mobile-cards">

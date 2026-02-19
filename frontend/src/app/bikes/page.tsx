@@ -140,6 +140,15 @@ export default function BikesPage() {
   }, [includeArchived, pageSize, urlReady])
 
   useEffect(() => {
+    if (!error && !success) return
+    const t = setTimeout(() => {
+      setError('')
+      setSuccess('')
+    }, 2600)
+    return () => clearTimeout(t)
+  }, [error, success])
+
+  useEffect(() => {
     if (!urlReady || typeof window === 'undefined') return
     const params = new URLSearchParams(window.location.search)
     if (includeArchived) params.set('archivedOnly', 'true')
@@ -166,8 +175,10 @@ export default function BikesPage() {
         <h1 className="text-2xl font-bold">Велосипеды</h1>
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={includeArchived} onChange={(e) => setIncludeArchived(e.target.checked)} /> Показать архив</label>
       </div>
-      {error && <p className="alert">{error}</p>}
-      {success && <p className="alert-success">{success}</p>}
+      <div className="toast-stack">
+        {error && <div className="alert">{error}</div>}
+        {success && <div className="alert-success">{success}</div>}
+      </div>
 
       {canManageCards && (
         <div className="mb-3 flex justify-end">
