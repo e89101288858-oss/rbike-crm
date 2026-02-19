@@ -81,7 +81,7 @@ export default function FinancePage() {
 
       {error && <p className="alert">{error}</p>}
 
-      {role === 'FRANCHISEE' && Number(royaltyReport?.summary?.totalRoyaltyDueRub || 0) > 0 && (
+      {role === 'FRANCHISEE' && !!royaltyReport?.summary?.royaltyEnabled && (
         <section className="panel mb-4">
           <h2 className="mb-2 text-lg font-semibold">Роялти к перечислению</h2>
           <div className="grid gap-2 md:grid-cols-3 text-sm">
@@ -96,6 +96,7 @@ export default function FinancePage() {
             <div className="kpi">
               <div className="text-xs text-gray-500">К оплате роялти</div>
               <div className="mt-1 font-semibold text-orange-300">{formatRub(Number(royaltyReport?.summary?.totalRoyaltyDueRub || 0))}</div>
+              {Number(royaltyReport?.summary?.totalRoyaltyDueRub || 0) <= 0 && <div className="mt-1 text-xs text-gray-500">За этот месяц начислений пока нет</div>}
             </div>
           </div>
         </section>

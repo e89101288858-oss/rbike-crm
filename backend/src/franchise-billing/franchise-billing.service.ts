@@ -51,6 +51,7 @@ export class FranchiseBillingService {
     ])
 
     const paidMap = new Map(paidByTenant.map((row) => [row.tenantId, row]))
+    const royaltyConfigured = tenants.some((tenant) => Number(tenant.royaltyPercent ?? 5) > 0)
 
     const tenantRows = tenants
       .map((tenant) => {
@@ -108,7 +109,7 @@ export class FranchiseBillingService {
         franchisees: franchiseeRows.length,
         totalRevenueRub,
         totalRoyaltyDueRub,
-        royaltyEnabled: totalRoyaltyDueRub > 0,
+        royaltyEnabled: royaltyConfigured,
       },
       franchisees: franchiseeRows,
       tenants: tenantRows,
@@ -145,6 +146,7 @@ export class FranchiseBillingService {
     ])
 
     const paidMap = new Map(paidByTenant.map((row) => [row.tenantId, row]))
+    const royaltyConfigured = tenants.some((tenant) => Number(tenant.royaltyPercent ?? 5) > 0)
 
     const tenantRows = tenants
       .map((tenant) => {
@@ -173,7 +175,7 @@ export class FranchiseBillingService {
         tenants: tenantRows.length,
         totalRevenueRub: round2(tenantRows.reduce((sum, row) => sum + row.revenueRub, 0)),
         totalRoyaltyDueRub,
-        royaltyEnabled: totalRoyaltyDueRub > 0,
+        royaltyEnabled: royaltyConfigured,
       },
       tenants: tenantRows,
     }
