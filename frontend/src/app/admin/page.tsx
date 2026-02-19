@@ -10,6 +10,8 @@ type UserRole = 'OWNER' | 'FRANCHISEE' | 'MANAGER' | 'MECHANIC' | ''
 
 type AuditItem = { at: string; text: string }
 
+type ConfirmState = null | { kind: 'franchisee' | 'tenant' | 'user'; id: string; title: string; text: string }
+
 const money = new Intl.NumberFormat('ru-RU')
 
 export default function AdminPage() {
@@ -39,6 +41,7 @@ export default function AdminPage() {
   const [auditRows, setAuditRows] = useState<any[]>([])
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [confirmState, setConfirmState] = useState<ConfirmState>(null)
 
   function pushAudit(text: string) {
     setAudit((prev) => [{ at: new Date().toISOString(), text }, ...prev].slice(0, 12))
@@ -154,7 +157,6 @@ export default function AdminPage() {
   }
 
   async function deleteFranchisee(f: any) {
-    if (!confirm(`Удалить франчайзи "${f.name}"?`)) return
     setError('')
     setSuccess('')
     try {
@@ -224,7 +226,6 @@ export default function AdminPage() {
   }
 
   async function deleteTenant(t: any) {
-    if (!confirm(`Удалить точку "${t.name}"?`)) return
     setError('')
     setSuccess('')
     try {
@@ -303,7 +304,6 @@ export default function AdminPage() {
   }
 
   async function deleteUser(u: any) {
-    if (!confirm(`Удалить пользователя ${u.email}?`)) return
     setError('')
     setSuccess('')
     try {
@@ -373,6 +373,15 @@ export default function AdminPage() {
     void loadAll()
   }, [router])
 
+  useEffect(() => {
+    if (!error && !success) return
+    const t = setTimeout(() => {
+      setError('')
+      setSuccess('')
+    }, 2600)
+    return () => clearTimeout(t)
+  }, [error, success])
+
   const filteredUsers = users.filter((u) => {
     const matchesSearch = !userSearch.trim() || u.email.toLowerCase().includes(userSearch.trim().toLowerCase())
     const matchesRole = userRoleFilter === 'ALL' || u.role === userRoleFilter
@@ -398,8 +407,10 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {error && <p className="alert">{error}</p>}
-      {success && <p className="alert-success">{success}</p>}
+      <div className="toast-stack">
+        {error && <div className="alert">{error}</div>}
+        {success && <div className="alert-success">{success}</div>}
+      </div>
 
       {role && role !== 'OWNER' ? (
         <section className="panel text-sm text-gray-700">Доступ только для OWNER.</section>
@@ -472,7 +483,7 @@ export default function AdminPage() {
                     <span className={`badge ${f.isActive ? 'badge-ok' : 'badge-muted'}`}>{f.isActive ? 'Активен' : 'Архив'}</span>
                     <button className="btn" onClick={() => saveFranchisee(f)}>Сохранить</button>
                     <button className="btn" onClick={() => archiveFranchisee(f)}>{f.isActive ? 'В архив' : 'Восстановить'}</button>
-                    <button className="btn border-red-300 text-red-700" onClick={() => deleteFranchisee(f)}>Удалить</button>
+                    <button className="btn border-red-300 text-red-700" onClick={() => setConfirmState({ kind: 'franchisee', id: f.id, title: `Удалить франчайзи «${f.name}»?`, text: 'Действие необратимо. Все связанные точки и пользователи должны быть обработаны заранее.' })}>Удалить</button>
                   </div>
                 </div>
 
@@ -499,7 +510,7 @@ export default function AdminPage() {
                         <span className={`badge ${t.isActive ? 'badge-ok' : 'badge-muted'}`}>{t.isActive ? 'Активна' : 'Архив'}</span>
                         <button className="btn" onClick={() => saveTenant(t)}>Сохранить</button>
                         <button className="btn" onClick={() => archiveTenant(t)}>{t.isActive ? 'В архив' : 'Восстановить'}</button>
-                        <button className="btn border-red-300 text-red-700" onClick={() => deleteTenant(t)}>Удалить</button>
+                        <button className="btn border-red-300 text-red-700" onClick={() => setConfirmState({ kind: 'tenant', id: t.id, title: `Удалить точку «${t.name}»?`, text: 'Действие необратимо. Убедись, что точка архивирована и очищена от активных операций.' })}>Удалить</button>
                       </div>
                     ))}
                     {!(tenantMap[f.id] || []).length && <p className="text-gray-600">Точек пока нет</p>}
@@ -576,7 +587,7 @@ export default function AdminPage() {
                       </label>
 
                       <button className="btn" onClick={() => saveUser(u)} disabled={u.role === 'OWNER'}>Сохранить</button>
-                      <button className="btn border-red-300 text-red-700" onClick={() => deleteUser(u)} disabled={u.role === 'OWNER'}>Удалить</button>
+                      <button className="btn border-red-300 text-red-700" onClick={() => setConfirmState({ kind: 'user', id: u.id, title: `Удалить пользователя ${u.email}?`, text: 'Действие необратимо. Пользователь потеряет доступ ко всем точкам.' })} disabled={u.role === 'OWNER'}>Удалить</button>
                     </div>
 
                     <div className="mt-2 grid gap-2 md:grid-cols-3">
@@ -644,6 +655,40 @@ export default function AdminPage() {
             )}
           </section>
         </>
+      )}
+
+      {confirmState && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setConfirmState(null)}>
+          <div className="panel w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <h3 className="mb-2 text-base font-semibold">{confirmState.title}</h3>
+            <p className="text-sm text-gray-400">{confirmState.text}</p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button className="btn" onClick={() => setConfirmState(null)}>Отмена</button>
+              <button
+                className="btn border-red-500/60 text-red-300"
+                onClick={async () => {
+                  const item = confirmState
+                  setConfirmState(null)
+                  if (!item) return
+                  if (item.kind === 'franchisee') {
+                    const f = franchisees.find((x) => x.id === item.id)
+                    if (f) await deleteFranchisee(f)
+                    return
+                  }
+                  if (item.kind === 'tenant') {
+                    const t = (Object.values(tenantMap).flat() as any[]).find((x) => x.id === item.id)
+                    if (t) await deleteTenant(t)
+                    return
+                  }
+                  const u = users.find((x) => x.id === item.id)
+                  if (u) await deleteUser(u)
+                }}
+              >
+                Удалить
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   )

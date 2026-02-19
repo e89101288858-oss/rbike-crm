@@ -332,6 +332,22 @@ body {
   color: #6ee7b7;
 }
 
+.toast-stack {
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  z-index: 60;
+  display: grid;
+  gap: 8px;
+  max-width: min(420px, calc(100vw - 24px));
+}
+
+.toast-stack .alert,
+.toast-stack .alert-success {
+  margin: 0;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.28);
+}
+
 .section-title {
   @apply mb-3 text-base font-semibold;
   color: #f3f4f6;
