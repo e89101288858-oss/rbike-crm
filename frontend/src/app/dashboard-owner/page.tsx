@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'
 import { getTenantId, getToken, setTenantId } from '@/lib/auth'
+import { formatRub } from '@/lib/format'
 
 export default function OwnerDashboardPage() {
   const router = useRouter()
@@ -12,6 +13,8 @@ export default function OwnerDashboardPage() {
   const [role, setRole] = useState('')
   const [franchisees, setFranchisees] = useState<any[]>([])
   const [tenantMap, setTenantMap] = useState<Record<string, any[]>>({})
+  const [month, setMonth] = useState(new Date().toISOString().slice(0, 7))
+  const [billing, setBilling] = useState<any>(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -39,6 +42,18 @@ export default function OwnerDashboardPage() {
       }
     })()
   }, [router])
+
+  useEffect(() => {
+    if (role !== 'OWNER') return
+    ;(async () => {
+      try {
+        const report = await api.franchiseOwnerMonthly(month)
+        setBilling(report)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Ошибка загрузки агрегатов сети')
+      }
+    })()
+  }, [role, month])
 
   if (role && role !== 'OWNER') {
     return (
@@ -70,8 +85,85 @@ export default function OwnerDashboardPage() {
         <div className="kpi"><div className="text-xs text-gray-500">Точек активных</div><div className="mt-1 text-2xl font-semibold">{tenantsActive}</div></div>
       </section>
 
+      <section className="panel mb-4 text-sm">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-base font-semibold">Агрегаты сети (по месяцу)</h2>
+          <input type="month" className="input w-44" value={month} onChange={(e) => setMonth(e.target.value)} />
+        </div>
+
+        <div className="grid gap-2 md:grid-cols-3">
+          <div className="kpi"><div className="text-xs text-gray-500">Выручка сети</div><div className="mt-1 text-2xl font-semibold">{formatRub(Number(billing?.summary?.totalRevenueRub || 0))}</div></div>
+          <div className="kpi"><div className="text-xs text-gray-500">Роялти к оплате</div><div className="mt-1 text-2xl font-semibold">{formatRub(Number(billing?.summary?.totalRoyaltyDueRub || 0))}</div></div>
+          <div className="kpi"><div className="text-xs text-gray-500">Франчайзи с выручкой</div><div className="mt-1 text-2xl font-semibold">{Number(billing?.summary?.franchisees || 0)}</div></div>
+        </div>
+      </section>
+
+      <section className="panel mb-4 text-sm">
+        <h2 className="mb-2 text-base font-semibold">Рейтинг франчайзи (месяц)</h2>
+        <div className="table-wrap">
+          <table className="table table-sticky mobile-cards">
+            <thead>
+              <tr>
+                <th>Франчайзи</th>
+                <th>Точек</th>
+                <th>Выручка</th>
+                <th>Роялти</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(billing?.franchisees || []).map((f: any) => (
+                <tr key={f.franchiseeId}>
+                  <td data-label="Франчайзи" className="font-medium">{f.franchiseeName}</td>
+                  <td data-label="Точек">{f.tenants}</td>
+                  <td data-label="Выручка">{formatRub(Number(f.revenueRub || 0))}</td>
+                  <td data-label="Роялти">{formatRub(Number(f.royaltyDueRub || 0))}</td>
+                </tr>
+              ))}
+              {!billing?.franchisees?.length && (
+                <tr>
+                  <td colSpan={4} className="text-center text-gray-500">Нет данных за выбранный месяц</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="panel mb-4 text-sm">
+        <h2 className="mb-2 text-base font-semibold">Рейтинг точек (месяц)</h2>
+        <div className="table-wrap">
+          <table className="table table-sticky mobile-cards">
+            <thead>
+              <tr>
+                <th>Точка</th>
+                <th>Франчайзи</th>
+                <th>Платежей</th>
+                <th>Выручка</th>
+                <th>Роялти</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(billing?.tenants || []).map((t: any) => (
+                <tr key={t.tenantId}>
+                  <td data-label="Точка" className="font-medium">{t.tenantName}</td>
+                  <td data-label="Франчайзи">{t.franchiseeName}</td>
+                  <td data-label="Платежей">{t.paidPaymentsCount}</td>
+                  <td data-label="Выручка">{formatRub(Number(t.revenueRub || 0))}</td>
+                  <td data-label="Роялти">{formatRub(Number(t.royaltyDueRub || 0))}</td>
+                </tr>
+              ))}
+              {!billing?.tenants?.length && (
+                <tr>
+                  <td colSpan={5} className="text-center text-gray-500">Нет данных за выбранный месяц</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <section className="panel text-sm">
-        <h2 className="mb-2 text-base font-semibold">Франчайзи и точки</h2>
+        <h2 className="mb-2 text-base font-semibold">Справочник франчайзи и точек</h2>
         <div className="table-wrap">
           <table className="table table-sticky mobile-cards">
             <thead>
