@@ -18,7 +18,8 @@ const nav: NavGroup[] = [
   {
     title: 'Операции',
     items: [
-      { href: '/dashboard', label: 'Дашборд', roles: ['OWNER', 'FRANCHISEE', 'MANAGER', 'MECHANIC'] },
+      { href: '/dashboard', label: 'Дашборд точки', roles: ['OWNER', 'FRANCHISEE', 'MANAGER', 'MECHANIC'] },
+      { href: '/dashboard-owner', label: 'OWNER дашборд', roles: ['OWNER'] },
       { href: '/rentals', label: 'Аренды', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
     ],
   },
