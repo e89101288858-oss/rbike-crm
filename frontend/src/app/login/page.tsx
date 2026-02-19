@@ -9,7 +9,7 @@ export default function LoginPage() {
   const router = useRouter()
   const [tab, setTab] = useState<'login' | 'register'>('login')
 
-  const [email, setEmail] = useState('partner1007@yandex.ru')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
   const [regFullName, setRegFullName] = useState('')
