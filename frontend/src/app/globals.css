@@ -173,6 +173,44 @@ body {
     padding-right: 8px;
     font-size: 11px;
   }
+
+  .mobile-cards {
+    min-width: 0;
+  }
+
+  .mobile-cards thead {
+    display: none;
+  }
+
+  .mobile-cards tbody,
+  .mobile-cards tr,
+  .mobile-cards td {
+    display: block;
+    width: 100%;
+  }
+
+  .mobile-cards tr {
+    border-top: 1px solid var(--border-1);
+    padding: 8px 10px;
+    background: var(--surface-1);
+  }
+
+  .mobile-cards tr:first-child {
+    border-top: 0;
+  }
+
+  .mobile-cards td {
+    border-top: 0;
+    padding: 3px 0;
+  }
+
+  .mobile-cards td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 11px;
+    color: #9ca3af;
+    margin-bottom: 2px;
+  }
 }
 
 .panel {

@@ -346,7 +346,7 @@ export default function RentalsPage() {
       </div>
 
       <div className="table-wrap">
-        <table className="table table-sticky">
+        <table className="table table-sticky mobile-cards">
           <thead>
             <tr>
               <th>Курьер</th>
@@ -361,10 +361,10 @@ export default function RentalsPage() {
               const daysLeft = diffDays(new Date().toISOString(), r.plannedEndDate)
               return (
                 <tr key={r.id} className="cursor-pointer hover:bg-white/5" onClick={() => setSelectedRentalId(r.id)}>
-                  <td className="font-medium">{r.client.fullName}</td>
-                  <td>{r.bike.code}</td>
-                  <td>{formatDate(r.startDate)} → {formatDate(r.plannedEndDate)}</td>
-                  <td>
+                  <td data-label="Курьер" className="font-medium">{r.client.fullName}</td>
+                  <td data-label="Велосипед">{r.bike.code}</td>
+                  <td data-label="Период">{formatDate(r.startDate)} → {formatDate(r.plannedEndDate)}</td>
+                  <td data-label="Статус">
                     <span className={`badge ${r.status === 'ACTIVE' ? 'badge-warn' : 'badge-ok'}`}>{r.status === 'ACTIVE' ? 'Активна' : 'Завершена'}</span>
                     {r.status === 'ACTIVE' && (
                       <span className={`ml-2 text-xs font-medium ${daysLeft <= 0 ? 'text-rose-300' : daysLeft === 1 ? 'text-orange-300' : daysLeft <= 3 ? 'text-blue-300' : 'text-emerald-300'}`}>
@@ -372,7 +372,7 @@ export default function RentalsPage() {
                       </span>
                     )}
                   </td>
-                  <td><button type="button" className="btn" onClick={(e) => { e.stopPropagation(); setSelectedRentalId(r.id) }}>Открыть</button></td>
+                  <td data-label="Действие"><button type="button" className="btn" onClick={(e) => { e.stopPropagation(); setSelectedRentalId(r.id) }}>Открыть</button></td>
                 </tr>
               )
             })}

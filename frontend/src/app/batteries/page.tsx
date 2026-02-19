@@ -211,7 +211,7 @@ export default function BatteriesPage() {
       {success && <p className="alert-success">{success}</p>}
 
       <div className="table-wrap">
-        <table className="table table-sticky">
+        <table className="table table-sticky mobile-cards">
           <thead>
             <tr><th>Код</th><th>Серийный</th><th>Велосипед</th><th>Статус</th><th></th></tr>
           </thead>
@@ -220,11 +220,11 @@ export default function BatteriesPage() {
               const archived = b.isActive === false
               return (
                 <tr key={b.id} className="cursor-pointer hover:bg-white/5" onClick={() => { setSelectedId(b.id); setModalEdit(false) }}>
-                  <td className="font-medium">{b.code}</td>
-                  <td>{b.serialNumber || '—'}</td>
-                  <td>{b.bike?.code || 'Не привязана'}</td>
-                  <td><span className="badge badge-muted">{statusLabel(b.status)}</span>{archived && <span className="badge badge-muted ml-2">АРХИВ</span>}</td>
-                  <td><button type="button" className="btn" onClick={(e) => { e.stopPropagation(); setSelectedId(b.id); setModalEdit(false) }}>Открыть</button></td>
+                  <td data-label="Код" className="font-medium">{b.code}</td>
+                  <td data-label="Серийный">{b.serialNumber || '—'}</td>
+                  <td data-label="Велосипед">{b.bike?.code || 'Не привязана'}</td>
+                  <td data-label="Статус"><span className="badge badge-muted">{statusLabel(b.status)}</span>{archived && <span className="badge badge-muted ml-2">АРХИВ</span>}</td>
+                  <td data-label="Действие"><button type="button" className="btn" onClick={(e) => { e.stopPropagation(); setSelectedId(b.id); setModalEdit(false) }}>Открыть</button></td>
                 </tr>
               )
             })}

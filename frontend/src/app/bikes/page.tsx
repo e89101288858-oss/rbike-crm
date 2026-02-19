@@ -176,7 +176,7 @@ export default function BikesPage() {
       )}
 
       <div className="table-wrap">
-        <table className="table table-sticky">
+        <table className="table table-sticky mobile-cards">
           <thead>
             <tr>
               <th>Код</th><th>Модель</th><th>Статус</th><th>Рама</th><th>Мотор-колесо</th><th></th>
@@ -188,12 +188,12 @@ export default function BikesPage() {
               const archived = b.isActive === false
               return (
                 <tr key={b.id} className="cursor-pointer hover:bg-white/5" onClick={() => { setSelectedBikeId(b.id); setModalEdit(false) }}>
-                  <td className="font-medium">{f.code}</td>
-                  <td>{f.model || '—'}</td>
-                  <td><span className={`badge ${statusBadge(f.status ?? b.status)}`}>{statusLabel(f.status ?? b.status)}</span>{archived && <span className="badge badge-muted ml-2">АРХИВ</span>}</td>
-                  <td>{f.frameNumber || '—'}</td>
-                  <td>{f.motorWheelNumber || '—'}</td>
-                  <td><button type="button" className="btn" onClick={(e) => { e.stopPropagation(); setSelectedBikeId(b.id); setModalEdit(false) }}>Открыть</button></td>
+                  <td data-label="Код" className="font-medium">{f.code}</td>
+                  <td data-label="Модель">{f.model || '—'}</td>
+                  <td data-label="Статус"><span className={`badge ${statusBadge(f.status ?? b.status)}`}>{statusLabel(f.status ?? b.status)}</span>{archived && <span className="badge badge-muted ml-2">АРХИВ</span>}</td>
+                  <td data-label="Рама">{f.frameNumber || '—'}</td>
+                  <td data-label="Мотор-колесо">{f.motorWheelNumber || '—'}</td>
+                  <td data-label="Действие"><button type="button" className="btn" onClick={(e) => { e.stopPropagation(); setSelectedBikeId(b.id); setModalEdit(false) }}>Открыть</button></td>
                 </tr>
               )
             })}

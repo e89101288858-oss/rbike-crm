@@ -228,7 +228,7 @@ export default function ClientsPage() {
       {success && <p className="alert-success">{success}</p>}
 
       <div className="table-wrap">
-        <table className="table table-sticky">
+        <table className="table table-sticky mobile-cards">
           <thead>
             <tr>
               <th>ФИО</th>
@@ -246,15 +246,15 @@ export default function ClientsPage() {
               const st = courierStatus(c)
               return (
                 <tr key={c.id} className="cursor-pointer hover:bg-white/5" onClick={() => { setSelectedClientId(c.id); setModalEdit(false) }}>
-                  <td className="font-medium">{e.fullName || '—'}</td>
-                  <td>{e.phone || '—'}</td>
-                  <td>{(e.birthDate as string) || '—'}</td>
-                  <td>{e.passportSeries || '—'} {e.passportNumber || ''}</td>
-                  <td>
+                  <td data-label="ФИО" className="font-medium">{e.fullName || '—'}</td>
+                  <td data-label="Телефон">{e.phone || '—'}</td>
+                  <td data-label="Дата рождения">{(e.birthDate as string) || '—'}</td>
+                  <td data-label="Паспорт">{e.passportSeries || '—'} {e.passportNumber || ''}</td>
+                  <td data-label="Статус">
                     <span className={`badge ${st.cls}`}>{st.label}</span>
                     {archived && <span className="badge badge-muted ml-2">АРХИВ</span>}
                   </td>
-                  <td>
+                  <td data-label="Действие">
                     <button
                       type="button"
                       className="btn"
