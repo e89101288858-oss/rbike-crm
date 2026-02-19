@@ -244,6 +244,7 @@ export class AdminController {
         isActive: dto.isActive ?? true,
         dailyRateRub: dto.dailyRateRub ?? 500,
         minRentalDays: dto.minRentalDays ?? 7,
+        royaltyPercent: dto.royaltyPercent ?? 5,
       },
     })
     await this.audit(user.userId, 'CREATE_TENANT', 'TENANT', created.id, {
@@ -251,6 +252,7 @@ export class AdminController {
       franchiseeId,
       dailyRateRub: created.dailyRateRub,
       minRentalDays: created.minRentalDays,
+      royaltyPercent: created.royaltyPercent,
     })
     return created
   }
@@ -309,6 +311,7 @@ export class AdminController {
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
         ...(dto.dailyRateRub !== undefined && { dailyRateRub: dto.dailyRateRub }),
         ...(dto.minRentalDays !== undefined && { minRentalDays: Math.trunc(dto.minRentalDays) }),
+        ...(dto.royaltyPercent !== undefined && { royaltyPercent: dto.royaltyPercent }),
       },
     })
     await this.audit(user.userId, 'UPDATE_TENANT', 'TENANT', id, {
@@ -318,6 +321,7 @@ export class AdminController {
         isActive: tenant.isActive,
         dailyRateRub: tenant.dailyRateRub,
         minRentalDays: tenant.minRentalDays,
+        royaltyPercent: tenant.royaltyPercent,
       },
       to: {
         name: updated.name,
@@ -325,6 +329,7 @@ export class AdminController {
         isActive: updated.isActive,
         dailyRateRub: updated.dailyRateRub,
         minRentalDays: updated.minRentalDays,
+        royaltyPercent: updated.royaltyPercent,
       },
     })
     return updated

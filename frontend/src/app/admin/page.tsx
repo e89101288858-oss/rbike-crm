@@ -25,7 +25,7 @@ export default function AdminPage() {
   const [newFranchiseeSignerFullName, setNewFranchiseeSignerFullName] = useState('')
   const [newFranchiseeBankDetails, setNewFranchiseeBankDetails] = useState('')
   const [newFranchiseeCity, setNewFranchiseeCity] = useState('')
-  const [newTenantDraft, setNewTenantDraft] = useState<Record<string, { name: string; address: string; dailyRateRub: number; minRentalDays: number }>>({})
+  const [newTenantDraft, setNewTenantDraft] = useState<Record<string, { name: string; address: string; dailyRateRub: number; minRentalDays: number; royaltyPercent: number }>>({})
   const [registrationRequests, setRegistrationRequests] = useState<any[]>([])
   const [approveMap, setApproveMap] = useState<Record<string, { franchiseeId: string; tenantId: string }>>({})
   const [users, setUsers] = useState<any[]>([])
@@ -47,12 +47,15 @@ export default function AdminPage() {
     setAudit((prev) => [{ at: new Date().toISOString(), text }, ...prev].slice(0, 12))
   }
 
-  function validateTenantSettings(dailyRateRub: number, minRentalDays: number) {
+  function validateTenantSettings(dailyRateRub: number, minRentalDays: number, royaltyPercent: number) {
     if (!Number.isFinite(dailyRateRub) || dailyRateRub < 1 || dailyRateRub > 100000) {
       throw new Error('Тариф должен быть числом от 1 до 100000')
     }
     if (!Number.isInteger(minRentalDays) || minRentalDays < 1 || minRentalDays > 365) {
       throw new Error('Мин. срок должен быть целым числом от 1 до 365')
+    }
+    if (!Number.isFinite(royaltyPercent) || royaltyPercent < 0 || royaltyPercent > 100) {
+      throw new Error('Роялти должен быть числом от 0 до 100%')
     }
   }
 
@@ -173,19 +176,20 @@ export default function AdminPage() {
     setError('')
     setSuccess('')
     try {
-      const draft = newTenantDraft[franchiseeId] || { name: '', address: '', dailyRateRub: 500, minRentalDays: 7 }
+      const draft = newTenantDraft[franchiseeId] || { name: '', address: '', dailyRateRub: 500, minRentalDays: 7, royaltyPercent: 5 }
       const name = draft.name.trim()
       if (!name) throw new Error('Укажи название точки')
-      validateTenantSettings(Number(draft.dailyRateRub), Number(draft.minRentalDays))
+      validateTenantSettings(Number(draft.dailyRateRub), Number(draft.minRentalDays), Number(draft.royaltyPercent))
       await api.adminCreateTenant(franchiseeId, {
         name,
         address: draft.address.trim() || undefined,
         isActive: true,
         dailyRateRub: Number(draft.dailyRateRub),
         minRentalDays: Number(draft.minRentalDays),
+        royaltyPercent: Number(draft.royaltyPercent),
       })
       pushAudit(`Создана точка: ${name}`)
-      setNewTenantDraft((p) => ({ ...p, [franchiseeId]: { name: '', address: '', dailyRateRub: 500, minRentalDays: 7 } }))
+      setNewTenantDraft((p) => ({ ...p, [franchiseeId]: { name: '', address: '', dailyRateRub: 500, minRentalDays: 7, royaltyPercent: 5 } }))
       await loadAll()
       setSuccess('Сохранено')
     } catch (err) {
@@ -197,14 +201,15 @@ export default function AdminPage() {
     setError('')
     setSuccess('')
     try {
-      validateTenantSettings(Number(t.dailyRateRub), Number(t.minRentalDays))
+      validateTenantSettings(Number(t.dailyRateRub), Number(t.minRentalDays), Number(t.royaltyPercent ?? 5))
       await api.adminUpdateTenant(t.id, {
         name: t.name,
         address: t.address || undefined,
         dailyRateRub: Number(t.dailyRateRub),
         minRentalDays: Number(t.minRentalDays),
+        royaltyPercent: Number(t.royaltyPercent ?? 5),
       })
-      pushAudit(`Обновлена точка: ${t.name} (тариф ${money.format(Number(t.dailyRateRub))} ₽, минимум ${t.minRentalDays} дн.)`)
+      pushAudit(`Обновлена точка: ${t.name} (тариф ${money.format(Number(t.dailyRateRub))} ₽, минимум ${t.minRentalDays} дн., роялти ${Number(t.royaltyPercent ?? 5)}%)`)
       await loadAll()
       setSuccess('Сохранено')
     } catch (err) {
@@ -489,12 +494,13 @@ export default function AdminPage() {
 
                 <div className="soft-card">
                   <div className="mb-2 font-semibold">Точки</div>
-                  <p className="mb-2 text-xs text-gray-600">Тариф: от 1 до 100000 ₽ в сутки. Минимальный срок: 1–365 дней.</p>
+                  <p className="mb-2 text-xs text-gray-600">Тариф: 1–100000 ₽/сутки. Минимальный срок: 1–365 дней. Роялти: 0–100% от выручки (0% = отключено).</p>
                   <div className="mb-2 flex flex-wrap gap-2">
-                    <input className="input min-w-56" placeholder="Новая точка" value={newTenantDraft[f.id]?.name || ''} onChange={(e) => setNewTenantDraft((p) => ({ ...p, [f.id]: { ...(p[f.id] || { address: '', dailyRateRub: 500, minRentalDays: 7 }), name: e.target.value } }))} />
-                    <input className="input min-w-72" placeholder="Адрес точки (возврата)" value={newTenantDraft[f.id]?.address || ''} onChange={(e) => setNewTenantDraft((p) => ({ ...p, [f.id]: { ...(p[f.id] || { name: '', dailyRateRub: 500, minRentalDays: 7 }), address: e.target.value } }))} />
-                    <input className="input w-32" type="number" min={1} max={100000} placeholder="Тариф ₽" value={newTenantDraft[f.id]?.dailyRateRub ?? 500} onChange={(e) => setNewTenantDraft((p) => ({ ...p, [f.id]: { ...(p[f.id] || { name: '', address: '', minRentalDays: 7 }), dailyRateRub: Number(e.target.value) } }))} />
-                    <input className="input w-28" type="number" min={1} max={365} placeholder="Мин. дней" value={newTenantDraft[f.id]?.minRentalDays ?? 7} onChange={(e) => setNewTenantDraft((p) => ({ ...p, [f.id]: { ...(p[f.id] || { name: '', address: '', dailyRateRub: 500 }), minRentalDays: Number(e.target.value) } }))} />
+                    <input className="input min-w-56" placeholder="Новая точка" value={newTenantDraft[f.id]?.name || ''} onChange={(e) => setNewTenantDraft((p) => ({ ...p, [f.id]: { ...(p[f.id] || { address: '', dailyRateRub: 500, minRentalDays: 7, royaltyPercent: 5 }), name: e.target.value } }))} />
+                    <input className="input min-w-72" placeholder="Адрес точки (возврата)" value={newTenantDraft[f.id]?.address || ''} onChange={(e) => setNewTenantDraft((p) => ({ ...p, [f.id]: { ...(p[f.id] || { name: '', dailyRateRub: 500, minRentalDays: 7, royaltyPercent: 5 }), address: e.target.value } }))} />
+                    <input className="input w-32" type="number" min={1} max={100000} placeholder="Тариф ₽" value={newTenantDraft[f.id]?.dailyRateRub ?? 500} onChange={(e) => setNewTenantDraft((p) => ({ ...p, [f.id]: { ...(p[f.id] || { name: '', address: '', minRentalDays: 7, royaltyPercent: 5 }), dailyRateRub: Number(e.target.value) } }))} />
+                    <input className="input w-28" type="number" min={1} max={365} placeholder="Мин. дней" value={newTenantDraft[f.id]?.minRentalDays ?? 7} onChange={(e) => setNewTenantDraft((p) => ({ ...p, [f.id]: { ...(p[f.id] || { name: '', address: '', dailyRateRub: 500, royaltyPercent: 5 }), minRentalDays: Number(e.target.value) } }))} />
+                    <input className="input w-28" type="number" min={0} max={100} step={0.1} placeholder="Роялти %" value={newTenantDraft[f.id]?.royaltyPercent ?? 5} onChange={(e) => setNewTenantDraft((p) => ({ ...p, [f.id]: { ...(p[f.id] || { name: '', address: '', dailyRateRub: 500, minRentalDays: 7 }), royaltyPercent: Number(e.target.value) } }))} />
                     <button className="btn" onClick={() => createTenant(f.id)}>Добавить точку</button>
                   </div>
 
@@ -507,6 +513,8 @@ export default function AdminPage() {
                         <input className="input w-28" type="number" min={1} max={100000} value={t.dailyRateRub ?? 500} onChange={(e) => setTenantMap((p) => ({ ...p, [f.id]: (p[f.id] || []).map((x: any) => x.id === t.id ? { ...x, dailyRateRub: Number(e.target.value) } : x) }))} />
                         <label className="text-xs text-gray-600">мин. дней</label>
                         <input className="input w-24" type="number" min={1} max={365} value={t.minRentalDays ?? 7} onChange={(e) => setTenantMap((p) => ({ ...p, [f.id]: (p[f.id] || []).map((x: any) => x.id === t.id ? { ...x, minRentalDays: Number(e.target.value) } : x) }))} />
+                        <label className="text-xs text-gray-600">роялти %</label>
+                        <input className="input w-24" type="number" min={0} max={100} step={0.1} value={t.royaltyPercent ?? 5} onChange={(e) => setTenantMap((p) => ({ ...p, [f.id]: (p[f.id] || []).map((x: any) => x.id === t.id ? { ...x, royaltyPercent: Number(e.target.value) } : x) }))} />
                         <span className={`badge ${t.isActive ? 'badge-ok' : 'badge-muted'}`}>{t.isActive ? 'Активна' : 'Архив'}</span>
                         <button className="btn" onClick={() => saveTenant(t)}>Сохранить</button>
                         <button className="btn" onClick={() => archiveTenant(t)}>{t.isActive ? 'В архив' : 'Восстановить'}</button>

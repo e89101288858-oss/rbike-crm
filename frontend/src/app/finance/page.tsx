@@ -10,6 +10,8 @@ import { formatDate, formatRub } from '@/lib/format'
 export default function FinancePage() {
   const router = useRouter()
   const [tenants, setTenants] = useState<any[]>([])
+  const [role, setRole] = useState('')
+  const [royaltyReport, setRoyaltyReport] = useState<any>(null)
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [bikeId, setBikeId] = useState('')
@@ -48,10 +50,17 @@ export default function FinancePage() {
   useEffect(() => {
     if (!getToken()) return router.replace('/login')
     ;(async () => {
-      const myTenants = await api.myTenants()
+      const [myTenants, me] = await Promise.all([api.myTenants(), api.me()])
+      setRole(me.role || '')
       setTenants(myTenants)
       if (!getTenantId() && myTenants.length > 0) setTenantId(myTenants[0].id)
       await load()
+
+      if (me.role === 'FRANCHISEE') {
+        const month = new Date().toISOString().slice(0, 7)
+        const rep = await api.franchiseMyMonthly(month)
+        setRoyaltyReport(rep)
+      }
     })()
   }, [router])
 
@@ -71,6 +80,26 @@ export default function FinancePage() {
       </div>
 
       {error && <p className="alert">{error}</p>}
+
+      {role === 'FRANCHISEE' && Number(royaltyReport?.summary?.totalRoyaltyDueRub || 0) > 0 && (
+        <section className="panel mb-4">
+          <h2 className="mb-2 text-lg font-semibold">Роялти к перечислению</h2>
+          <div className="grid gap-2 md:grid-cols-3 text-sm">
+            <div className="kpi">
+              <div className="text-xs text-gray-500">Месяц</div>
+              <div className="mt-1 font-semibold">{royaltyReport?.month || '—'}</div>
+            </div>
+            <div className="kpi">
+              <div className="text-xs text-gray-500">Выручка</div>
+              <div className="mt-1 font-semibold">{formatRub(Number(royaltyReport?.summary?.totalRevenueRub || 0))}</div>
+            </div>
+            <div className="kpi">
+              <div className="text-xs text-gray-500">К оплате роялти</div>
+              <div className="mt-1 font-semibold text-orange-300">{formatRub(Number(royaltyReport?.summary?.totalRoyaltyDueRub || 0))}</div>
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="panel mb-6">
         <h2 className="mb-3 text-lg font-semibold">Выручка по дням</h2>

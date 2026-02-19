@@ -24,4 +24,10 @@ export class CreateTenantDto {
   @Min(1)
   @Max(365)
   minRentalDays?: number
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  royaltyPercent?: number
 }

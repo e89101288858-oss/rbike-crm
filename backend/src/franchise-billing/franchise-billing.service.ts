@@ -2,8 +2,6 @@ import { Injectable } from '@nestjs/common'
 import { PaymentStatus } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 
-const ROYALTY_RATE = 0.05
-
 function toMonthRange(month?: string) {
   const now = new Date()
 
@@ -58,7 +56,8 @@ export class FranchiseBillingService {
       .map((tenant) => {
         const row = paidMap.get(tenant.id)
         const revenue = row?._sum.amount ?? 0
-        const royaltyDue = round2(revenue * ROYALTY_RATE)
+        const royaltyRate = Number(tenant.royaltyPercent ?? 5) / 100
+        const royaltyDue = round2(revenue * royaltyRate)
         return {
           franchiseeId: tenant.franchiseeId,
           franchiseeName: tenant.franchisee.name,
@@ -66,7 +65,8 @@ export class FranchiseBillingService {
           tenantName: tenant.name,
           paidPaymentsCount: row?._count._all ?? 0,
           revenueRub: round2(revenue),
-          royaltyRate: ROYALTY_RATE,
+          royaltyRate,
+          royaltyPercent: Number(tenant.royaltyPercent ?? 5),
           royaltyDueRub: royaltyDue,
         }
       })
@@ -103,12 +103,12 @@ export class FranchiseBillingService {
     return {
       month: monthLabel,
       currency: 'RUB',
-      royaltyRate: ROYALTY_RATE,
       summary: {
         tenants: tenantRows.length,
         franchisees: franchiseeRows.length,
         totalRevenueRub,
         totalRoyaltyDueRub,
+        royaltyEnabled: totalRoyaltyDueRub > 0,
       },
       franchisees: franchiseeRows,
       tenants: tenantRows,
@@ -150,25 +150,30 @@ export class FranchiseBillingService {
       .map((tenant) => {
         const row = paidMap.get(tenant.id)
         const revenue = row?._sum.amount ?? 0
+        const royaltyPercent = Number(tenant.royaltyPercent ?? 5)
+        const royaltyRate = royaltyPercent / 100
         return {
           tenantId: tenant.id,
           tenantName: tenant.name,
           paidPaymentsCount: row?._count._all ?? 0,
           revenueRub: round2(revenue),
-          royaltyRate: ROYALTY_RATE,
-          royaltyDueRub: round2(revenue * ROYALTY_RATE),
+          royaltyPercent,
+          royaltyRate,
+          royaltyDueRub: round2(revenue * royaltyRate),
         }
       })
       .filter((row) => (includeZero ? true : row.revenueRub > 0))
 
+    const totalRoyaltyDueRub = round2(tenantRows.reduce((sum, row) => sum + row.royaltyDueRub, 0))
+
     return {
       month: monthLabel,
       currency: 'RUB',
-      royaltyRate: ROYALTY_RATE,
       summary: {
         tenants: tenantRows.length,
         totalRevenueRub: round2(tenantRows.reduce((sum, row) => sum + row.revenueRub, 0)),
-        totalRoyaltyDueRub: round2(tenantRows.reduce((sum, row) => sum + row.royaltyDueRub, 0)),
+        totalRoyaltyDueRub,
+        royaltyEnabled: totalRoyaltyDueRub > 0,
       },
       tenants: tenantRows,
     }

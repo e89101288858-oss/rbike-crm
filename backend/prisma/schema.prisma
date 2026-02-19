@@ -106,6 +106,7 @@ model Tenant {
   franchisee     Franchisee @relation(fields: [franchiseeId], references: [id])
   dailyRateRub   Float      @default(500)
   minRentalDays  Int        @default(7)
+  royaltyPercent Float      @default(5)
 
   userTenants UserTenant[]
 

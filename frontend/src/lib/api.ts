@@ -106,6 +106,7 @@ export const api = {
       address?: string
       dailyRateRub?: number
       minRentalDays?: number
+      royaltyPercent?: number
     }>>('/my/tenants'),
 
   clients: (query = '') => request<Client[]>(`/clients${query ? `?${query}` : ''}`, undefined, true),
@@ -381,7 +382,7 @@ export const api = {
 
   adminCreateTenant: (
     franchiseeId: string,
-    payload: { name: string; address?: string; isActive?: boolean; dailyRateRub?: number; minRentalDays?: number },
+    payload: { name: string; address?: string; isActive?: boolean; dailyRateRub?: number; minRentalDays?: number; royaltyPercent?: number },
   ) =>
     request<any>(`/franchisees/${franchiseeId}/tenants`, {
       method: 'POST',
@@ -390,7 +391,7 @@ export const api = {
 
   adminUpdateTenant: (
     id: string,
-    payload: { name?: string; address?: string; isActive?: boolean; dailyRateRub?: number; minRentalDays?: number },
+    payload: { name?: string; address?: string; isActive?: boolean; dailyRateRub?: number; minRentalDays?: number; royaltyPercent?: number },
   ) =>
     request<any>(`/tenants/${id}`, {
       method: 'PATCH',
