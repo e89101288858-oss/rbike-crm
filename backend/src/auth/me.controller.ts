@@ -31,6 +31,7 @@ export class MeController {
           franchisee: { select: { name: true } },
           dailyRateRub: true,
           minRentalDays: true,
+          royaltyPercent: true,
         },
       })
     }
@@ -46,6 +47,7 @@ export class MeController {
           franchisee: { select: { name: true } },
           dailyRateRub: true,
           minRentalDays: true,
+          royaltyPercent: true,
         },
       })
     }
@@ -62,6 +64,7 @@ export class MeController {
             franchisee: { select: { name: true } },
             dailyRateRub: true,
             minRentalDays: true,
+            royaltyPercent: true,
           },
         },
       },

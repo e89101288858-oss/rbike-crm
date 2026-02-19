@@ -11,7 +11,6 @@ export default function FinancePage() {
   const router = useRouter()
   const [tenants, setTenants] = useState<any[]>([])
   const [role, setRole] = useState('')
-  const [royaltyReport, setRoyaltyReport] = useState<any>(null)
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [bikeId, setBikeId] = useState('')
@@ -24,6 +23,11 @@ export default function FinancePage() {
     () => Math.max(1, ...days.map((d: any) => Number(d.revenueRub ?? 0))),
     [days],
   )
+
+  const selectedTenant = tenants.find((t: any) => t.id === getTenantId())
+  const royaltyPercent = Number(selectedTenant?.royaltyPercent ?? 0)
+  const revenueTotal = days.reduce((sum: number, d: any) => sum + Number(d.revenueRub ?? 0), 0)
+  const royaltyDue = Math.round(revenueTotal * (royaltyPercent / 100) * 100) / 100
 
   async function load() {
     setError('')
@@ -56,11 +60,7 @@ export default function FinancePage() {
       if (!getTenantId() && myTenants.length > 0) setTenantId(myTenants[0].id)
       await load()
 
-      if (me.role === 'FRANCHISEE') {
-        const month = new Date().toISOString().slice(0, 7)
-        const rep = await api.franchiseMyMonthly(month)
-        setRoyaltyReport(rep)
-      }
+      // royalty summary for franchisee is calculated below from tenant-scoped revenue
     })()
   }, [router])
 
@@ -81,22 +81,26 @@ export default function FinancePage() {
 
       {error && <p className="alert">{error}</p>}
 
-      {role === 'FRANCHISEE' && !!royaltyReport?.summary?.royaltyEnabled && (
+      {role === 'FRANCHISEE' && royaltyPercent > 0 && (
         <section className="panel mb-4">
           <h2 className="mb-2 text-lg font-semibold">Роялти к перечислению</h2>
-          <div className="grid gap-2 md:grid-cols-3 text-sm">
+          <div className="grid gap-2 md:grid-cols-4 text-sm">
             <div className="kpi">
-              <div className="text-xs text-gray-500">Месяц</div>
-              <div className="mt-1 font-semibold">{royaltyReport?.month || '—'}</div>
+              <div className="text-xs text-gray-500">Точка</div>
+              <div className="mt-1 font-semibold">{selectedTenant?.name || '—'}</div>
             </div>
             <div className="kpi">
-              <div className="text-xs text-gray-500">Выручка</div>
-              <div className="mt-1 font-semibold">{formatRub(Number(royaltyReport?.summary?.totalRevenueRub || 0))}</div>
+              <div className="text-xs text-gray-500">Ставка роялти</div>
+              <div className="mt-1 font-semibold">{royaltyPercent}%</div>
+            </div>
+            <div className="kpi">
+              <div className="text-xs text-gray-500">Выручка за выбранный период</div>
+              <div className="mt-1 font-semibold">{formatRub(revenueTotal)}</div>
             </div>
             <div className="kpi">
               <div className="text-xs text-gray-500">К оплате роялти</div>
-              <div className="mt-1 font-semibold text-orange-300">{formatRub(Number(royaltyReport?.summary?.totalRoyaltyDueRub || 0))}</div>
-              {Number(royaltyReport?.summary?.totalRoyaltyDueRub || 0) <= 0 && <div className="mt-1 text-xs text-gray-500">За этот месяц начислений пока нет</div>}
+              <div className="mt-1 font-semibold text-orange-300">{formatRub(royaltyDue)}</div>
+              {royaltyDue <= 0 && <div className="mt-1 text-xs text-gray-500">За выбранный период начислений пока нет</div>}
             </div>
           </div>
         </section>
