@@ -35,6 +35,7 @@ const nav: NavGroup[] = [
     title: 'Аналитика',
     items: [
       { href: '/finance', label: 'Финансы', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
+      { href: '/expenses', label: 'Расходы', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
       { href: '/payments', label: 'Платежи', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
     ],
   },

@@ -82,6 +82,17 @@ export type RentalDocument = {
   filePath?: string
 }
 
+export type Expense = {
+  id: string
+  amountRub: number
+  category: string
+  notes?: string | null
+  spentAt: string
+  scopeType: 'SINGLE' | 'MULTI' | 'ALL_BIKES'
+  isActive?: boolean
+  bikes?: Array<{ bike: { id: string; code: string } }>
+}
+
 export const api = {
   login: (email: string, password: string) =>
     request<{ accessToken: string }>('/auth/login', {
@@ -213,6 +224,20 @@ export const api = {
   activeRentals: () => request<Rental[]>('/rentals/active', undefined, true),
 
   batteries: (query = '') => request<Battery[]>(`/batteries${query ? `?${query}` : ''}`, undefined, true),
+
+  expenses: (query = '') => request<Expense[]>(`/expenses${query ? `?${query}` : ''}`, undefined, true),
+  createExpense: (payload: {
+    amountRub: number
+    category: string
+    notes?: string
+    spentAt: string
+    scopeType: 'SINGLE' | 'MULTI' | 'ALL_BIKES'
+    bikeIds?: string[]
+  }) => request<Expense>('/expenses', { method: 'POST', body: JSON.stringify(payload) }, true),
+  updateExpense: (id: string, payload: Partial<Expense> & { bikeIds?: string[] }) =>
+    request<Expense>(`/expenses/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }, true),
+  deleteExpense: (id: string) => request<any>(`/expenses/${id}`, { method: 'DELETE' }, true),
+  restoreExpense: (id: string) => request<any>(`/expenses/${id}/restore`, { method: 'POST' }, true),
 
   createBattery: (payload: {
     code: string

@@ -63,6 +63,12 @@ enum BatteryStatus {
   LOST
 }
 
+enum ExpenseScopeType {
+  SINGLE
+  MULTI
+  ALL_BIKES
+}
+
 model User {
   id           String       @id @default(uuid())
   email        String       @unique
@@ -83,6 +89,7 @@ model User {
   auditLogs            AuditLog[]
   reviewedRegistrationRequests RegistrationRequest[] @relation("RegistrationReviewedBy")
   updatedContractTemplates ContractTemplate[]
+  createdExpenses Expense[] @relation("ExpenseCreatedBy")
 }
 
 model Franchisee {
@@ -119,6 +126,8 @@ model Tenant {
   payments      Payment[]
   repairs       Repair[]
   documents     Document[]
+  expenses      Expense[]
+  expenseBikes  ExpenseBike[]
   contractTemplate ContractTemplate?
 
   isActive  Boolean  @default(true)
@@ -152,6 +161,7 @@ model Bike {
   rentals Rental[]
   batteries Battery[]
   repairs Repair[]
+  expenseBikes ExpenseBike[]
 
   createdAt DateTime @default(now())
 
@@ -294,6 +304,44 @@ model Payment {
   @@index([tenantId, status])
   @@index([tenantId, dueAt])
   @@unique([rentalId, kind, periodStart])
+}
+
+model Expense {
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  amountRub Float
+  category  String
+  notes     String?
+  spentAt   DateTime
+  scopeType ExpenseScopeType @default(SINGLE)
+  isActive  Boolean @default(true)
+
+  createdById String?
+  createdBy   User? @relation("ExpenseCreatedBy", fields: [createdById], references: [id])
+
+  bikes     ExpenseBike[]
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, spentAt])
+  @@index([tenantId, category])
+  @@index([tenantId, isActive])
+}
+
+model ExpenseBike {
+  id        String @id @default(uuid())
+  tenantId  String
+  tenant    Tenant @relation(fields: [tenantId], references: [id])
+  expenseId String
+  expense   Expense @relation(fields: [expenseId], references: [id])
+  bikeId    String
+  bike      Bike @relation(fields: [bikeId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([expenseId, bikeId])
+  @@index([tenantId, bikeId])
+  @@index([tenantId, expenseId])
 }
 
 model Repair {
