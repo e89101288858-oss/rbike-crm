@@ -17,6 +17,7 @@ export default function FinancePage() {
   const [bikes, setBikes] = useState<any[]>([])
   const [days, setDays] = useState<any[]>([])
   const [byBike, setByBike] = useState<any[]>([])
+  const [expenses, setExpenses] = useState<any[]>([])
   const [error, setError] = useState('')
 
   const maxDayRevenue = useMemo(
@@ -29,6 +30,33 @@ export default function FinancePage() {
   const revenueTotal = days.reduce((sum: number, d: any) => sum + Number(d.revenueRub ?? 0), 0)
   const royaltyDue = Math.round(revenueTotal * (royaltyPercent / 100) * 100) / 100
 
+  const expenseByBike = useMemo(() => {
+    const map = new Map<string, number>()
+    const allBikeIds = bikes.map((b: any) => b.id)
+
+    for (const e of expenses) {
+      const amount = Number(e.amountRub ?? 0)
+      if (!Number.isFinite(amount) || amount <= 0) continue
+
+      if (e.scopeType === 'ALL_BIKES') {
+        if (!allBikeIds.length) continue
+        const share = amount / allBikeIds.length
+        for (const id of allBikeIds) map.set(id, (map.get(id) ?? 0) + share)
+        continue
+      }
+
+      const ids = (e.bikes ?? []).map((x: any) => x?.bike?.id).filter(Boolean)
+      if (!ids.length) continue
+      const share = amount / ids.length
+      for (const id of ids) map.set(id, (map.get(id) ?? 0) + share)
+    }
+
+    return map
+  }, [expenses, bikes])
+
+  const totalExpensesRub = Math.round(expenses.reduce((sum: number, e: any) => sum + Number(e.amountRub ?? 0), 0) * 100) / 100
+  const netTotalRub = Math.round((revenueTotal - totalExpensesRub) * 100) / 100
+
   async function load() {
     setError('')
     try {
@@ -38,14 +66,16 @@ export default function FinancePage() {
       const qb = new URLSearchParams(q)
       if (bikeId) qb.set('bikeId', bikeId)
 
-      const [bikesRes, daysRes, bikeRes] = await Promise.all([
+      const [bikesRes, daysRes, bikeRes, expensesRes] = await Promise.all([
         api.bikes(),
         api.revenueByDays(q.toString()),
         api.revenueByBike(qb.toString()),
+        api.expenses(q.toString()),
       ])
       setBikes(bikesRes)
       setDays(daysRes.days ?? [])
       setByBike(bikeRes.bikes ?? [])
+      setExpenses(expensesRes ?? [])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки финансов')
     }
@@ -80,6 +110,24 @@ export default function FinancePage() {
       </div>
 
       {error && <p className="alert">{error}</p>}
+
+      <section className="panel mb-4">
+        <h2 className="mb-2 text-lg font-semibold">Итоги за период</h2>
+        <div className="grid gap-2 md:grid-cols-3 text-sm">
+          <div className="kpi">
+            <div className="text-xs text-gray-500">Выручка</div>
+            <div className="mt-1 font-semibold">{formatRub(revenueTotal)}</div>
+          </div>
+          <div className="kpi">
+            <div className="text-xs text-gray-500">Расходы</div>
+            <div className="mt-1 font-semibold">{formatRub(totalExpensesRub)}</div>
+          </div>
+          <div className="kpi">
+            <div className="text-xs text-gray-500">Чистый результат</div>
+            <div className={`mt-1 font-semibold ${netTotalRub < 0 ? 'text-rose-300' : 'text-emerald-300'}`}>{formatRub(netTotalRub)}</div>
+          </div>
+        </div>
+      </section>
 
       {role === 'FRANCHISEE' && royaltyPercent > 0 && (
         <section className="panel mb-4">
@@ -128,27 +176,35 @@ export default function FinancePage() {
       </section>
 
       <section className="panel">
-        <h2 className="mb-3 text-lg font-semibold">Выручка по велосипедам</h2>
+        <h2 className="mb-3 text-lg font-semibold">Финансы по велосипедам</h2>
         <div className="table-wrap">
           <table className="table table-sticky">
             <thead>
               <tr>
                 <th>Велосипед</th>
                 <th>Выручка</th>
+                <th>Расходы</th>
+                <th>Чистый результат</th>
                 <th>Платежей</th>
               </tr>
             </thead>
             <tbody>
-              {byBike.map((b: any) => (
-                <tr key={b.bikeId}>
-                  <td>{b.bikeCode}</td>
-                  <td>{formatRub(b.revenueRub)}</td>
-                  <td>{b.payments}</td>
-                </tr>
-              ))}
+              {byBike.map((b: any) => {
+                const exp = Math.round((expenseByBike.get(b.bikeId) ?? 0) * 100) / 100
+                const net = Math.round((Number(b.revenueRub || 0) - exp) * 100) / 100
+                return (
+                  <tr key={b.bikeId}>
+                    <td>{b.bikeCode}</td>
+                    <td>{formatRub(b.revenueRub)}</td>
+                    <td>{formatRub(exp)}</td>
+                    <td className={net < 0 ? 'text-rose-300' : 'text-emerald-300'}>{formatRub(net)}</td>
+                    <td>{b.payments}</td>
+                  </tr>
+                )
+              })}
               {!byBike.length && (
                 <tr>
-                  <td colSpan={3} className="text-center text-gray-600">Нет данных по велосипедам</td>
+                  <td colSpan={5} className="text-center text-gray-600">Нет данных по велосипедам</td>
                 </tr>
               )}
             </tbody>
