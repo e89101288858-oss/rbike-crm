@@ -30,6 +30,7 @@ export default function RentalsPage() {
   const [replaceToMap, setReplaceToMap] = useState<Record<string, string>>({})
   const [dailyRateMap, setDailyRateMap] = useState<Record<string, string>>({})
   const [journalMap, setJournalMap] = useState<Record<string, any[]>>({})
+  const [paymentsMap, setPaymentsMap] = useState<Record<string, any[]>>({})
   const [docsMap, setDocsMap] = useState<Record<string, RentalDocument[]>>({})
   const [docHtmlMap, setDocHtmlMap] = useState<Record<string, string>>({})
   const [dailyRateRub, setDailyRateRub] = useState(500)
@@ -208,6 +209,16 @@ export default function RentalsPage() {
     }
   }
 
+  async function loadRentalPayments(rentalId: string) {
+    setError('')
+    try {
+      const data = await api.payments(`rentalId=${encodeURIComponent(rentalId)}`)
+      setPaymentsMap((prev) => ({ ...prev, [rentalId]: data }))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка загрузки истории платежей')
+    }
+  }
+
   async function openDocument(documentId: string) {
     setError('')
     try {
@@ -288,6 +299,12 @@ export default function RentalsPage() {
     const t = setTimeout(() => setError(''), 2600)
     return () => clearTimeout(t)
   }, [error])
+
+  useEffect(() => {
+    if (!selectedRentalId) return
+    if (paymentsMap[selectedRentalId]) return
+    void loadRentalPayments(selectedRentalId)
+  }, [selectedRentalId, paymentsMap])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -525,6 +542,7 @@ export default function RentalsPage() {
                   </>
                 )}
                 <button className="btn" onClick={() => loadJournal(r.id)}>Журнал</button>
+                <button className="btn" onClick={() => loadRentalPayments(r.id)}>Платежи</button>
                 <button className="btn" onClick={() => generateContract(r.id)}>Сформировать договор</button>
                 {r.status === 'ACTIVE' && <button className="btn border-red-500/60 text-red-300" onClick={() => { setCloseModalRentalId(r.id); setCloseReason('') }}>Завершить досрочно</button>}
                 {r.status === 'CLOSED' && role === 'OWNER' && <button className="btn border-red-500/60 text-red-300" onClick={() => setDeleteModalRentalId(r.id)}>Удалить аренду</button>}
@@ -560,6 +578,33 @@ export default function RentalsPage() {
                         <button className="btn" onClick={() => replaceBatteryInRental(r.id)}>Заменить</button>
                       </div>
                     </div>
+                  )}
+                </div>
+              )}
+
+              {Array.isArray(paymentsMap[r.id]) && (
+                <div className="mt-3 rounded border p-2">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <div className="font-medium">История платежей</div>
+                    <button className="btn" onClick={() => loadRentalPayments(r.id)}>Обновить</button>
+                  </div>
+                  {!!paymentsMap[r.id]?.length ? (
+                    <div className="space-y-1 text-xs">
+                      {paymentsMap[r.id]
+                        .slice()
+                        .sort((a: any, b: any) => String(b.createdAt || b.dueAt || '').localeCompare(String(a.createdAt || a.dueAt || '')))
+                        .map((p: any) => (
+                          <div key={p.id} className="rounded border border-[#2f3136] bg-[#181a1f] p-2">
+                            <div className="font-medium">{formatRub(Number(p.amount || 0))} · {p.status === 'PAID' ? 'Оплачен' : 'План'}</div>
+                            <div className="text-gray-400">Тип: {p.kind || '—'}</div>
+                            <div className="text-gray-400">Срок: {formatDate(p.dueAt)}</div>
+                            <div className="text-gray-400">Оплачен: {formatDate(p.paidAt)}</div>
+                            <div className="text-gray-500">Период: {formatDate(p.periodStart)} → {formatDate(p.periodEnd)}</div>
+                          </div>
+                        ))}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-gray-500">По этой аренде пока нет платежей</div>
                   )}
                 </div>
               )}
