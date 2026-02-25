@@ -123,7 +123,7 @@ export default function FinancePage() {
             <div className="mt-1 font-semibold">{formatRub(totalExpensesRub)}</div>
           </div>
           <div className="kpi">
-            <div className="text-xs text-gray-500">Чистый результат</div>
+            <div className="text-xs text-gray-500">Прибыль</div>
             <div className={`mt-1 font-semibold ${netTotalRub < 0 ? 'text-rose-300' : 'text-emerald-300'}`}>{formatRub(netTotalRub)}</div>
           </div>
         </div>
@@ -184,7 +184,7 @@ export default function FinancePage() {
                 <th>Велосипед</th>
                 <th>Выручка</th>
                 <th>Расходы</th>
-                <th>Чистый результат</th>
+                <th>Прибыль</th>
                 <th>Платежей</th>
               </tr>
             </thead>
