@@ -31,6 +31,7 @@ export default function RentalsPage() {
   const [dailyRateMap, setDailyRateMap] = useState<Record<string, string>>({})
   const [journalMap, setJournalMap] = useState<Record<string, any[]>>({})
   const [paymentsMap, setPaymentsMap] = useState<Record<string, any[]>>({})
+  const [paymentsPageMap, setPaymentsPageMap] = useState<Record<string, number>>({})
   const [docsMap, setDocsMap] = useState<Record<string, RentalDocument[]>>({})
   const [docHtmlMap, setDocHtmlMap] = useState<Record<string, string>>({})
   const [dailyRateRub, setDailyRateRub] = useState(500)
@@ -214,6 +215,7 @@ export default function RentalsPage() {
     try {
       const data = await api.payments(`rentalId=${encodeURIComponent(rentalId)}`)
       setPaymentsMap((prev) => ({ ...prev, [rentalId]: data }))
+      setPaymentsPageMap((prev) => ({ ...prev, [rentalId]: 1 }))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки истории платежей')
     }
@@ -542,7 +544,6 @@ export default function RentalsPage() {
                   </>
                 )}
                 <button className="btn" onClick={() => loadJournal(r.id)}>Журнал</button>
-                <button className="btn" onClick={() => loadRentalPayments(r.id)}>Платежи</button>
                 <button className="btn" onClick={() => generateContract(r.id)}>Сформировать договор</button>
                 {r.status === 'ACTIVE' && <button className="btn border-red-500/60 text-red-300" onClick={() => { setCloseModalRentalId(r.id); setCloseReason('') }}>Завершить досрочно</button>}
                 {r.status === 'CLOSED' && role === 'OWNER' && <button className="btn border-red-500/60 text-red-300" onClick={() => setDeleteModalRentalId(r.id)}>Удалить аренду</button>}
@@ -582,32 +583,49 @@ export default function RentalsPage() {
                 </div>
               )}
 
-              {Array.isArray(paymentsMap[r.id]) && (
-                <div className="mt-3 rounded border p-2">
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <div className="font-medium">История платежей</div>
-                    <button className="btn" onClick={() => loadRentalPayments(r.id)}>Обновить</button>
-                  </div>
-                  {!!paymentsMap[r.id]?.length ? (
-                    <div className="space-y-1 text-xs">
-                      {paymentsMap[r.id]
-                        .slice()
-                        .sort((a: any, b: any) => String(b.createdAt || b.dueAt || '').localeCompare(String(a.createdAt || a.dueAt || '')))
-                        .map((p: any) => (
-                          <div key={p.id} className="rounded border border-[#2f3136] bg-[#181a1f] p-2">
-                            <div className="font-medium">{formatRub(Number(p.amount || 0))} · {p.status === 'PAID' ? 'Оплачен' : 'План'}</div>
-                            <div className="text-gray-400">Тип: {p.kind || '—'}</div>
-                            <div className="text-gray-400">Срок: {formatDate(p.dueAt)}</div>
-                            <div className="text-gray-400">Оплачен: {formatDate(p.paidAt)}</div>
-                            <div className="text-gray-500">Период: {formatDate(p.periodStart)} → {formatDate(p.periodEnd)}</div>
+              <div className="mt-3 rounded border p-2">
+                <div className="mb-2 font-medium">История платежей</div>
+                {!Array.isArray(paymentsMap[r.id]) ? (
+                  <div className="text-xs text-gray-500">Загрузка…</div>
+                ) : paymentsMap[r.id].length === 0 ? (
+                  <div className="text-xs text-gray-500">По этой аренде пока нет платежей</div>
+                ) : (
+                  (() => {
+                    const sorted = paymentsMap[r.id]
+                      .slice()
+                      .sort((a: any, b: any) => String(b.createdAt || b.dueAt || '').localeCompare(String(a.createdAt || a.dueAt || '')))
+                    const pageSize = 10
+                    const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
+                    const currentPage = Math.min(paymentsPageMap[r.id] || 1, totalPages)
+                    const start = (currentPage - 1) * pageSize
+                    const items = sorted.slice(start, start + pageSize)
+
+                    return (
+                      <>
+                        <div className="space-y-1 text-xs">
+                          {items.map((p: any) => (
+                            <div key={p.id} className="rounded border border-[#2f3136] bg-[#181a1f] p-2">
+                              <div className="font-medium">{formatRub(Number(p.amount || 0))} · {p.status === 'PAID' ? 'Оплачен' : 'План'}</div>
+                              <div className="text-gray-400">Тип: {p.kind || '—'}</div>
+                              <div className="text-gray-400">Срок: {formatDate(p.dueAt)}</div>
+                              <div className="text-gray-400">Оплачен: {formatDate(p.paidAt)}</div>
+                              <div className="text-gray-500">Период: {formatDate(p.periodStart)} → {formatDate(p.periodEnd)}</div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {sorted.length > pageSize && (
+                          <div className="mt-2 flex items-center justify-end gap-2 text-xs text-gray-400">
+                            <button className="btn" disabled={currentPage <= 1} onClick={() => setPaymentsPageMap((prev) => ({ ...prev, [r.id]: Math.max(1, currentPage - 1) }))}>Назад</button>
+                            <span>Стр. {currentPage} / {totalPages}</span>
+                            <button className="btn" disabled={currentPage >= totalPages} onClick={() => setPaymentsPageMap((prev) => ({ ...prev, [r.id]: Math.min(totalPages, currentPage + 1) }))}>Вперед</button>
                           </div>
-                        ))}
-                    </div>
-                  ) : (
-                    <div className="text-xs text-gray-500">По этой аренде пока нет платежей</div>
-                  )}
-                </div>
-              )}
+                        )}
+                      </>
+                    )
+                  })()
+                )}
+              </div>
 
               {!!docsMap[r.id]?.length && (
                 <div className="mt-3 rounded border p-2">
