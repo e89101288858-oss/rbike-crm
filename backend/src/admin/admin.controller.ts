@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
@@ -245,6 +246,7 @@ export class AdminController {
         dailyRateRub: dto.dailyRateRub ?? 500,
         minRentalDays: dto.minRentalDays ?? 7,
         royaltyPercent: dto.royaltyPercent ?? 5,
+        mode: dto.mode ?? 'FRANCHISE',
       },
     })
     await this.audit(user.userId, 'CREATE_TENANT', 'TENANT', created.id, {
@@ -258,7 +260,10 @@ export class AdminController {
   }
 
   @Get('franchisees/:franchiseeId/tenants')
-  async listTenants(@Param('franchiseeId') franchiseeId: string) {
+  async listTenants(
+    @Param('franchiseeId') franchiseeId: string,
+    @Query('mode') mode?: 'FRANCHISE' | 'SAAS',
+  ) {
     const franchisee = await this.prisma.franchisee.findUnique({
       where: { id: franchiseeId },
     })
@@ -266,8 +271,21 @@ export class AdminController {
       throw new NotFoundException('Franchisee not found')
     }
     return this.prisma.tenant.findMany({
-      where: { franchiseeId },
+      where: { franchiseeId, ...(mode ? { mode } : {}) },
       orderBy: { createdAt: 'asc' },
+    })
+  }
+
+  @Get('admin/saas/tenants')
+  async listSaasTenants() {
+    return this.prisma.tenant.findMany({
+      where: { mode: 'SAAS' },
+      orderBy: { createdAt: 'asc' },
+      include: {
+        franchisee: {
+          select: { id: true, name: true, companyName: true, city: true },
+        },
+      },
     })
   }
 
@@ -312,6 +330,7 @@ export class AdminController {
         ...(dto.dailyRateRub !== undefined && { dailyRateRub: dto.dailyRateRub }),
         ...(dto.minRentalDays !== undefined && { minRentalDays: Math.trunc(dto.minRentalDays) }),
         ...(dto.royaltyPercent !== undefined && { royaltyPercent: dto.royaltyPercent }),
+        ...(dto.mode !== undefined && { mode: dto.mode }),
       },
     })
     await this.audit(user.userId, 'UPDATE_TENANT', 'TENANT', id, {
@@ -322,6 +341,7 @@ export class AdminController {
         dailyRateRub: tenant.dailyRateRub,
         minRentalDays: tenant.minRentalDays,
         royaltyPercent: tenant.royaltyPercent,
+        mode: tenant.mode,
       },
       to: {
         name: updated.name,
@@ -330,6 +350,7 @@ export class AdminController {
         dailyRateRub: updated.dailyRateRub,
         minRentalDays: updated.minRentalDays,
         royaltyPercent: updated.royaltyPercent,
+        mode: updated.mode,
       },
     })
     return updated

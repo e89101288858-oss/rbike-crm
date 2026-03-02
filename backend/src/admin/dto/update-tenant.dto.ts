@@ -1,4 +1,5 @@
-import { IsBoolean, IsNumber, IsOptional, IsString, Max, Min, MinLength } from 'class-validator'
+import { IsBoolean, IsEnum, IsNumber, IsOptional, IsString, Max, Min, MinLength } from 'class-validator'
+import { TenantModeDto } from './create-tenant.dto'
 
 export class UpdateTenantDto {
   @IsOptional()
@@ -31,4 +32,8 @@ export class UpdateTenantDto {
   @Min(0)
   @Max(100)
   royaltyPercent?: number
+
+  @IsOptional()
+  @IsEnum(TenantModeDto)
+  mode?: TenantModeDto
 }

@@ -69,6 +69,11 @@ enum ExpenseScopeType {
   ALL_BIKES
 }
 
+enum TenantMode {
+  FRANCHISE
+  SAAS
+}
+
 model User {
   id           String       @id @default(uuid())
   email        String       @unique
@@ -114,6 +119,7 @@ model Tenant {
   dailyRateRub   Float      @default(500)
   minRentalDays  Int        @default(7)
   royaltyPercent Float      @default(5)
+  mode         TenantMode   @default(FRANCHISE)
 
   userTenants UserTenant[]
 
