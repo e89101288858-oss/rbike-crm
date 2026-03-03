@@ -52,6 +52,7 @@ export default function LoginPage() {
       const me = await api.me()
       const tenants = await api.myTenants()
       if (tenants.length > 0) setTenantId(tenants[0].id)
+      if (typeof window !== 'undefined') localStorage.removeItem('rbike_demo')
 
       router.push(me.role === 'OWNER' ? '/owner' : '/dashboard')
     } catch (err) {
@@ -71,6 +72,7 @@ export default function LoginPage() {
       setTenantId(res.tenantId)
       if (typeof window !== 'undefined') {
         localStorage.setItem('rbike_onboarding', '1')
+        localStorage.setItem('rbike_demo', '1')
       }
       router.push('/dashboard?demo=1')
     } catch (err) {
@@ -102,6 +104,7 @@ export default function LoginPage() {
       setTenantId(res.tenantId)
       if (typeof window !== 'undefined') {
         localStorage.setItem('rbike_onboarding', '1')
+        localStorage.removeItem('rbike_demo')
       }
 
       setRegFullName('')

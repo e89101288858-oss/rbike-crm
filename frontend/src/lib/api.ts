@@ -196,6 +196,11 @@ export const api = {
       method: 'PATCH',
     }, true),
 
+  endDemoSession: () =>
+    request<any>('/my/demo/end', {
+      method: 'PATCH',
+    }, true),
+
   clients: (query = '') => request<Client[]>(`/clients${query ? `?${query}` : ''}`, undefined, true),
 
   createClient: (payload: {

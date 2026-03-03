@@ -3,8 +3,9 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { clearTenantId, clearToken, getTenantId, setTenantId } from '@/lib/auth'
+import { clearTenantId, clearToken, getTenantId, getToken, setTenantId } from '@/lib/auth'
 import { api } from '@/lib/api'
+import { API_BASE } from '@/lib/config'
 
 type TenantOption = { id: string; name: string; franchisee?: { name: string } }
 type UserRole = 'OWNER' | 'FRANCHISEE' | 'MANAGER' | 'MECHANIC' | ''
@@ -75,6 +76,31 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
         setRole('')
       }
     })()
+  }, [])
+
+  useEffect(() => {
+    const isDemo = typeof window !== 'undefined' && localStorage.getItem('rbike_demo') === '1'
+    if (!isDemo) return
+
+    const notifyDemoEnd = () => {
+      const token = getToken()
+      const currentTenantId = getTenantId()
+      if (!token || !currentTenantId) return
+
+      void fetch(`${API_BASE}/my/demo/end`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          'X-Tenant-Id': currentTenantId,
+        },
+        keepalive: true,
+      }).catch(() => {})
+    }
+
+    const onPageHide = () => notifyDemoEnd()
+    window.addEventListener('pagehide', onPageHide)
+    return () => window.removeEventListener('pagehide', onPageHide)
   }, [])
 
   const nav = role === 'OWNER' ? ownerNav : opsNav
@@ -152,7 +178,13 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
 
         <button
           className="btn"
-          onClick={() => {
+          onClick={async () => {
+            try {
+              if (typeof window !== 'undefined' && localStorage.getItem('rbike_demo') === '1') {
+                await api.endDemoSession()
+                localStorage.removeItem('rbike_demo')
+              }
+            } catch {}
             clearToken()
             clearTenantId()
             router.push('/login')
