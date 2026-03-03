@@ -85,7 +85,7 @@ export default function LoginPage() {
 
   return (
     <main className="page max-w-md">
-      <h1 className="mb-4 text-3xl font-bold">RBike CRM</h1>
+      <h1 className="mb-4 text-3xl font-bold">rbCRM</h1>
       <p className="mb-4 text-sm text-gray-600">Вход в систему</p>
 
       <div className="mb-3 flex gap-2">

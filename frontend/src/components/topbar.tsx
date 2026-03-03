@@ -20,7 +20,7 @@ const ownerNav: NavGroup[] = [
     items: [
       { href: '/owner', label: 'Дашборд', roles: ['OWNER'] },
       { href: '/owner/franchisees', label: 'Франчайзи', roles: ['OWNER'] },
-      { href: '/owner/saas', label: 'Подписка', roles: ['OWNER'] },
+      { href: '/owner/saas', label: 'SaaS', roles: ['OWNER'] },
       { href: '/owner/settings', label: 'Настройки', roles: ['OWNER'] },
     ],
   },
@@ -91,7 +91,7 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
 
       <aside className={`sidebar ${mobileOpen ? 'sidebar-open' : ''}`}>
         <div className="sidebar-head">
-          <div className="text-lg font-bold">RBike CRM</div>
+          <div className="text-lg font-bold">rbCRM</div>
         </div>
 
         <nav className="sidebar-nav">

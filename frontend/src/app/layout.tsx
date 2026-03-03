@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'RBike CRM',
+  title: 'rbCRM',
   description: 'ERP/CRM система для управления прокатом и франшизой электровелосипедов',
 };
 

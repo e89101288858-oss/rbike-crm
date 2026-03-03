@@ -97,7 +97,7 @@ export default function OwnerSaasDetailsPage() {
           saasMaxActiveRentals: found.saasMaxActiveRentals ? String(found.saasMaxActiveRentals) : '',
         })
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Ошибка загрузки клиента подписки')
+        setError(err instanceof Error ? err.message : 'Ошибка загрузки SaaS клиента')
       }
     })()
   }, [router, params, month, period, quarter, year])
@@ -116,7 +116,7 @@ export default function OwnerSaasDetailsPage() {
       })
       router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка сохранения клиента подписки')
+      setError(err instanceof Error ? err.message : 'Ошибка сохранения SaaS клиента')
     }
   }
 
@@ -124,7 +124,7 @@ export default function OwnerSaasDetailsPage() {
     <main className="page with-sidebar">
       <Topbar />
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold">Клиент подписки: {tenant?.name || '—'}</h1>
+        <h1 className="text-2xl font-bold">SaaS клиент: {tenant?.name || '—'}</h1>
         <div className="flex items-center gap-2">
           <select className="select" value={period} onChange={(e) => setPeriod(e.target.value as 'MONTH' | 'QUARTER' | 'YEAR')}>
             <option value="MONTH">Месяц</option>
@@ -152,7 +152,7 @@ export default function OwnerSaasDetailsPage() {
         <div className="kpi"><div className="text-xs text-gray-500">План</div><div className="mt-1 text-2xl font-semibold">{tenant?.saasPlan || '—'}</div></div>
         <div className="kpi"><div className="text-xs text-gray-500">Статус</div><div className="mt-1 text-2xl font-semibold">{tenant?.saasSubscriptionStatus || '—'}</div></div>
         <div className="kpi"><div className="text-xs text-gray-500">Выручка (месяц)</div><div className="mt-1 text-2xl font-semibold">{formatRub(Number(tenantBilling?.revenueRub || 0))}</div></div>
-        <div className="kpi"><div className="text-xs text-gray-500">Ранг в подписке</div><div className="mt-1 text-2xl font-semibold">{saasRank ? `#${saasRank}` : '—'}</div></div>
+        <div className="kpi"><div className="text-xs text-gray-500">Ранг в SaaS</div><div className="mt-1 text-2xl font-semibold">{saasRank ? `#${saasRank}` : '—'}</div></div>
       </section>
 
       <section className="panel text-sm">
