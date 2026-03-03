@@ -60,31 +60,41 @@ function inRange(dateRaw: string | null | undefined, from: Date, to: Date) {
   return d >= from && d <= to
 }
 
-function aggregateRevenue(days: Array<{ date: string; revenueRub: number }>, mode: ChartMode) {
+function aggregateRevenue(days: Array<{ date: string; revenueRub: number }>, mode: ChartMode, from: Date, to: Date) {
+  const byDate = new Map<string, number>()
+  for (const d of days) {
+    const k = String(d.date).slice(0, 10)
+    byDate.set(k, (byDate.get(k) || 0) + Number(d.revenueRub || 0))
+  }
+
   if (mode === 'day') {
-    return days.map((d) => ({ label: d.date.slice(5), value: Number(d.revenueRub || 0) }))
+    const key = from.toISOString().slice(0, 10)
+    return [{ label: key.slice(5), value: Number(byDate.get(key) || 0) }]
   }
 
   if (mode === 'month') {
-    const weekMap = new Map<number, number>()
-    for (const d of days) {
-      const day = Number(d.date.slice(8, 10))
-      const weekNo = Math.floor((day - 1) / 7) + 1
-      weekMap.set(weekNo, (weekMap.get(weekNo) || 0) + Number(d.revenueRub || 0))
+    const year = from.getFullYear()
+    const month = from.getMonth()
+    const daysInMonth = new Date(year, month + 1, 0).getDate()
+    const rows: Array<{ label: string; value: number }> = []
+    for (let day = 1; day <= daysInMonth; day++) {
+      const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+      rows.push({ label: String(day), value: Number(byDate.get(key) || 0) })
     }
-    return Array.from(weekMap.entries())
-      .sort((a, b) => a[0] - b[0])
-      .map(([weekNo, value]) => ({ label: `Нед ${weekNo}`, value }))
+    return rows
   }
 
-  const monthMap = new Map<string, number>()
-  for (const d of days) {
-    const key = d.date.slice(0, 7)
-    monthMap.set(key, (monthMap.get(key) || 0) + Number(d.revenueRub || 0))
+  const rows: Array<{ label: string; value: number }> = []
+  const year = from.getFullYear()
+  for (let m = 0; m < 12; m++) {
+    const key = `${year}-${String(m + 1).padStart(2, '0')}`
+    let value = 0
+    for (const [d, v] of byDate.entries()) {
+      if (d.startsWith(key)) value += Number(v || 0)
+    }
+    rows.push({ label: key.slice(5), value })
   }
-  return Array.from(monthMap.entries())
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([key, value]) => ({ label: key, value }))
+  return rows
 }
 
 function tabClass(active: boolean) {
@@ -218,7 +228,7 @@ export default function DashboardPage() {
         )
         if (cancelled) return
 
-        const rows = aggregateRevenue(rev.days ?? [], chartMode)
+        const rows = aggregateRevenue(rev.days ?? [], chartMode, chartRange.from, chartRange.to)
         setChartRows(rows)
         setChartRevenueTotal(Number(rev.totalRevenueRub || 0))
 
@@ -306,27 +316,37 @@ export default function DashboardPage() {
         setRevenueTotalBlock(Number(rev.totalRevenueRub || 0))
 
         const days = rev.days ?? []
+        const byDate = new Map<string, number>()
+        for (const d of days) {
+          const key = String(d.date).slice(0, 10)
+          byDate.set(key, (byDate.get(key) || 0) + Number(d.revenueRub || 0))
+        }
+
         let rows: Array<{ label: string; value: number }> = []
         if (revenueMode === 'day') {
-          const value = days.reduce((s: number, d: any) => s + Number(d.revenueRub || 0), 0)
-          rows = [{ label: 'Сегодня', value }]
+          const key = new Date().toISOString().slice(0, 10)
+          rows = [{ label: key.slice(5), value: Number(byDate.get(key) || 0) }]
         } else if (revenueMode === 'week') {
-          rows = days.map((d: any) => ({ label: d.date.slice(5), value: Number(d.revenueRub || 0) }))
+          rows = days.map((d: any) => ({ label: String(d.date).slice(5), value: Number(d.revenueRub || 0) }))
         } else if (revenueMode === 'month') {
-          const weekMap = new Map<number, number>()
-          for (const d of days) {
-            const day = Number(String(d.date).slice(8, 10))
-            const weekNo = Math.floor((day - 1) / 7) + 1
-            weekMap.set(weekNo, (weekMap.get(weekNo) || 0) + Number(d.revenueRub || 0))
+          const now = new Date()
+          const year = now.getFullYear()
+          const month = now.getMonth()
+          const daysInMonth = new Date(year, month + 1, 0).getDate()
+          for (let day = 1; day <= daysInMonth; day++) {
+            const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+            rows.push({ label: String(day), value: Number(byDate.get(key) || 0) })
           }
-          rows = Array.from(weekMap.entries()).sort((a, b) => a[0] - b[0]).map(([k, v]) => ({ label: `Нед ${k}`, value: v }))
         } else {
-          const monthMap = new Map<string, number>()
-          for (const d of days) {
-            const key = String(d.date).slice(0, 7)
-            monthMap.set(key, (monthMap.get(key) || 0) + Number(d.revenueRub || 0))
+          const year = new Date().getFullYear()
+          for (let m = 0; m < 12; m++) {
+            const prefix = `${year}-${String(m + 1).padStart(2, '0')}`
+            let value = 0
+            for (const [d, v] of byDate.entries()) {
+              if (d.startsWith(prefix)) value += Number(v || 0)
+            }
+            rows.push({ label: prefix.slice(5), value })
           }
-          rows = Array.from(monthMap.entries()).sort((a, b) => a[0].localeCompare(b[0])).map(([k, v]) => ({ label: k, value: v }))
         }
         setRevenueRows(rows)
       } catch (err) {
@@ -479,7 +499,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="relative rounded-md border border-white/10 bg-[#181a1f] p-4">
-              <div className="grid h-56 grid-cols-12 items-end gap-3">
+              <div className="grid h-56 items-end gap-3" style={{ gridTemplateColumns: `repeat(${Math.max(chartRows.length, 1)}, minmax(0, 1fr))` }}>
                 {chartRows.map((r) => {
                   const h = `${Math.max(8, Math.round((r.value / maxBar) * 100))}%`
                   return (
@@ -558,7 +578,7 @@ export default function DashboardPage() {
               <button className={tabClass(revenueMode === 'year')} onClick={() => setRevenueMode('year')}>Год</button>
             </div>
             <div className="rounded-md border border-white/10 bg-[#181a1f] p-3">
-              <div className="grid h-28 grid-cols-12 items-end gap-2">
+              <div className="grid h-28 items-end gap-2" style={{ gridTemplateColumns: `repeat(${Math.max(revenueRows.length, 1)}, minmax(0, 1fr))` }}>
                 {revenueRows.map((r) => {
                   const h = `${Math.max(8, Math.round((r.value / maxRevenueBar) * 100))}%`
                   return (
