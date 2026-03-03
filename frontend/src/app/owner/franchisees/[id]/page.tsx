@@ -32,9 +32,15 @@ export default function OwnerFranchiseeDetailsPage() {
           api.adminTenantsByFranchisee(params.id),
         ])
         const found = frs.find((f: any) => f.id === params.id)
-        setFranchisee(found || null)
+        const franchiseTenants = (ts || []).filter((t: any) => t.mode === 'FRANCHISE')
+
+        if (!found || franchiseTenants.length === 0) {
+          return router.replace('/owner/franchisees')
+        }
+
+        setFranchisee(found)
         setBilling((ownerBilling?.franchisees || []).find((x: any) => x.franchiseeId === params.id) || null)
-        setTenants(ts)
+        setTenants(franchiseTenants)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Ошибка загрузки франчайзи')
       }

@@ -26,14 +26,16 @@ export default function OwnerSaasDetailsPage() {
 
         const rows = await api.adminSaasTenants()
         const found = rows.find((x: any) => x.id === params.id)
-        setTenant(found || null)
-        setEdit(found ? {
+        if (!found) return router.replace('/owner/saas')
+
+        setTenant(found)
+        setEdit({
           saasPlan: found.saasPlan || 'STARTER',
           saasSubscriptionStatus: found.saasSubscriptionStatus || 'TRIAL',
           saasTrialEndsAt: toDateInput(found.saasTrialEndsAt),
           saasMaxBikes: found.saasMaxBikes ? String(found.saasMaxBikes) : '',
           saasMaxActiveRentals: found.saasMaxActiveRentals ? String(found.saasMaxActiveRentals) : '',
-        } : null)
+        })
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Ошибка загрузки SaaS tenant')
       }
