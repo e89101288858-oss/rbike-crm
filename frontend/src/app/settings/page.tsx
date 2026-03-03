@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'
@@ -27,6 +27,19 @@ export default function TenantSettingsPage() {
 
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+
+  const passwordStrength = useMemo(() => {
+    const v = passwordForm.newPassword || ''
+    let score = 0
+    if (v.length >= 8) score++
+    if (/[A-ZА-Я]/.test(v)) score++
+    if (/[a-zа-я]/.test(v)) score++
+    if (/\d/.test(v)) score++
+    if (/[^A-Za-zА-Яа-я0-9]/.test(v)) score++
+    if (score <= 2) return { label: 'Слабый', color: 'text-red-400' }
+    if (score <= 4) return { label: 'Средний', color: 'text-yellow-400' }
+    return { label: 'Сильный', color: 'text-green-400' }
+  }, [passwordForm.newPassword])
 
   async function load() {
     try {
@@ -120,13 +133,14 @@ export default function TenantSettingsPage() {
     try {
       if (passwordForm.currentPassword.length < 6) throw new Error('Текущий пароль некорректный')
       if (passwordForm.newPassword.length < 6) throw new Error('Новый пароль минимум 6 символов')
+      if (passwordForm.currentPassword === passwordForm.newPassword) throw new Error('Новый пароль должен отличаться от текущего')
 
       await api.changeMyPassword(passwordForm.currentPassword, passwordForm.newPassword)
       setPasswordForm({ currentPassword: '', newPassword: '' })
       setSuccess('Пароль изменен. Выполнен выход со всех устройств.')
       clearToken()
       clearTenantId()
-      router.replace('/login')
+      router.replace('/login?passwordChanged=1')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка смены пароля')
     }
@@ -250,7 +264,14 @@ export default function TenantSettingsPage() {
 
         <div className="grid gap-2 md:grid-cols-2">
           <input className="input" type="password" placeholder="Текущий пароль" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm((p) => ({ ...p, currentPassword: e.target.value }))} />
-          <input className="input" type="password" placeholder="Новый пароль" value={passwordForm.newPassword} onChange={(e) => setPasswordForm((p) => ({ ...p, newPassword: e.target.value }))} />
+          <div>
+            <input className="input w-full" type="password" placeholder="Новый пароль" value={passwordForm.newPassword} onChange={(e) => setPasswordForm((p) => ({ ...p, newPassword: e.target.value }))} />
+            {passwordForm.newPassword ? (
+              <div className={`mt-1 text-xs ${passwordStrength.color}`}>
+                Сложность пароля: {passwordStrength.label}
+              </div>
+            ) : null}
+          </div>
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">

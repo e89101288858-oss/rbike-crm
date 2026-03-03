@@ -1,12 +1,13 @@
 'use client'
 
-import { FormEvent, useState } from 'react'
+import { FormEvent, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { setTenantId, setToken } from '@/lib/auth'
 
 export default function LoginPage() {
   const router = useRouter()
+  const [passwordChangedNotice, setPasswordChangedNotice] = useState(false)
   const [tab, setTab] = useState<'login' | 'register'>('login')
 
   const [email, setEmail] = useState('')
@@ -23,6 +24,14 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('passwordChanged') === '1') {
+      setPasswordChangedNotice(true)
+    }
+  }, [])
 
   async function onSubmitLogin(e: FormEvent) {
     e.preventDefault()
@@ -87,6 +96,10 @@ export default function LoginPage() {
     <main className="page max-w-md">
       <h1 className="mb-4 text-3xl font-bold">rbCRM</h1>
       <p className="mb-4 text-sm text-gray-600">Вход в систему</p>
+
+      {passwordChangedNotice ? (
+        <p className="alert-success mb-3">Пароль изменён. Войдите заново.</p>
+      ) : null}
 
       <div className="mb-3 flex gap-2">
         <button className={tab === 'login' ? 'btn-primary' : 'btn'} onClick={() => setTab('login')}>Вход</button>
