@@ -134,6 +134,9 @@ export default function TenantSettingsPage() {
 
   async function logoutAllSessions() {
     try {
+      const ok = window.confirm('Завершить все активные сессии на других устройствах? Вас тоже разлогинит на этом устройстве.')
+      if (!ok) return
+
       await api.logoutAllSessions()
       clearToken()
       clearTenantId()
