@@ -97,6 +97,7 @@ export class AuthService {
       userId: created.user.id,
       role: created.user.role,
       franchiseeId: created.user.franchiseeId ?? null,
+      tokenVersion: created.user.tokenVersion ?? 0,
     }
 
     const accessToken = await this.jwt.signAsync(payload)
@@ -137,6 +138,7 @@ export class AuthService {
       userId: user.id,
       role: user.role,
       franchiseeId: user.franchiseeId ?? null,
+      tokenVersion: user.tokenVersion ?? 0,
     }
 
     const accessToken = await this.jwt.signAsync(payload)

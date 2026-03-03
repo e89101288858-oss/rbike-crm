@@ -93,6 +93,8 @@ model User {
   fullName     String?
   phone        String?
   passwordHash String
+  tokenVersion Int          @default(0)
+  passwordChangedAt DateTime?
   role         UserRole
   franchiseeId String?
   franchisee   Franchisee?  @relation(fields: [franchiseeId], references: [id])

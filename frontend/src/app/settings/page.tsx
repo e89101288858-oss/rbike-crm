@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'
-import { getTenantId, getToken, setTenantId } from '@/lib/auth'
+import { clearTenantId, clearToken, getTenantId, getToken, setTenantId } from '@/lib/auth'
 
 export default function TenantSettingsPage() {
   const router = useRouter()
@@ -123,9 +123,23 @@ export default function TenantSettingsPage() {
 
       await api.changeMyPassword(passwordForm.currentPassword, passwordForm.newPassword)
       setPasswordForm({ currentPassword: '', newPassword: '' })
-      setSuccess('Пароль изменен')
+      setSuccess('Пароль изменен. Выполнен выход со всех устройств.')
+      clearToken()
+      clearTenantId()
+      router.replace('/login')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка смены пароля')
+    }
+  }
+
+  async function logoutAllSessions() {
+    try {
+      await api.logoutAllSessions()
+      clearToken()
+      clearTenantId()
+      router.replace('/login')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка завершения всех сессий')
     }
   }
 
@@ -196,12 +210,20 @@ export default function TenantSettingsPage() {
       </section>
 
       <section className="panel text-sm">
-        <h2 className="mb-2 text-base font-semibold">Смена пароля</h2>
+        <h2 className="mb-2 text-base font-semibold">Безопасность</h2>
+        <div className="mb-3 text-xs text-gray-500">
+          Последняя смена пароля: <b>{account?.user?.passwordChangedAt ? new Date(account.user.passwordChangedAt).toLocaleString('ru-RU') : 'ещё не менялся'}</b>
+        </div>
+
         <div className="grid gap-2 md:grid-cols-2">
           <input className="input" type="password" placeholder="Текущий пароль" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm((p) => ({ ...p, currentPassword: e.target.value }))} />
           <input className="input" type="password" placeholder="Новый пароль" value={passwordForm.newPassword} onChange={(e) => setPasswordForm((p) => ({ ...p, newPassword: e.target.value }))} />
         </div>
-        <div className="mt-4"><button className="btn-primary" onClick={changePassword}>Сменить пароль</button></div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button className="btn-primary" onClick={changePassword}>Сменить пароль</button>
+          <button className="btn" onClick={logoutAllSessions}>Выйти со всех устройств</button>
+        </div>
       </section>
     </main>
   )

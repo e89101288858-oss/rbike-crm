@@ -90,6 +90,7 @@ export class MyTenantSettingsController {
           email: true,
           fullName: true,
           phone: true,
+          passwordChangedAt: true,
         },
       }),
     ])
@@ -167,8 +168,24 @@ export class MyTenantSettingsController {
     if (!ok) throw new BadRequestException('Текущий пароль неверный')
 
     const passwordHash = await bcrypt.hash(dto.newPassword, 10)
-    await this.prisma.user.update({ where: { id: user.userId }, data: { passwordHash } })
+    await this.prisma.user.update({
+      where: { id: user.userId },
+      data: {
+        passwordHash,
+        passwordChangedAt: new Date(),
+        tokenVersion: { increment: 1 },
+      },
+    })
 
+    return { ok: true }
+  }
+
+  @Patch('logout-all-sessions')
+  async logoutAllSessions(@CurrentUser() user: JwtUser) {
+    await this.prisma.user.update({
+      where: { id: user.userId },
+      data: { tokenVersion: { increment: 1 } },
+    })
     return { ok: true }
   }
 }

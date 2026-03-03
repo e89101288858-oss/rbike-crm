@@ -4,6 +4,7 @@ export type JwtUser = {
   userId: string
   role: string
   franchiseeId: string | null
+  tokenVersion?: number
 }
 
 export const CurrentUser = createParamDecorator(

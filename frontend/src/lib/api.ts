@@ -174,6 +174,11 @@ export const api = {
       body: JSON.stringify({ currentPassword, newPassword }),
     }, true),
 
+  logoutAllSessions: () =>
+    request<any>('/my/logout-all-sessions', {
+      method: 'PATCH',
+    }, true),
+
   clients: (query = '') => request<Client[]>(`/clients${query ? `?${query}` : ''}`, undefined, true),
 
   createClient: (payload: {
