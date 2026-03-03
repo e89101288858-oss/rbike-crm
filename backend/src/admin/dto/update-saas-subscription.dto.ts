@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer'
-import { IsDate, IsEnum, IsOptional } from 'class-validator'
+import { IsDate, IsEnum, IsInt, IsOptional, Min } from 'class-validator'
 
 export enum SaaSPlanDto {
   STARTER = 'STARTER',
@@ -27,4 +27,16 @@ export class UpdateSaasSubscriptionDto {
   @Type(() => Date)
   @IsDate()
   saasTrialEndsAt?: Date | null
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  saasMaxBikes?: number | null
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  saasMaxActiveRentals?: number | null
 }

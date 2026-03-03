@@ -430,7 +430,13 @@ export const api = {
     }>('/admin/saas/summary'),
   adminUpdateSaasSubscription: (
     tenantId: string,
-    payload: { saasPlan?: 'STARTER' | 'PRO' | 'ENTERPRISE'; saasSubscriptionStatus?: 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED'; saasTrialEndsAt?: string | null },
+    payload: {
+      saasPlan?: 'STARTER' | 'PRO' | 'ENTERPRISE'
+      saasSubscriptionStatus?: 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED'
+      saasTrialEndsAt?: string | null
+      saasMaxBikes?: number
+      saasMaxActiveRentals?: number
+    },
   ) =>
     request<any>(`/admin/saas/tenants/${tenantId}/subscription`, {
       method: 'PATCH',

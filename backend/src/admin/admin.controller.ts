@@ -374,6 +374,12 @@ export class AdminController {
         ...(dto.saasTrialEndsAt !== undefined && {
           saasTrialEndsAt: dto.saasTrialEndsAt,
         }),
+        ...(dto.saasMaxBikes !== undefined && {
+          saasMaxBikes: dto.saasMaxBikes,
+        }),
+        ...(dto.saasMaxActiveRentals !== undefined && {
+          saasMaxActiveRentals: dto.saasMaxActiveRentals,
+        }),
       },
     })
 
@@ -382,11 +388,15 @@ export class AdminController {
         saasPlan: tenant.saasPlan,
         saasSubscriptionStatus: tenant.saasSubscriptionStatus,
         saasTrialEndsAt: tenant.saasTrialEndsAt,
+        saasMaxBikes: tenant.saasMaxBikes,
+        saasMaxActiveRentals: tenant.saasMaxActiveRentals,
       },
       to: {
         saasPlan: updated.saasPlan,
         saasSubscriptionStatus: updated.saasSubscriptionStatus,
         saasTrialEndsAt: updated.saasTrialEndsAt,
+        saasMaxBikes: updated.saasMaxBikes,
+        saasMaxActiveRentals: updated.saasMaxActiveRentals,
       },
     })
 

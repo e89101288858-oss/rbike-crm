@@ -136,6 +136,8 @@ model Tenant {
   saasPlan                SaaSPlan?
   saasSubscriptionStatus  SaaSSubscriptionStatus?
   saasTrialEndsAt         DateTime?
+  saasMaxBikes            Int?
+  saasMaxActiveRentals    Int?
 
   userTenants UserTenant[]
 

@@ -26,6 +26,8 @@ export default function OwnerDashboardPage() {
     saasPlan: 'STARTER' | 'PRO' | 'ENTERPRISE'
     saasSubscriptionStatus: 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED'
     saasTrialEndsAt: string
+    saasMaxBikes: string
+    saasMaxActiveRentals: string
   }>>({})
   const [error, setError] = useState('')
 
@@ -42,6 +44,8 @@ export default function OwnerDashboardPage() {
           saasPlan: (t.saasPlan || 'STARTER') as 'STARTER' | 'PRO' | 'ENTERPRISE',
           saasSubscriptionStatus: (t.saasSubscriptionStatus || 'TRIAL') as 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED',
           saasTrialEndsAt: toDateInput(t.saasTrialEndsAt),
+          saasMaxBikes: t.saasMaxBikes ? String(t.saasMaxBikes) : '',
+          saasMaxActiveRentals: t.saasMaxActiveRentals ? String(t.saasMaxActiveRentals) : '',
         },
       ]),
     )
@@ -66,6 +70,8 @@ export default function OwnerDashboardPage() {
         saasPlan: edit.saasPlan,
         saasSubscriptionStatus: edit.saasSubscriptionStatus,
         saasTrialEndsAt: edit.saasTrialEndsAt ? new Date(`${edit.saasTrialEndsAt}T00:00:00.000Z`).toISOString() : null,
+        ...(edit.saasMaxBikes.trim() ? { saasMaxBikes: Number(edit.saasMaxBikes) } : {}),
+        ...(edit.saasMaxActiveRentals.trim() ? { saasMaxActiveRentals: Number(edit.saasMaxActiveRentals) } : {}),
       })
       await refreshSaasData()
     } catch (err) {
@@ -361,6 +367,8 @@ export default function OwnerDashboardPage() {
                     <th>План</th>
                     <th>Статус подписки</th>
                     <th>Trial до</th>
+                    <th>Лимит великов</th>
+                    <th>Лимит активных аренд</th>
                     <th>Действие</th>
                   </tr>
                 </thead>
@@ -425,6 +433,36 @@ export default function OwnerDashboardPage() {
                             }
                           />
                         </td>
+                        <td data-label="Лимит великов">
+                          <input
+                            type="number"
+                            min={1}
+                            className="input"
+                            placeholder="по плану"
+                            value={edit?.saasMaxBikes || ''}
+                            onChange={(e) =>
+                              setSaasEdits((prev) => ({
+                                ...prev,
+                                [t.id]: { ...prev[t.id], saasMaxBikes: e.target.value },
+                              }))
+                            }
+                          />
+                        </td>
+                        <td data-label="Лимит активных аренд">
+                          <input
+                            type="number"
+                            min={1}
+                            className="input"
+                            placeholder="по плану"
+                            value={edit?.saasMaxActiveRentals || ''}
+                            onChange={(e) =>
+                              setSaasEdits((prev) => ({
+                                ...prev,
+                                [t.id]: { ...prev[t.id], saasMaxActiveRentals: e.target.value },
+                              }))
+                            }
+                          />
+                        </td>
                         <td data-label="Действие">
                           <button
                             className="btn"
@@ -439,7 +477,7 @@ export default function OwnerDashboardPage() {
                   })}
                   {!filteredSaasTenants.length && (
                     <tr>
-                      <td colSpan={6} className="text-center text-gray-500">SaaS tenant’ов пока нет</td>
+                      <td colSpan={8} className="text-center text-gray-500">SaaS tenant’ов пока нет</td>
                     </tr>
                   )}
                 </tbody>

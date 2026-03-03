@@ -30,6 +30,8 @@ export async function assertSaasOperationAllowed(
       saasPlan: true,
       saasSubscriptionStatus: true,
       saasTrialEndsAt: true,
+      saasMaxBikes: true,
+      saasMaxActiveRentals: true,
     },
   })
 
@@ -59,8 +61,10 @@ export async function assertSaasOperationAllowed(
 
   const plan = tenant.saasPlan ?? 'STARTER'
   const limits = SAAS_PLAN_LIMITS[plan] ?? SAAS_PLAN_LIMITS.STARTER
+  const maxBikes = tenant.saasMaxBikes ?? limits.maxBikes
+  const maxActiveRentals = tenant.saasMaxActiveRentals ?? limits.maxActiveRentals
 
-  if (operation === 'CREATE_BIKE' && Number.isFinite(limits.maxBikes)) {
+  if (operation === 'CREATE_BIKE' && Number.isFinite(maxBikes)) {
     const bikesCount = await prisma.bike.count({
       where: {
         tenantId,
@@ -68,14 +72,14 @@ export async function assertSaasOperationAllowed(
       },
     })
 
-    if (bikesCount >= limits.maxBikes) {
+    if (bikesCount >= maxBikes) {
       throw new ForbiddenException(
-        `Bike limit reached for ${plan}: ${limits.maxBikes}. Upgrade plan to add more bikes.`,
+        `Bike limit reached for ${plan}: ${maxBikes}. Contact owner or upgrade plan to add more bikes.`,
       )
     }
   }
 
-  if (operation === 'CREATE_RENTAL' && Number.isFinite(limits.maxActiveRentals)) {
+  if (operation === 'CREATE_RENTAL' && Number.isFinite(maxActiveRentals)) {
     const activeRentalsCount = await prisma.rental.count({
       where: {
         tenantId,
@@ -83,9 +87,9 @@ export async function assertSaasOperationAllowed(
       },
     })
 
-    if (activeRentalsCount >= limits.maxActiveRentals) {
+    if (activeRentalsCount >= maxActiveRentals) {
       throw new ForbiddenException(
-        `Active rentals limit reached for ${plan}: ${limits.maxActiveRentals}. Upgrade plan to create more rentals.`,
+        `Active rentals limit reached for ${plan}: ${maxActiveRentals}. Contact owner or upgrade plan to create more rentals.`,
       )
     }
   }
