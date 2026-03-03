@@ -17,6 +17,7 @@ export default function PaymentsPage() {
   const [status, setStatus] = useState<'PLANNED' | 'PAID'>('PAID')
   const [editId, setEditId] = useState('')
   const [editAmount, setEditAmount] = useState('')
+  const [page, setPage] = useState(1)
 
   async function load() {
     setLoading(true)
@@ -24,6 +25,7 @@ export default function PaymentsPage() {
     try {
       if (!getTenantId()) throw new Error('Не выбран tenant')
       setItems(await api.payments(`status=${status}`))
+      setPage(1)
     } catch (err) {
       setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка загрузки платежей'}`)
     } finally {
@@ -72,6 +74,16 @@ export default function PaymentsPage() {
     }
   }
 
+  const sortedItems = [...items].sort((a: any, b: any) => {
+    const ad = String(a?.paidAt || a?.dueAt || a?.createdAt || '')
+    const bd = String(b?.paidAt || b?.dueAt || b?.createdAt || '')
+    return bd.localeCompare(ad)
+  })
+  const pageSize = 10
+  const totalPages = Math.max(1, Math.ceil(sortedItems.length / pageSize))
+  const pageSafe = Math.min(page, totalPages)
+  const pageItems = sortedItems.slice((pageSafe - 1) * pageSize, pageSafe * pageSize)
+
   useEffect(() => {
     if (!getToken()) return router.replace('/login')
     ;(async () => {
@@ -98,8 +110,16 @@ export default function PaymentsPage() {
       {error && <p className="alert">{error}</p>}
       {success && <p className="alert-success">{success}</p>}
 
+      <div className="mb-3 flex items-center justify-between text-sm">
+        <div className="text-gray-500">Страница {pageSafe} из {totalPages}</div>
+        <div className="flex gap-2">
+          <button className="btn" disabled={pageSafe <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>Назад</button>
+          <button className="btn" disabled={pageSafe >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>Вперёд</button>
+        </div>
+      </div>
+
       <div className="space-y-2 md:hidden">
-        {items.map((p) => (
+        {pageItems.map((p) => (
           <div key={p.id} className="panel text-sm">
             <div className="font-semibold">{p.rental?.client?.fullName || '—'}</div>
             <div>Велосипед: {p.rental?.bike?.code || '—'}</div>
@@ -123,7 +143,7 @@ export default function PaymentsPage() {
             )}
           </div>
         ))}
-        {!items.length && <p className="text-sm text-gray-600">Нет платежей в этом статусе</p>}
+        {!sortedItems.length && <p className="text-sm text-gray-600">Нет платежей в этом статусе</p>}
       </div>
 
       <div className="table-wrap hidden md:block">
@@ -140,7 +160,7 @@ export default function PaymentsPage() {
             </tr>
           </thead>
           <tbody>
-            {items.map((p) => (
+            {pageItems.map((p) => (
               <tr key={p.id}>
                 <td>{p.rental?.client?.fullName || '—'}</td>
                 <td>{p.rental?.bike?.code || '—'}</td>
@@ -168,7 +188,7 @@ export default function PaymentsPage() {
                 </td>
               </tr>
             ))}
-            {!items.length && (
+            {!sortedItems.length && (
               <tr>
                 <td colSpan={7} className="text-center text-gray-600">Нет платежей в этом статусе</td>
               </tr>

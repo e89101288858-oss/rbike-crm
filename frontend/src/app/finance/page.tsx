@@ -19,6 +19,7 @@ export default function FinancePage() {
   const [byBike, setByBike] = useState<any[]>([])
   const [expenses, setExpenses] = useState<any[]>([])
   const [error, setError] = useState('')
+  const [daysPage, setDaysPage] = useState(1)
 
   const maxDayRevenue = useMemo(
     () => Math.max(1, ...days.map((d: any) => Number(d.revenueRub ?? 0))),
@@ -27,6 +28,16 @@ export default function FinancePage() {
 
   const selectedTenant = tenants.find((t: any) => t.id === getTenantId())
   const royaltyPercent = Number(selectedTenant?.royaltyPercent ?? 0)
+
+  const sortedDays = useMemo(
+    () => [...days].sort((a: any, b: any) => String(b.date || '').localeCompare(String(a.date || ''))),
+    [days],
+  )
+  const pageSize = 10
+  const totalDaysPages = Math.max(1, Math.ceil(sortedDays.length / pageSize))
+  const daysPageSafe = Math.min(daysPage, totalDaysPages)
+  const daysPageItems = sortedDays.slice((daysPageSafe - 1) * pageSize, daysPageSafe * pageSize)
+
   const revenueTotal = days.reduce((sum: number, d: any) => sum + Number(d.revenueRub ?? 0), 0)
   const royaltyDue = Math.round(revenueTotal * (royaltyPercent / 100) * 100) / 100
 
@@ -74,6 +85,7 @@ export default function FinancePage() {
       ])
       setBikes(bikesRes)
       setDays(daysRes.days ?? [])
+      setDaysPage(1)
       setByBike(bikeRes.bikes ?? [])
       setExpenses(expensesRes ?? [])
     } catch (err) {
@@ -157,7 +169,7 @@ export default function FinancePage() {
       <section className="panel mb-6">
         <h2 className="mb-3 text-lg font-semibold">Выручка по дням</h2>
         <div className="space-y-2 text-sm">
-          {days.map((d: any) => {
+          {daysPageItems.map((d: any) => {
             const width = `${Math.max(6, Math.round((Number(d.revenueRub) / maxDayRevenue) * 100))}%`
             return (
               <div key={d.date} className="rounded-xl border border-gray-200 p-2">
@@ -173,6 +185,16 @@ export default function FinancePage() {
           })}
           {!days.length && <p className="text-gray-600">Нет данных за период</p>}
         </div>
+
+        {sortedDays.length > 0 && (
+          <div className="mt-3 flex items-center justify-between text-sm">
+            <div className="text-gray-500">Страница {daysPageSafe} из {totalDaysPages}</div>
+            <div className="flex gap-2">
+              <button className="btn" disabled={daysPageSafe <= 1} onClick={() => setDaysPage((p) => Math.max(1, p - 1))}>Назад</button>
+              <button className="btn" disabled={daysPageSafe >= totalDaysPages} onClick={() => setDaysPage((p) => Math.min(totalDaysPages, p + 1))}>Вперёд</button>
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="panel">
