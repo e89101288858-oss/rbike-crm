@@ -496,9 +496,11 @@ export default function DashboardPage() {
                     const ratio = maxBar > 0 ? r.value / maxBar : 0
                     const h = r.value <= 0 ? '0%' : `${Math.max(6, Math.round(ratio * 100))}%`
                     return (
-                      <div key={r.label} className="flex w-8 shrink-0 flex-col items-center gap-2">
-                        <div className="w-full rounded-sm bg-orange-500/80" style={{ height: h }} />
-                        <div className="text-[10px] text-gray-400">{r.label}</div>
+                      <div key={r.label} className="flex h-full w-8 shrink-0 flex-col items-center">
+                        <div className="flex w-full flex-1 items-end">
+                          <div className="w-full rounded-sm bg-orange-500/80" style={{ height: h }} />
+                        </div>
+                        <div className="mt-1 text-[10px] text-gray-400">{r.label}</div>
                       </div>
                     )
                   })}
@@ -572,9 +574,11 @@ export default function DashboardPage() {
                     const ratio = maxRevenueBar > 0 ? r.value / maxRevenueBar : 0
                     const h = r.value <= 0 ? '0%' : `${Math.max(6, Math.round(ratio * 100))}%`
                     return (
-                      <div key={r.label} className="flex w-7 shrink-0 flex-col items-center gap-1">
-                        <div className="w-full rounded-sm bg-orange-500/80" style={{ height: h }} />
-                        <div className="text-[10px] text-gray-500">{r.label}</div>
+                      <div key={r.label} className="flex h-full w-7 shrink-0 flex-col items-center">
+                        <div className="flex w-full flex-1 items-end">
+                          <div className="w-full rounded-sm bg-orange-500/80" style={{ height: h }} />
+                        </div>
+                        <div className="mt-1 text-[10px] text-gray-500">{r.label}</div>
                       </div>
                     )
                   })}
