@@ -358,16 +358,7 @@ export default function DashboardPage() {
   const maxBar = useMemo(() => Math.max(1, ...chartRows.map((r) => r.value)), [chartRows])
   const maxRevenueBar = useMemo(() => Math.max(1, ...revenueRows.map((r) => r.value)), [revenueRows])
 
-  const linePoints = useMemo(() => {
-    if (!chartRows.length) return ''
-    return chartRows
-      .map((r, i) => {
-        const x = chartRows.length === 1 ? 0 : (i / (chartRows.length - 1)) * 100
-        const y = 100 - (r.value / maxBar) * 100
-        return `${x},${Math.max(0, Math.min(100, y))}`
-      })
-      .join(' ')
-  }, [chartRows, maxBar])
+  // line overlay removed by design: bars only
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -511,11 +502,7 @@ export default function DashboardPage() {
                 })}
               </div>
 
-              {!!linePoints && (
-                <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="pointer-events-none absolute inset-4 h-[224px] w-[calc(100%-2rem)]">
-                  <polyline fill="none" stroke="#fb923c" strokeWidth="1.4" points={linePoints} />
-                </svg>
-              )}
+              {/* bars only */}
 
               {!chartRows.length && <p className="text-sm text-gray-400">Нет данных за период</p>}
             </div>
