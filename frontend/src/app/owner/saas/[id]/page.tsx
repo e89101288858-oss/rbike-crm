@@ -16,6 +16,8 @@ export default function OwnerSaasDetailsPage() {
   const [tenantBilling, setTenantBilling] = useState<any>(null)
   const [saasRank, setSaasRank] = useState<number | null>(null)
 
+  const [month, setMonth] = useState(new Date().toISOString().slice(0, 7))
+
   const toDateInput = (value?: string | null) => (value ? new Date(value).toISOString().slice(0, 10) : '')
 
   useEffect(() => {
@@ -29,7 +31,7 @@ export default function OwnerSaasDetailsPage() {
 
         const [rows, ownerBilling] = await Promise.all([
           api.adminSaasTenants(),
-          api.franchiseOwnerMonthly(new Date().toISOString().slice(0, 7)),
+          api.franchiseOwnerMonthly(month),
         ])
         const found = rows.find((x: any) => x.id === params.id)
         if (!found) return router.replace('/owner/saas')
@@ -55,7 +57,7 @@ export default function OwnerSaasDetailsPage() {
         setError(err instanceof Error ? err.message : 'Ошибка загрузки SaaS tenant')
       }
     })()
-  }, [router, params])
+  }, [router, params, month])
 
   const trialLabel = useMemo(() => tenant?.saasTrialEndsAt ? new Date(tenant.saasTrialEndsAt).toLocaleDateString('ru-RU') : '—', [tenant])
 
@@ -78,7 +80,10 @@ export default function OwnerSaasDetailsPage() {
   return (
     <main className="page with-sidebar">
       <Topbar />
-      <h1 className="mb-4 text-2xl font-bold">SaaS tenant: {tenant?.name || '—'}</h1>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-2xl font-bold">SaaS tenant: {tenant?.name || '—'}</h1>
+        <input type="month" className="input w-44" value={month} onChange={(e) => setMonth(e.target.value)} />
+      </div>
       {error && <div className="alert">{error}</div>}
 
       <section className="mb-4 grid gap-2 md:grid-cols-4">

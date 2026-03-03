@@ -16,7 +16,7 @@ export default function OwnerFranchiseeDetailsPage() {
   const [tenantBillingRows, setTenantBillingRows] = useState<any[]>([])
   const [error, setError] = useState('')
 
-  const month = useMemo(() => new Date().toISOString().slice(0, 7), [])
+  const [month, setMonth] = useState(new Date().toISOString().slice(0, 7))
 
   useEffect(() => {
     if (!getToken()) return router.replace('/login')
@@ -56,7 +56,10 @@ export default function OwnerFranchiseeDetailsPage() {
   return (
     <main className="page with-sidebar">
       <Topbar />
-      <h1 className="mb-4 text-2xl font-bold">Франчайзи: {franchisee?.name || '—'}</h1>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-2xl font-bold">Франчайзи: {franchisee?.name || '—'}</h1>
+        <input type="month" className="input w-44" value={month} onChange={(e) => setMonth(e.target.value)} />
+      </div>
       {error && <div className="alert">{error}</div>}
 
       <section className="mb-4 grid gap-2 md:grid-cols-4">
