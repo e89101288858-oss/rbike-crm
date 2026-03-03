@@ -112,7 +112,9 @@ export default function DashboardPage() {
   const [tenants, setTenants] = useState<any[]>([])
   const [bikeSummary, setBikeSummary] = useState<any>(null)
   const [allBikesCount, setAllBikesCount] = useState(0)
+  const [clientsCount, setClientsCount] = useState(0)
   const [allRentals, setAllRentals] = useState<Rental[]>([])
+  const [showOnboarding, setShowOnboarding] = useState(false)
 
   const [chartMode, setChartMode] = useState<ChartMode>('week')
   const [revenueMode, setRevenueMode] = useState<RevenueMode>('week')
@@ -153,15 +155,17 @@ export default function DashboardPage() {
           return
         }
 
-        const [summaryRes, bikesRes, activeRes, closedRes] = await Promise.all([
+        const [summaryRes, bikesRes, clientsRes, activeRes, closedRes] = await Promise.all([
           api.bikeSummary(),
           api.bikes(),
+          api.clients(),
           api.rentals('ACTIVE'),
           api.rentals('CLOSED'),
         ])
 
         setBikeSummary(summaryRes)
         setAllBikesCount(bikesRes.length)
+        setClientsCount((clientsRes ?? []).length)
         setAllRentals([...(activeRes ?? []), ...(closedRes ?? [])])
       } catch (err) {
         const msg = err instanceof Error ? err.message : ''
@@ -311,7 +315,17 @@ export default function DashboardPage() {
       .join(' ')
   }, [chartRows, maxBar])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const fromQuery = params.get('onboarding') === '1'
+    const fromStorage = localStorage.getItem('rbike_onboarding') === '1'
+    setShowOnboarding(fromQuery || fromStorage)
+  }, [])
+
   const showFranchiseeDashboard = role === 'FRANCHISEE' || role === 'OWNER'
+  const rentalsCount = allRentals.length
+  const onboardingCompleted = clientsCount > 0 && allBikesCount > 0 && rentalsCount > 0
 
   return (
     <main className="page with-sidebar min-h-screen text-gray-100">
@@ -323,6 +337,56 @@ export default function DashboardPage() {
         <section className="rounded-lg border border-white/10 bg-[#1f2126] p-4 text-sm text-gray-300">Дашборд для роли {role || '—'} пока не настроен.</section>
       ) : (
         <>
+          {showOnboarding && (
+            <section className="mb-6 rounded-lg border border-orange-500/40 bg-orange-500/10 p-4">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <h2 className="text-lg font-semibold text-orange-100">SaaS onboarding</h2>
+                <button
+                  className="btn"
+                  onClick={() => {
+                    setShowOnboarding(false)
+                    if (typeof window !== 'undefined') localStorage.removeItem('rbike_onboarding')
+                  }}
+                >
+                  Скрыть
+                </button>
+              </div>
+              <p className="mb-3 text-sm text-orange-200">
+                Быстрый старт для нового аккаунта: создай первого курьера, велосипед и первую аренду.
+              </p>
+              <div className="mb-3 grid gap-2 md:grid-cols-3 text-sm">
+                <div className={`kpi ${clientsCount > 0 ? 'border-emerald-500/40 bg-emerald-500/10' : ''}`}>
+                  <div className="text-xs text-gray-300">Курьеры</div>
+                  <div className="mt-1 text-2xl font-semibold">{formatInt(clientsCount)}</div>
+                </div>
+                <div className={`kpi ${allBikesCount > 0 ? 'border-emerald-500/40 bg-emerald-500/10' : ''}`}>
+                  <div className="text-xs text-gray-300">Велосипеды</div>
+                  <div className="mt-1 text-2xl font-semibold">{formatInt(allBikesCount)}</div>
+                </div>
+                <div className={`kpi ${rentalsCount > 0 ? 'border-emerald-500/40 bg-emerald-500/10' : ''}`}>
+                  <div className="text-xs text-gray-300">Аренды</div>
+                  <div className="mt-1 text-2xl font-semibold">{formatInt(rentalsCount)}</div>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button className="btn" onClick={() => router.push('/clients')}>+ Курьер</button>
+                <button className="btn" onClick={() => router.push('/bikes')}>+ Велосипед</button>
+                <button className="btn" onClick={() => router.push('/rentals')}>+ Аренда</button>
+                {onboardingCompleted && (
+                  <button
+                    className="btn-primary"
+                    onClick={() => {
+                      setShowOnboarding(false)
+                      if (typeof window !== 'undefined') localStorage.removeItem('rbike_onboarding')
+                    }}
+                  >
+                    Готово
+                  </button>
+                )}
+              </div>
+            </section>
+          )}
+
           <section className="mb-6 grid gap-3 md:grid-cols-4">
             <div className="rounded-lg border border-white/10 bg-[#1f2126] p-4">
               <div className="text-xs text-gray-400">Активные аренды</div>

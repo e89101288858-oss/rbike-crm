@@ -62,6 +62,9 @@ export default function LoginPage() {
 
       setToken(res.accessToken)
       setTenantId(res.tenantId)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('rbike_onboarding', '1')
+      }
 
       setRegFullName('')
       setRegPhone('')
@@ -71,7 +74,7 @@ export default function LoginPage() {
       setRegCity('')
       setRegTenantName('')
 
-      router.push('/dashboard')
+      router.push('/dashboard?onboarding=1')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка регистрации')
     } finally {
