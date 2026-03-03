@@ -14,36 +14,46 @@ type NavGroup = {
   items: Array<{ href: string; label: string; roles: UserRole[] }>
 }
 
-const nav: NavGroup[] = [
+const ownerNav: NavGroup[] = [
+  {
+    title: 'OWNER',
+    items: [
+      { href: '/owner', label: 'Дашборд', roles: ['OWNER'] },
+      { href: '/owner/franchisees', label: 'Франчайзи', roles: ['OWNER'] },
+      { href: '/owner/saas', label: 'SaaS', roles: ['OWNER'] },
+      { href: '/owner/settings', label: 'Настройки', roles: ['OWNER'] },
+    ],
+  },
+]
+
+const opsNav: NavGroup[] = [
   {
     title: 'Операции',
     items: [
-      { href: '/dashboard', label: 'Дашборд точки', roles: ['OWNER', 'FRANCHISEE', 'MANAGER', 'MECHANIC'] },
-      { href: '/dashboard-owner', label: 'OWNER дашборд', roles: ['OWNER'] },
-      { href: '/rentals', label: 'Аренды', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
+      { href: '/dashboard', label: 'Дашборд точки', roles: ['FRANCHISEE', 'MANAGER', 'MECHANIC'] },
+      { href: '/rentals', label: 'Аренды', roles: ['FRANCHISEE', 'MANAGER'] },
     ],
   },
   {
     title: 'Справочники',
     items: [
-      { href: '/clients', label: 'Курьеры', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
-      { href: '/bikes', label: 'Велосипеды', roles: ['OWNER', 'FRANCHISEE', 'MANAGER', 'MECHANIC'] },
-      { href: '/batteries', label: 'АКБ', roles: ['OWNER', 'FRANCHISEE', 'MANAGER', 'MECHANIC'] },
+      { href: '/clients', label: 'Курьеры', roles: ['FRANCHISEE', 'MANAGER'] },
+      { href: '/bikes', label: 'Велосипеды', roles: ['FRANCHISEE', 'MANAGER', 'MECHANIC'] },
+      { href: '/batteries', label: 'АКБ', roles: ['FRANCHISEE', 'MANAGER', 'MECHANIC'] },
     ],
   },
   {
     title: 'Аналитика',
     items: [
-      { href: '/finance', label: 'Финансы', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
-      { href: '/expenses', label: 'Расходы', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
-      { href: '/payments', label: 'Платежи', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
+      { href: '/finance', label: 'Финансы', roles: ['FRANCHISEE', 'MANAGER'] },
+      { href: '/expenses', label: 'Расходы', roles: ['FRANCHISEE', 'MANAGER'] },
+      { href: '/payments', label: 'Платежи', roles: ['FRANCHISEE', 'MANAGER'] },
     ],
   },
   {
     title: 'Инструменты',
     items: [
-      { href: '/import', label: 'Импорт CSV', roles: ['OWNER', 'FRANCHISEE', 'MANAGER'] },
-      { href: '/admin', label: 'Админ', roles: ['OWNER'] },
+      { href: '/import', label: 'Импорт CSV', roles: ['FRANCHISEE', 'MANAGER'] },
     ],
   },
 ]
@@ -66,6 +76,7 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
     })()
   }, [])
 
+  const nav = role === 'OWNER' ? ownerNav : opsNav
   const visibleGroups = nav
     .map((g) => ({ ...g, items: g.items.filter((i) => !role || i.roles.includes(role)) }))
     .filter((g) => g.items.length > 0)
@@ -108,7 +119,7 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
       </aside>
 
       <div className="top-right-controls">
-        {tenants.length > 0 ? (
+        {role !== 'OWNER' && (tenants.length > 0 ? (
           <select
             className="select"
             value={tenantId}
@@ -136,7 +147,7 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
               setTenantId(value)
             }}
           />
-        )}
+        ))}
 
         <button
           className="btn"

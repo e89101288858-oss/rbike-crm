@@ -33,10 +33,11 @@ export default function LoginPage() {
       const res = await api.login(email, password)
       setToken(res.accessToken)
 
+      const me = await api.me()
       const tenants = await api.myTenants()
       if (tenants.length > 0) setTenantId(tenants[0].id)
 
-      router.push('/dashboard')
+      router.push(me.role === 'OWNER' ? '/owner' : '/dashboard')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка входа')
     } finally {

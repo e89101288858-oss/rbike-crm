@@ -14,7 +14,7 @@ type ConfirmState = null | { kind: 'franchisee' | 'tenant' | 'user'; id: string;
 
 const money = new Intl.NumberFormat('ru-RU')
 
-export default function AdminPage() {
+export function AdminPage() {
   const router = useRouter()
   const [tenants, setTenants] = useState<any[]>([])
   const [role, setRole] = useState<UserRole>('')
@@ -701,3 +701,5 @@ export default function AdminPage() {
     </main>
   )
 }
+
+export default AdminPage
