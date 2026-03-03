@@ -51,6 +51,7 @@ export default function RentalsPage() {
   const [deleteModalRentalId, setDeleteModalRentalId] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [openSection, setOpenSection] = useState<'payments' | 'docs' | 'journal'>('payments')
 
   async function loadAll() {
     setError('')
@@ -468,26 +469,37 @@ export default function RentalsPage() {
         const daysLeft = diffDays(new Date().toISOString(), r.plannedEndDate)
         const highlight = r.status === 'ACTIVE' ? daysHighlightClass(daysLeft) : 'border-[#2f3136] bg-[#1f2126]'
         return (
-          <section className={`mt-3 w-full rounded-xl border border-white/10 bg-[#1f2126] p-4 shadow-xl text-sm ${highlight}`}>
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <div className="font-semibold text-base text-white">{r.client.fullName} — {r.bike.code}</div>
-              <span className={`badge ${r.status === 'ACTIVE' ? 'badge-warn' : 'badge-ok'}`}>{r.status === 'ACTIVE' ? 'Активна' : 'Завершена'}</span>
+          <section className={`mt-3 w-full rounded-xl border p-4 shadow-xl text-sm panel ${highlight}`}>
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div>
+                <div className="text-base font-semibold text-white">{r.client.fullName}</div>
+                <div className="text-xs text-gray-400">Велосипед: {r.bike.code}</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`badge ${r.status === 'ACTIVE' ? 'badge-warn' : 'badge-ok'}`}>{r.status === 'ACTIVE' ? 'Активна' : 'Завершена'}</span>
+                {r.status === 'ACTIVE' && (
+                  <span className={`badge ${daysLeft <= 0 ? 'badge-danger' : daysLeft <= 3 ? 'badge-warn' : 'badge-ok'}`}>
+                    {daysLeft <= 0 ? `Просрочено ${Math.abs(daysLeft)} дн.` : `Осталось ${daysLeft} дн.`}
+                  </span>
+                )}
+              </div>
             </div>
 
-            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4 mb-3">
-              <div className="rounded-md border border-white/10 bg-white/5 p-2">Тариф: <b>{formatRub(Math.round((Number(r.weeklyRateRub || 0) / 7) * 100) / 100)}</b> / сутки</div>
-              <div className="rounded-md border border-white/10 bg-white/5 p-2">Период: <b>{formatDate(r.startDate)} → {formatDate(r.plannedEndDate)}</b></div>
-              <div className="rounded-md border border-white/10 bg-white/5 p-2">Осталось дней: <b>{r.status === 'ACTIVE' ? Math.max(0, diffDays(new Date().toISOString(), r.plannedEndDate)) : '—'}</b></div>
-              <div className="rounded-md border border-white/10 bg-white/5 p-2">АКБ: <b>{r.batteries?.map((x) => x.battery.code).join(', ') || '—'}</b></div>
+            <div className="mb-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+              <div className="kpi"><div className="text-xs text-gray-500">Период</div><div className="mt-1 font-semibold">{formatDate(r.startDate)} → {formatDate(r.plannedEndDate)}</div></div>
+              <div className="kpi"><div className="text-xs text-gray-500">Тариф</div><div className="mt-1 font-semibold">{formatRub(Math.round((Number(r.weeklyRateRub || 0) / 7) * 100) / 100)} / сутки</div></div>
+              <div className="kpi"><div className="text-xs text-gray-500">Факт завершения</div><div className="mt-1 font-semibold">{formatDate(r.actualEndDate)}</div></div>
+              <div className="kpi"><div className="text-xs text-gray-500">АКБ</div><div className="mt-1 font-semibold">{r.batteries?.map((x) => x.battery.code).join(', ') || '—'}</div></div>
             </div>
-            {!!r.closeReason && <div className="mb-3 rounded-md border border-red-500/30 bg-red-500/10 p-2 text-red-200">Причина досрочного завершения: {r.closeReason}</div>}
 
-            <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-white/10 bg-[#181a1f] p-2">
+            {!!r.closeReason && <div className="mb-3 rounded-md border border-red-500/40 bg-red-500/10 p-2 text-xs text-red-200">Причина досрочного завершения: {r.closeReason}</div>}
+
+            <div className="sticky top-2 z-10 mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-white/10 bg-[#181a1f]/95 p-2 backdrop-blur">
               {r.status === 'ACTIVE' && (
                 <>
                   <input type="number" className="input w-44" min={1} step={10} placeholder="Ставка ₽/сутки" value={dailyRateMap[r.id] ?? Math.round((Number(r.weeklyRateRub || 0) / 7) * 100) / 100} onChange={(e) => setDailyRateMap((prev) => ({ ...prev, [r.id]: e.target.value }))} />
                   <button className="btn" onClick={() => setRentalDailyRate(r.id, Number(r.weeklyRateRub || 0))}>Обновить ставку</button>
-                  <button className="btn" onClick={() => { setExtendModalRentalId(r.id); setExtendDays('') }}>Продлить</button>
+                  <button className="btn-primary" onClick={() => { setExtendModalRentalId(r.id); setExtendDays('') }}>Продлить</button>
                 </>
               )}
               <button className="btn" onClick={() => generateContract(r.id)}>Сформировать договор</button>
@@ -496,10 +508,10 @@ export default function RentalsPage() {
             </div>
 
             {r.status === 'ACTIVE' && (
-              <div className="mt-2 grid gap-2 md:grid-cols-2">
+              <div className="mb-3 grid gap-2 md:grid-cols-2">
                 {(r.batteries?.length || 0) < 2 && (
                   <div className="rounded-lg border border-white/10 bg-[#181a1f] p-3">
-                    <div className="mb-1 text-xs text-gray-600">Довыдача АКБ</div>
+                    <div className="mb-1 text-xs text-gray-500">Довыдача АКБ</div>
                     <div className="flex gap-2">
                       <select className="select w-full" value={addBatteryMap[r.id] || ''} onChange={(e) => setAddBatteryMap((p) => ({ ...p, [r.id]: e.target.value }))}>
                         <option value="">Выбери АКБ</option>
@@ -512,7 +524,7 @@ export default function RentalsPage() {
 
                 {(r.batteries?.length || 0) > 0 && (
                   <div className="rounded-lg border border-white/10 bg-[#181a1f] p-3">
-                    <div className="mb-1 text-xs text-gray-600">Замена АКБ</div>
+                    <div className="mb-1 text-xs text-gray-500">Замена АКБ</div>
                     <div className="grid gap-2 md:grid-cols-3">
                       <select className="select" value={replaceFromMap[r.id] || ''} onChange={(e) => setReplaceFromMap((p) => ({ ...p, [r.id]: e.target.value }))}>
                         <option value="">Снять</option>
@@ -529,84 +541,91 @@ export default function RentalsPage() {
               </div>
             )}
 
-            <div className="mt-3 rounded-lg border border-white/10 bg-[#181a1f] p-3">
-              <div className="mb-2 font-medium">История платежей</div>
-              {!Array.isArray(paymentsMap[r.id]) ? (
-                <div className="text-xs text-gray-500">Загрузка…</div>
-              ) : paymentsMap[r.id].length === 0 ? (
-                <div className="text-xs text-gray-500">По этой аренде пока нет платежей</div>
-              ) : (
-                (() => {
-                  const sorted = paymentsMap[r.id]
-                    .slice()
-                    .sort((a: any, b: any) => String(b.createdAt || b.dueAt || '').localeCompare(String(a.createdAt || a.dueAt || '')))
-                  const pageSize = 10
-                  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
-                  const currentPage = Math.min(paymentsPageMap[r.id] || 1, totalPages)
-                  const start = (currentPage - 1) * pageSize
-                  const items = sorted.slice(start, start + pageSize)
+            <div className="space-y-2">
+              <div className="rounded-lg border border-white/10 bg-[#181a1f] p-3">
+                <button className="w-full text-left text-sm font-medium" onClick={() => setOpenSection((s) => s === 'payments' ? 'docs' : 'payments')}>История платежей</button>
+                {openSection === 'payments' && (
+                  <div className="mt-2">
+                    {!Array.isArray(paymentsMap[r.id]) ? (
+                      <div className="text-xs text-gray-500">Загрузка…</div>
+                    ) : paymentsMap[r.id].length === 0 ? (
+                      <div className="text-xs text-gray-500">По этой аренде пока нет платежей</div>
+                    ) : (
+                      (() => {
+                        const sorted = paymentsMap[r.id]
+                          .slice()
+                          .sort((a: any, b: any) => String(b.createdAt || b.dueAt || '').localeCompare(String(a.createdAt || a.dueAt || '')))
+                        const pageSize = 10
+                        const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
+                        const currentPage = Math.min(paymentsPageMap[r.id] || 1, totalPages)
+                        const start = (currentPage - 1) * pageSize
+                        const items = sorted.slice(start, start + pageSize)
 
-                  return (
-                    <>
-                      <div className="space-y-1 text-xs">
-                        {items.map((p: any) => (
-                          <div key={p.id} className="rounded border border-[#2f3136] bg-[#181a1f] p-2">
-                            <div className="font-medium">{formatRub(Number(p.amount || 0))} · {p.status === 'PAID' ? 'Оплачен' : 'План'}</div>
-                            <div className="text-gray-400">Тип: {p.kind || '—'}</div>
-                            <div className="text-gray-400">Срок: {formatDate(p.dueAt)}</div>
-                            <div className="text-gray-400">Оплачен: {formatDate(p.paidAt)}</div>
-                            <div className="text-gray-500">Период: {formatDate(p.periodStart)} → {formatDate(p.periodEnd)}</div>
+                        return (
+                          <>
+                            <div className="space-y-1 text-xs">
+                              {items.map((p: any) => (
+                                <div key={p.id} className="rounded border border-white/10 bg-[#111318] p-2">
+                                  <div className="font-medium">{formatRub(Number(p.amount || 0))} · {p.status === 'PAID' ? 'Оплачен' : 'План'}</div>
+                                  <div className="text-gray-400">Тип: {p.kind || '—'} · Срок: {formatDate(p.dueAt)} · Оплачен: {formatDate(p.paidAt)}</div>
+                                  <div className="text-gray-500">Период: {formatDate(p.periodStart)} → {formatDate(p.periodEnd)}</div>
+                                </div>
+                              ))}
+                            </div>
+                            {sorted.length > pageSize && (
+                              <div className="mt-2 flex items-center justify-end gap-2 text-xs text-gray-400">
+                                <button className="btn" disabled={currentPage <= 1} onClick={() => setPaymentsPageMap((prev) => ({ ...prev, [r.id]: Math.max(1, currentPage - 1) }))}>Назад</button>
+                                <span>Стр. {currentPage} / {totalPages}</span>
+                                <button className="btn" disabled={currentPage >= totalPages} onClick={() => setPaymentsPageMap((prev) => ({ ...prev, [r.id]: Math.min(totalPages, currentPage + 1) }))}>Вперед</button>
+                              </div>
+                            )}
+                          </>
+                        )
+                      })()
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {!!docsMap[r.id]?.length && (
+                <div className="rounded-lg border border-white/10 bg-[#181a1f] p-3">
+                  <button className="w-full text-left text-sm font-medium" onClick={() => setOpenSection((s) => s === 'docs' ? 'journal' : 'docs')}>Документы по аренде</button>
+                  {openSection === 'docs' && (
+                    <div className="mt-2 space-y-2">
+                      {docsMap[r.id].map((d) => (
+                        <div key={d.id} className="rounded border border-white/10 bg-[#111318] p-2">
+                          <div className="mb-1 text-xs text-gray-500">{d.type} · {formatDateTime(d.createdAt)}</div>
+                          <div className="flex gap-2">
+                            {d.filePath?.endsWith('.docx') ? (
+                              <button className="btn" onClick={() => downloadDocument(d.id)}>Скачать DOCX</button>
+                            ) : (
+                              <>
+                                <button className="btn" onClick={() => openDocument(d.id)}>Показать</button>
+                                <button className="btn" onClick={() => printDocument(d.id)} disabled={!docHtmlMap[d.id]}>Печать / PDF</button>
+                              </>
+                            )}
                           </div>
-                        ))}
-                      </div>
-
-                      {sorted.length > pageSize && (
-                        <div className="mt-2 flex items-center justify-end gap-2 text-xs text-gray-400">
-                          <button className="btn" disabled={currentPage <= 1} onClick={() => setPaymentsPageMap((prev) => ({ ...prev, [r.id]: Math.max(1, currentPage - 1) }))}>Назад</button>
-                          <span>Стр. {currentPage} / {totalPages}</span>
-                          <button className="btn" disabled={currentPage >= totalPages} onClick={() => setPaymentsPageMap((prev) => ({ ...prev, [r.id]: Math.min(totalPages, currentPage + 1) }))}>Вперед</button>
+                          {!!docHtmlMap[d.id] && <div className="mt-2 rounded border bg-white p-2" dangerouslySetInnerHTML={{ __html: docHtmlMap[d.id] }} />}
                         </div>
-                      )}
-                    </>
-                  )
-                })()
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {!!journalMap[r.id]?.length && (
+                <div className="rounded-lg border border-white/10 bg-[#181a1f] p-3">
+                  <button className="w-full text-left text-sm font-medium" onClick={() => setOpenSection((s) => s === 'journal' ? 'payments' : 'journal')}>Журнал операций</button>
+                  {openSection === 'journal' && (
+                    <div className="mt-2 space-y-1 text-xs">
+                      {journalMap[r.id].map((e: any, idx: number) => (
+                        <div key={idx}>{formatDate(e.at)} {new Date(e.at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} — {e.type}: {e.details}</div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
-
-            {!!docsMap[r.id]?.length && (
-              <div className="mt-3 rounded-lg border border-white/10 bg-[#181a1f] p-3">
-                <div className="mb-2 font-medium">Документы по аренде</div>
-                <div className="space-y-2">
-                  {docsMap[r.id].map((d) => (
-                    <div key={d.id} className="rounded-lg border border-white/10 bg-[#181a1f] p-3">
-                      <div className="mb-1 text-xs text-gray-600">{d.type} · {formatDateTime(d.createdAt)}</div>
-                      <div className="flex gap-2">
-                        {d.filePath?.endsWith('.docx') ? (
-                          <button className="btn" onClick={() => downloadDocument(d.id)}>Скачать DOCX</button>
-                        ) : (
-                          <>
-                            <button className="btn" onClick={() => openDocument(d.id)}>Показать</button>
-                            <button className="btn" onClick={() => printDocument(d.id)} disabled={!docHtmlMap[d.id]}>Печать / PDF</button>
-                          </>
-                        )}
-                      </div>
-                      {!!docHtmlMap[d.id] && <div className="mt-2 rounded border bg-white p-2" dangerouslySetInnerHTML={{ __html: docHtmlMap[d.id] }} />}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {!!journalMap[r.id]?.length && (
-              <div className="mt-3 rounded-lg border border-white/10 bg-[#181a1f] p-3">
-                <div className="mb-2 font-medium">Журнал операций</div>
-                <div className="space-y-1 text-xs">
-                  {journalMap[r.id].map((e: any, idx: number) => (
-                    <div key={idx}>{formatDate(e.at)} {new Date(e.at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} — {e.type}: {e.details}</div>
-                  ))}
-                </div>
-              </div>
-            )}
           </section>
         )
       })()}
