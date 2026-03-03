@@ -18,7 +18,59 @@ export default function OwnerDashboardPage() {
   const [saasSummary, setSaasSummary] = useState<any>(null)
   const [saasTenants, setSaasTenants] = useState<any[]>([])
   const [section, setSection] = useState<'FRANCHISE' | 'SAAS'>('FRANCHISE')
+  const [savingTenantId, setSavingTenantId] = useState('')
+  const [saasEdits, setSaasEdits] = useState<Record<string, {
+    saasPlan: 'STARTER' | 'PRO' | 'ENTERPRISE'
+    saasSubscriptionStatus: 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED'
+    saasTrialEndsAt: string
+  }>>({})
   const [error, setError] = useState('')
+
+  const toDateInput = (value?: string | null) => {
+    if (!value) return ''
+    return new Date(value).toISOString().slice(0, 10)
+  }
+
+  const buildSaasEdits = (rows: any[]) =>
+    Object.fromEntries(
+      rows.map((t) => [
+        t.id,
+        {
+          saasPlan: (t.saasPlan || 'STARTER') as 'STARTER' | 'PRO' | 'ENTERPRISE',
+          saasSubscriptionStatus: (t.saasSubscriptionStatus || 'TRIAL') as 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED',
+          saasTrialEndsAt: toDateInput(t.saasTrialEndsAt),
+        },
+      ]),
+    )
+
+  const refreshSaasData = async () => {
+    const [saasSummaryResp, saasTenantsResp] = await Promise.all([
+      api.adminSaasSummary(),
+      api.adminSaasTenants(),
+    ])
+    setSaasSummary(saasSummaryResp)
+    setSaasTenants(saasTenantsResp)
+    setSaasEdits(buildSaasEdits(saasTenantsResp))
+  }
+
+  const saveSaasTenant = async (tenantId: string) => {
+    try {
+      const edit = saasEdits[tenantId]
+      if (!edit) return
+      setSavingTenantId(tenantId)
+      setError('')
+      await api.adminUpdateSaasSubscription(tenantId, {
+        saasPlan: edit.saasPlan,
+        saasSubscriptionStatus: edit.saasSubscriptionStatus,
+        saasTrialEndsAt: edit.saasTrialEndsAt ? new Date(`${edit.saasTrialEndsAt}T00:00:00.000Z`).toISOString() : null,
+      })
+      await refreshSaasData()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка сохранения SaaS подписки')
+    } finally {
+      setSavingTenantId('')
+    }
+  }
 
   useEffect(() => {
     if (!getToken()) return router.replace('/login')
@@ -37,6 +89,7 @@ export default function OwnerDashboardPage() {
         setFranchisees(frs)
         setSaasSummary(saasSummaryResp)
         setSaasTenants(saasTenantsResp)
+        setSaasEdits(buildSaasEdits(saasTenantsResp))
 
         if (!getTenantId() && myTenants.length > 0) setTenantId(myTenants[0].id)
 
@@ -256,21 +309,80 @@ export default function OwnerDashboardPage() {
                     <th>План</th>
                     <th>Статус подписки</th>
                     <th>Trial до</th>
+                    <th>Действие</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {saasTenants.map((t: any) => (
-                    <tr key={t.id}>
-                      <td data-label="Точка" className="font-medium">{t.name}</td>
-                      <td data-label="Франчайзи">{t.franchisee?.name || '—'}</td>
-                      <td data-label="План">{t.saasPlan || '—'}</td>
-                      <td data-label="Статус подписки">{t.saasSubscriptionStatus || '—'}</td>
-                      <td data-label="Trial до">{t.saasTrialEndsAt ? new Date(t.saasTrialEndsAt).toLocaleDateString('ru-RU') : '—'}</td>
-                    </tr>
-                  ))}
+                  {saasTenants.map((t: any) => {
+                    const edit = saasEdits[t.id]
+                    return (
+                      <tr key={t.id}>
+                        <td data-label="Точка" className="font-medium">{t.name}</td>
+                        <td data-label="Франчайзи">{t.franchisee?.name || '—'}</td>
+                        <td data-label="План">
+                          <select
+                            className="select"
+                            value={edit?.saasPlan || 'STARTER'}
+                            onChange={(e) =>
+                              setSaasEdits((prev) => ({
+                                ...prev,
+                                [t.id]: { ...prev[t.id], saasPlan: e.target.value as 'STARTER' | 'PRO' | 'ENTERPRISE' },
+                              }))
+                            }
+                          >
+                            <option value="STARTER">STARTER</option>
+                            <option value="PRO">PRO</option>
+                            <option value="ENTERPRISE">ENTERPRISE</option>
+                          </select>
+                        </td>
+                        <td data-label="Статус подписки">
+                          <select
+                            className="select"
+                            value={edit?.saasSubscriptionStatus || 'TRIAL'}
+                            onChange={(e) =>
+                              setSaasEdits((prev) => ({
+                                ...prev,
+                                [t.id]: {
+                                  ...prev[t.id],
+                                  saasSubscriptionStatus: e.target.value as 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED',
+                                },
+                              }))
+                            }
+                          >
+                            <option value="TRIAL">TRIAL</option>
+                            <option value="ACTIVE">ACTIVE</option>
+                            <option value="PAST_DUE">PAST_DUE</option>
+                            <option value="CANCELED">CANCELED</option>
+                          </select>
+                        </td>
+                        <td data-label="Trial до">
+                          <input
+                            type="date"
+                            className="input"
+                            value={edit?.saasTrialEndsAt || ''}
+                            onChange={(e) =>
+                              setSaasEdits((prev) => ({
+                                ...prev,
+                                [t.id]: { ...prev[t.id], saasTrialEndsAt: e.target.value },
+                              }))
+                            }
+                          />
+                        </td>
+                        <td data-label="Действие">
+                          <button
+                            className="btn"
+                            disabled={savingTenantId === t.id}
+                            onClick={() => saveSaasTenant(t.id)}
+                          >
+                            {savingTenantId === t.id ? 'Сохранение...' : 'Сохранить'}
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
                   {!saasTenants.length && (
                     <tr>
-                      <td colSpan={5} className="text-center text-gray-500">SaaS tenant’ов пока нет</td>
+                      <td colSpan={6} className="text-center text-gray-500">SaaS tenant’ов пока нет</td>
                     </tr>
                   )}
                 </tbody>
