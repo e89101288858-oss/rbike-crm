@@ -90,7 +90,7 @@ export default function LoginPage() {
 
       <div className="mb-3 flex gap-2">
         <button className={tab === 'login' ? 'btn-primary' : 'btn'} onClick={() => setTab('login')}>Вход</button>
-        <button className={tab === 'register' ? 'btn-primary' : 'btn'} onClick={() => setTab('register')}>SaaS регистрация</button>
+        <button className={tab === 'register' ? 'btn-primary' : 'btn'} onClick={() => setTab('register')}>Регистрация</button>
       </div>
 
       {tab === 'login' ? (
@@ -110,7 +110,7 @@ export default function LoginPage() {
           <input className="input w-full" placeholder="Название точки (опционально)" value={regTenantName} onChange={(e) => setRegTenantName(e.target.value)} />
           <input className="input w-full" placeholder="Email" value={regEmail} onChange={(e) => setRegEmail(e.target.value)} required />
           <input className="input w-full" placeholder="Пароль (мин. 6)" type="password" value={regPassword} onChange={(e) => setRegPassword(e.target.value)} required minLength={6} />
-          <button disabled={loading} className="btn-primary w-full">{loading ? 'Создаём аккаунт…' : 'Создать SaaS аккаунт'}</button>
+          <button disabled={loading} className="btn-primary w-full">{loading ? 'Создаём аккаунт…' : 'Создать аккаунт'}</button>
           {error && <p className="alert">{error}</p>}
           {success && <p className="alert-success">{success}</p>}
         </form>

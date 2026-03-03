@@ -340,7 +340,7 @@ export default function DashboardPage() {
           {showOnboarding && (
             <section className="mb-6 rounded-lg border border-orange-500/40 bg-orange-500/10 p-4">
               <div className="mb-2 flex items-center justify-between gap-2">
-                <h2 className="text-lg font-semibold text-orange-100">SaaS onboarding</h2>
+                <h2 className="text-lg font-semibold text-orange-100">Быстрый старт</h2>
                 <button
                   className="btn"
                   onClick={() => {

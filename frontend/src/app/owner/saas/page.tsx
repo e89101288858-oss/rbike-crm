@@ -27,7 +27,7 @@ export default function OwnerSaasPage() {
         setSummary(s)
         setTenants(ts)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Ошибка загрузки SaaS раздела')
+        setError(err instanceof Error ? err.message : 'Ошибка загрузки раздела подписки')
       }
     })()
   }, [router])
@@ -35,18 +35,18 @@ export default function OwnerSaasPage() {
   return (
     <main className="page with-sidebar">
       <Topbar />
-      <h1 className="mb-4 text-2xl font-bold">SaaS</h1>
+      <h1 className="mb-4 text-2xl font-bold">Подписка</h1>
       {error && <div className="alert">{error}</div>}
 
       <section className="mb-4 grid gap-2 md:grid-cols-4">
-        <div className="kpi"><div className="text-xs text-gray-500">SaaS tenant'ов</div><div className="mt-1 text-2xl font-semibold">{Number(summary?.totalSaasTenants || 0)}</div></div>
+        <div className="kpi"><div className="text-xs text-gray-500">Клиентов подписки</div><div className="mt-1 text-2xl font-semibold">{Number(summary?.totalSaasTenants || 0)}</div></div>
         <div className="kpi"><div className="text-xs text-gray-500">Trial</div><div className="mt-1 text-2xl font-semibold">{Number(summary?.subscriptions?.trial || 0)}</div></div>
         <div className="kpi"><div className="text-xs text-gray-500">Active</div><div className="mt-1 text-2xl font-semibold">{Number(summary?.subscriptions?.active || 0)}</div></div>
         <div className="kpi"><div className="text-xs text-gray-500">Trial ≤ 7 дней</div><div className="mt-1 text-2xl font-semibold">{Number(summary?.trialExpiringSoon || 0)}</div></div>
       </section>
 
       <section className="panel text-sm">
-        <h2 className="mb-2 text-base font-semibold">Список SaaS tenant'ов</h2>
+        <h2 className="mb-2 text-base font-semibold">Список клиентов подписки</h2>
         <div className="table-wrap">
           <table className="table table-sticky mobile-cards">
             <thead>
