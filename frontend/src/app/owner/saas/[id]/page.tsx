@@ -18,6 +18,22 @@ export default function OwnerSaasDetailsPage() {
 
   const [period, setPeriod] = useState<'MONTH' | 'QUARTER' | 'YEAR'>('MONTH')
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7))
+  const [quarter, setQuarter] = useState(`${new Date().getUTCFullYear()}-Q${Math.floor(new Date().getUTCMonth() / 3) + 1}`)
+  const [year, setYear] = useState(String(new Date().getUTCFullYear()))
+
+  const quarterOptions = Array.from({ length: 8 }).map((_, i) => {
+    const d = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() - i * 3, 1))
+    const q = Math.floor(d.getUTCMonth() / 3) + 1
+    return `${d.getUTCFullYear()}-Q${q}`
+  })
+  const yearOptions = Array.from({ length: 8 }).map((_, i) => String(new Date().getUTCFullYear() - i))
+
+  const anchorMonth =
+    period === 'MONTH'
+      ? month
+      : period === 'QUARTER'
+        ? `${quarter.split('-Q')[0]}-${String((Number(quarter.split('-Q')[1]) - 1) * 3 + 1).padStart(2, '0')}`
+        : `${year}-12`
 
   function monthsForPeriod(periodValue: 'MONTH' | 'QUARTER' | 'YEAR', monthValue: string) {
     const [y, m] = monthValue.split('-').map(Number)
@@ -47,7 +63,7 @@ export default function OwnerSaasDetailsPage() {
         const rows = await api.adminSaasTenants()
 
         const reports = await Promise.all(
-          monthsForPeriod(period, month).map((x) => api.franchiseOwnerMonthly(x)),
+          monthsForPeriod(period, anchorMonth).map((x) => api.franchiseOwnerMonthly(x)),
         )
         const found = rows.find((x: any) => x.id === params.id)
         if (!found) return router.replace('/owner/saas')
@@ -84,7 +100,7 @@ export default function OwnerSaasDetailsPage() {
         setError(err instanceof Error ? err.message : 'Ошибка загрузки SaaS tenant')
       }
     })()
-  }, [router, params, month, period])
+  }, [router, params, month, period, quarter, year])
 
   const trialLabel = useMemo(() => tenant?.saasTrialEndsAt ? new Date(tenant.saasTrialEndsAt).toLocaleDateString('ru-RU') : '—', [tenant])
 
@@ -115,7 +131,19 @@ export default function OwnerSaasDetailsPage() {
             <option value="QUARTER">Квартал</option>
             <option value="YEAR">Год</option>
           </select>
-          <input type="month" className="input w-44" value={month} onChange={(e) => setMonth(e.target.value)} />
+          {period === 'MONTH' && (
+            <input type="month" className="input w-44" value={month} onChange={(e) => setMonth(e.target.value)} />
+          )}
+          {period === 'QUARTER' && (
+            <select className="select w-44" value={quarter} onChange={(e) => setQuarter(e.target.value)}>
+              {quarterOptions.map((q) => <option key={q} value={q}>{q}</option>)}
+            </select>
+          )}
+          {period === 'YEAR' && (
+            <select className="select w-44" value={year} onChange={(e) => setYear(e.target.value)}>
+              {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
+            </select>
+          )}
         </div>
       </div>
       {error && <div className="alert">{error}</div>}
