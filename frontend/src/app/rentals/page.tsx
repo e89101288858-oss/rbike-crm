@@ -48,6 +48,7 @@ export default function RentalsPage() {
   const [closeReason, setCloseReason] = useState('')
   const [deleteModalRentalId, setDeleteModalRentalId] = useState<string | null>(null)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
   async function loadAll() {
     setError('')
@@ -125,11 +126,14 @@ export default function RentalsPage() {
 
   async function extendRental(rentalId: string) {
     setError('')
+    setSuccess('')
     try {
       const days = Number(extendMap[rentalId] || 0)
       if (!Number.isInteger(days) || days <= 0) throw new Error('Введите дни продления (целое > 0)')
       await api.extendRental(rentalId, days)
+      setExtendMap((p) => ({ ...p, [rentalId]: '' }))
       await loadAll()
+      setSuccess(`Аренда продлена на ${days} дн.`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка продления аренды')
     }
@@ -137,6 +141,7 @@ export default function RentalsPage() {
 
   async function closeRental(rentalId: string, reason: string) {
     setError('')
+    setSuccess('')
     try {
       const trimmedReason = reason.trim()
       if (!trimmedReason) throw new Error('Причина досрочного завершения обязательна')
@@ -144,6 +149,7 @@ export default function RentalsPage() {
       await loadAll()
       setCloseModalRentalId(null)
       setCloseReason('')
+      setSuccess('Аренда завершена досрочно')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка закрытия аренды')
     }
@@ -303,6 +309,12 @@ export default function RentalsPage() {
   }, [error])
 
   useEffect(() => {
+    if (!success) return
+    const t = setTimeout(() => setSuccess(''), 2200)
+    return () => clearTimeout(t)
+  }, [success])
+
+  useEffect(() => {
     if (!selectedRentalId) return
     if (paymentsMap[selectedRentalId]) return
     void loadRentalPayments(selectedRentalId)
@@ -365,6 +377,7 @@ export default function RentalsPage() {
 
       <div className="toast-stack">
         {error && <div className="alert">{error}</div>}
+        {success && <div className="alert-success">{success}</div>}
       </div>
 
       <div className="mb-3 flex items-center gap-2">
@@ -422,7 +435,7 @@ export default function RentalsPage() {
       </div>
 
       {closeModalRentalId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setCloseModalRentalId(null)}>
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4" onClick={() => setCloseModalRentalId(null)}>
           <div className="panel w-full max-w-md" onClick={(e) => e.stopPropagation()}>
             <h3 className="mb-2 text-base font-semibold">Досрочно завершить аренду</h3>
             <p className="mb-2 text-xs text-gray-400">Укажи причину завершения. Это обязательное поле.</p>
@@ -441,7 +454,7 @@ export default function RentalsPage() {
       )}
 
       {deleteModalRentalId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setDeleteModalRentalId(null)}>
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4" onClick={() => setDeleteModalRentalId(null)}>
           <div className="panel w-full max-w-md" onClick={(e) => e.stopPropagation()}>
             <h3 className="mb-2 text-base font-semibold">Удалить завершенную аренду?</h3>
             <p className="text-sm text-gray-400">Действие необратимо. Будут удалены связанные записи платежей, документов и журнала.</p>
