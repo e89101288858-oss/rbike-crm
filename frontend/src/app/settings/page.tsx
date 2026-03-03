@@ -11,7 +11,7 @@ export default function TenantSettingsPage() {
   const [tenants, setTenants] = useState<any[]>([])
   const [role, setRole] = useState('')
   const [settings, setSettings] = useState<any>(null)
-  const [form, setForm] = useState({ dailyRateRub: 500, minRentalDays: 7, royaltyPercent: 5 })
+  const [form, setForm] = useState({ dailyRateRub: 500, minRentalDays: 7 })
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
@@ -27,7 +27,6 @@ export default function TenantSettingsPage() {
       setForm({
         dailyRateRub: Number(s.dailyRateRub || 500),
         minRentalDays: Number(s.minRentalDays || 7),
-        royaltyPercent: Number(s.royaltyPercent || 5),
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки настроек точки')
@@ -52,12 +51,10 @@ export default function TenantSettingsPage() {
     try {
       if (form.dailyRateRub < 1 || form.dailyRateRub > 100000) throw new Error('Ставка: 1..100000')
       if (form.minRentalDays < 1 || form.minRentalDays > 365) throw new Error('Минимальный срок: 1..365')
-      if (form.royaltyPercent < 0 || form.royaltyPercent > 100) throw new Error('Роялти: 0..100')
 
       await api.updateMyTenantSettings({
         dailyRateRub: Number(form.dailyRateRub),
         minRentalDays: Number(form.minRentalDays),
-        royaltyPercent: Number(form.royaltyPercent),
       })
       setSuccess('Настройки точки сохранены')
       await load()
@@ -88,7 +85,7 @@ export default function TenantSettingsPage() {
           Точка: <b>{settings?.name || '—'}</b> · Режим: <b>{settings?.mode || '—'}</b>
         </div>
 
-        <div className="grid gap-2 md:grid-cols-3">
+        <div className="grid gap-2 md:grid-cols-2">
           <label className="space-y-1">
             <div className="text-xs text-gray-500">Суточная ставка (₽)</div>
             <input
@@ -110,19 +107,6 @@ export default function TenantSettingsPage() {
               className="input"
               value={form.minRentalDays}
               onChange={(e) => setForm((p) => ({ ...p, minRentalDays: Number(e.target.value) }))}
-            />
-          </label>
-
-          <label className="space-y-1">
-            <div className="text-xs text-gray-500">Роялти (%)</div>
-            <input
-              type="number"
-              min={0}
-              max={100}
-              step={0.1}
-              className="input"
-              value={form.royaltyPercent}
-              onChange={(e) => setForm((p) => ({ ...p, royaltyPercent: Number(e.target.value) }))}
             />
           </label>
         </div>

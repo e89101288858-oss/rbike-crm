@@ -32,12 +32,18 @@ export class MyTenantSettingsController {
   @Patch()
   async updateSettings(@Req() req: Request, @Body() dto: UpdateMyTenantSettingsDto) {
     const tenantId = req.tenantId!
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { mode: true },
+    })
+
     return this.prisma.tenant.update({
       where: { id: tenantId },
       data: {
         ...(dto.dailyRateRub !== undefined && { dailyRateRub: dto.dailyRateRub }),
         ...(dto.minRentalDays !== undefined && { minRentalDays: Math.trunc(dto.minRentalDays) }),
-        ...(dto.royaltyPercent !== undefined && { royaltyPercent: dto.royaltyPercent }),
+        ...(tenant?.mode !== 'SAAS' && dto.royaltyPercent !== undefined && { royaltyPercent: dto.royaltyPercent }),
       },
       select: {
         id: true,
