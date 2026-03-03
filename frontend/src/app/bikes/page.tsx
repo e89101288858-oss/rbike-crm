@@ -6,6 +6,7 @@ import { Topbar } from '@/components/topbar'
 import { api, Bike } from '@/lib/api'
 import { getTenantId, getToken, setTenantId } from '@/lib/auth'
 import { statusLabel } from '@/lib/format'
+import { CrmActionRow, CrmCard, CrmEmpty, CrmStat } from '@/components/crm-ui'
 
 type UserRole = 'OWNER' | 'FRANCHISEE' | 'MANAGER' | 'MECHANIC' | ''
 
@@ -171,20 +172,29 @@ export default function BikesPage() {
   return (
     <main className="page with-sidebar">
       <Topbar tenants={tenants} />
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={includeArchived} onChange={(e) => setIncludeArchived(e.target.checked)} /> Показать архив</label>
+      <CrmActionRow className="mb-3">
+        {selectedBikeId ? (
+          <button className="btn" onClick={() => setSelectedBikeId(null)}>Назад к списку</button>
+        ) : (
+          <>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={includeArchived} onChange={(e) => setIncludeArchived(e.target.checked)} /> Показать архив</label>
+            {canManageCards && <button type="button" className="btn-primary ml-auto" onClick={() => setCreateModalOpen(true)}>Добавить велосипед</button>}
+          </>
+        )}
+      </CrmActionRow>
+
+      <div className="mb-3 grid gap-2 md:grid-cols-3">
+        <CrmStat label="Всего велосипедов" value={bikes.length} />
+        <CrmStat label="На странице" value={pagedBikes.length} />
+        <CrmStat label="В аренде" value={bikes.filter((b: any) => b.status === 'RENTED').length} />
       </div>
       <div className="toast-stack">
         {error && <div className="alert">{error}</div>}
         {success && <div className="alert-success">{success}</div>}
       </div>
 
-      {canManageCards && (
-        <div className="mb-3 flex justify-end">
-          <button type="button" className="btn-primary" onClick={() => setCreateModalOpen(true)}>Добавить велосипед</button>
-        </div>
-      )}
-
+      {!selectedBikeId && (
+        <>
       <div className="table-wrap">
         <table className="table table-sticky mobile-cards">
           <thead>
@@ -207,7 +217,7 @@ export default function BikesPage() {
                 </tr>
               )
             })}
-            {!pagedBikes.length && <tr><td colSpan={6} className="text-center text-gray-600">Велосипедов пока нет</td></tr>}
+            {!pagedBikes.length && <tr><td colSpan={6} className="text-center text-gray-600"><CrmEmpty title="Велосипедов пока нет" /></td></tr>}
           </tbody>
         </table>
       </div>
@@ -225,6 +235,8 @@ export default function BikesPage() {
           <button className="btn" onClick={() => setPage(Math.min(totalPages, Math.max(1, Number(pageInput || 1))))}>ОК</button>
         </div>
       </div>
+        </>
+      )}
 
       {createModalOpen && canManageCards && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setCreateModalOpen(false)}>
@@ -265,79 +277,49 @@ export default function BikesPage() {
       )}
 
       {selectedBike && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setSelectedBikeId(null)}>
-          <div className="panel w-full max-w-5xl" onClick={(e) => e.stopPropagation()}>
-            {(() => {
-              const b: any = selectedBike
-              const f = formMap[b.id] ?? toBikeForm(b)
-              const archived = b.isActive === false
-              const readOnly = archived || !modalEdit
-              return (
-                <>
-                  <div className="mb-3 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2"><h2 className="text-lg font-semibold">Карточка велосипеда</h2><span className={`badge ${statusBadge(f.status ?? b.status)}`}>{statusLabel(f.status ?? b.status)}</span>{archived && <span className="badge badge-muted">АРХИВ</span>}</div>
-                    <button className="btn" onClick={() => setSelectedBikeId(null)}>Закрыть</button>
-                  </div>
+        <CrmCard className="mt-3">
+          {(() => {
+            const b: any = selectedBike
+            const f = formMap[b.id] ?? toBikeForm(b)
+            const archived = b.isActive === false
+            return (
+              <>
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2"><h2 className="text-lg font-semibold">Карточка велосипеда</h2><span className={`badge ${statusBadge(f.status ?? b.status)}`}>{statusLabel(f.status ?? b.status)}</span>{archived && <span className="badge badge-muted">АРХИВ</span>}</div>
+                </div>
 
-                  {!modalEdit || archived ? (
-                    <div className="grid gap-2 md:grid-cols-3 text-sm">
-                      <div className="kpi"><div className="text-xs text-gray-500">Код</div><div>{f.code || '—'}</div></div>
-                      <div className="kpi"><div className="text-xs text-gray-500">Модель</div><div>{f.model || '—'}</div></div>
-                      <div className="kpi"><div className="text-xs text-gray-500">Статус</div><div>{statusLabel(f.status)}</div></div>
-                      <div className="kpi"><div className="text-xs text-gray-500">Номер рамы</div><div>{f.frameNumber || '—'}</div></div>
-                      <div className="kpi"><div className="text-xs text-gray-500">Номер мотор-колеса</div><div>{f.motorWheelNumber || '—'}</div></div>
-                      <div className="kpi"><div className="text-xs text-gray-500">SIM</div><div>{f.simCardNumber || '—'}</div></div>
-                      {f.status === 'MAINTENANCE' && (
-                        <>
-                          <div className="kpi md:col-span-2"><div className="text-xs text-gray-500">Причина ремонта</div><div>{f.repairReason || '—'}</div></div>
-                          <div className="kpi"><div className="text-xs text-gray-500">Дата конца ремонта</div><div>{f.repairEndDate || '—'}</div></div>
-                        </>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="grid gap-2 md:grid-cols-4">
-                      <input className="input" value={f.code} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], code: e.target.value } }))} />
-                      <input className="input" value={f.model} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], model: e.target.value } }))} />
-                      <select
-                        className="select"
-                        value={f.status}
-                        onChange={(e) => setFormMap((p) => ({
-                          ...p,
-                          [b.id]: {
-                            ...p[b.id],
-                            status: e.target.value,
-                            repairReason: e.target.value === 'MAINTENANCE' ? p[b.id]?.repairReason ?? '' : '',
-                            repairEndDate: e.target.value === 'MAINTENANCE' ? p[b.id]?.repairEndDate ?? '' : '',
-                          },
-                        }))}
-                      >{BIKE_STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}</select>
-                      <input className="input" value={f.frameNumber} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], frameNumber: e.target.value } }))} />
-                      <input className="input" value={f.motorWheelNumber} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], motorWheelNumber: e.target.value } }))} />
-                      <input className="input" value={f.simCardNumber} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], simCardNumber: e.target.value } }))} />
-                      {f.status === 'MAINTENANCE' && (
-                        <>
-                          <input className="input" placeholder="Причина ремонта" value={f.repairReason} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], repairReason: e.target.value } }))} />
-                          <input className="input" type="date" value={f.repairEndDate} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], repairEndDate: e.target.value } }))} />
-                        </>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="mt-4 flex flex-wrap justify-between gap-2">
-                    <div className="flex gap-2">
-                      {!archived && !modalEdit && <button className="btn" onClick={() => setModalEdit(true)}>Редактировать</button>}
-                      {!archived && modalEdit && <button className="btn" onClick={() => saveBike(b.id)}>Сохранить</button>}
-                      {!archived && modalEdit && <button className="btn" onClick={() => { setFormMap((p) => ({ ...p, [b.id]: toBikeForm(b) })); setModalEdit(false) }}>Отмена</button>}
-                      {!archived ? (
-                        canManageCards && <button className="btn border-red-300 text-red-700" onClick={() => removeBike(b.id)}>В архив</button>
-                      ) : canManageCards && <button className="btn" onClick={() => restoreBike(b.id)}>Восстановить</button>}
-                    </div>
+                {!modalEdit || archived ? (
+                  <div className="grid gap-2 md:grid-cols-3 text-sm">
+                    <div className="kpi"><div className="text-xs text-gray-500">Код</div><div>{f.code || '—'}</div></div>
+                    <div className="kpi"><div className="text-xs text-gray-500">Модель</div><div>{f.model || '—'}</div></div>
+                    <div className="kpi"><div className="text-xs text-gray-500">Статус</div><div>{statusLabel(f.status)}</div></div>
+                    <div className="kpi"><div className="text-xs text-gray-500">Номер рамы</div><div>{f.frameNumber || '—'}</div></div>
+                    <div className="kpi"><div className="text-xs text-gray-500">Номер мотор-колеса</div><div>{f.motorWheelNumber || '—'}</div></div>
+                    <div className="kpi"><div className="text-xs text-gray-500">SIM</div><div>{f.simCardNumber || '—'}</div></div>
                   </div>
-                </>
-              )
-            })()}
-          </div>
-        </div>
+                ) : (
+                  <div className="grid gap-2 md:grid-cols-4">
+                    <input className="input" value={f.code} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], code: e.target.value } }))} />
+                    <input className="input" value={f.model} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], model: e.target.value } }))} />
+                    <select className="select" value={f.status} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], status: e.target.value } }))}>{BIKE_STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}</select>
+                    <input className="input" value={f.frameNumber} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], frameNumber: e.target.value } }))} />
+                    <input className="input" value={f.motorWheelNumber} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], motorWheelNumber: e.target.value } }))} />
+                    <input className="input" value={f.simCardNumber} onChange={(e) => setFormMap((p) => ({ ...p, [b.id]: { ...p[b.id], simCardNumber: e.target.value } }))} />
+                  </div>
+                )}
+
+                <div className="mt-4 flex flex-wrap justify-between gap-2">
+                  <div className="flex gap-2">
+                    {!archived && !modalEdit && <button className="btn" onClick={() => setModalEdit(true)}>Редактировать</button>}
+                    {!archived && modalEdit && <button className="btn" onClick={() => saveBike(b.id)}>Сохранить</button>}
+                    {!archived && modalEdit && <button className="btn" onClick={() => { setFormMap((p) => ({ ...p, [b.id]: toBikeForm(b) })); setModalEdit(false) }}>Отмена</button>}
+                    {!archived ? (canManageCards && <button className="btn border-red-300 text-red-700" onClick={() => removeBike(b.id)}>В архив</button>) : canManageCards && <button className="btn" onClick={() => restoreBike(b.id)}>Восстановить</button>}
+                  </div>
+                </div>
+              </>
+            )
+          })()}
+        </CrmCard>
       )}
     </main>
   )

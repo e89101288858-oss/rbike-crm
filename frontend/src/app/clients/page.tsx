@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api, Client } from '@/lib/api'
 import { getToken, getTenantId, setTenantId } from '@/lib/auth'
+import { CrmActionRow, CrmCard, CrmEmpty, CrmStat } from '@/components/crm-ui'
 
 type ClientForm = Partial<Client>
 
@@ -213,23 +214,24 @@ export default function ClientsPage() {
   return (
     <main className="page with-sidebar">
       <Topbar tenants={tenants} />
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-4">
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={blacklistOnly} onChange={(e) => setBlacklistOnly(e.target.checked)} />
-            Только ЧС
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={includeArchived} onChange={(e) => setIncludeArchived(e.target.checked)} />
-            Показать архив
-          </label>
-        </div>
-      </div>
+      <CrmActionRow className="mb-3">
+        {selectedClientId ? (
+          <button className="btn" onClick={() => setSelectedClientId(null)}>Назад к списку</button>
+        ) : (
+          <>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={blacklistOnly} onChange={(e) => setBlacklistOnly(e.target.checked)} /> Только ЧС</label>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={includeArchived} onChange={(e) => setIncludeArchived(e.target.checked)} /> Показать архив</label>
+            <input className="input min-w-0 flex-1 max-w-[760px]" placeholder="Поиск: ФИО / телефон / паспорт / контакт" value={query} onChange={(e) => setQuery(e.target.value)} />
+            <button className="btn whitespace-nowrap" onClick={load} disabled={loading}>{loading ? 'Поиск…' : 'Найти'}</button>
+            <button type="button" className="btn-primary whitespace-nowrap" onClick={() => setCreateModalOpen(true)}>Добавить курьера</button>
+          </>
+        )}
+      </CrmActionRow>
 
-      <div className="mb-3 flex items-center gap-2">
-        <input className="input min-w-0 flex-1 max-w-[760px]" placeholder="Поиск: ФИО / телефон / паспорт / контакт" value={query} onChange={(e) => setQuery(e.target.value)} />
-        <button className="btn whitespace-nowrap" onClick={load} disabled={loading}>{loading ? 'Поиск…' : 'Найти'}</button>
-        <button type="button" className="btn-primary whitespace-nowrap" onClick={() => setCreateModalOpen(true)}>Добавить курьера</button>
+      <div className="mb-3 grid gap-2 md:grid-cols-3">
+        <CrmStat label="Курьеров по фильтру" value={visibleClients.length} />
+        <CrmStat label="ЧС" value={clients.filter((c) => c.isBlacklisted).length} />
+        <CrmStat label="На странице" value={pagedClients.length} />
       </div>
 
       <div className="toast-stack">
@@ -237,6 +239,8 @@ export default function ClientsPage() {
         {success && <div className="alert-success">{success}</div>}
       </div>
 
+      {!selectedClientId && (
+        <>
       <div className="table-wrap">
         <table className="table table-sticky mobile-cards">
           <thead>
@@ -278,7 +282,7 @@ export default function ClientsPage() {
             })}
             {!visibleClients.length && (
               <tr>
-                <td colSpan={6} className="text-center text-gray-600">Курьеров по фильтру нет</td>
+                <td colSpan={6} className="text-center text-gray-600"><CrmEmpty title="Курьеров по фильтру нет" /></td>
               </tr>
             )}
           </tbody>
@@ -321,6 +325,8 @@ export default function ClientsPage() {
           </button>
         </div>
       </div>
+        </>
+      )}
 
       {createModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setCreateModalOpen(false)}>
@@ -348,78 +354,60 @@ export default function ClientsPage() {
       )}
 
       {selectedClient && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setSelectedClientId(null)}>
-          <div className="panel w-full max-w-5xl" onClick={(e) => e.stopPropagation()}>
-            {(() => {
-              const c = selectedClient
-              const e = editMap[c.id] ?? toClientForm(c)
-              const archived = c.isActive === false
-              const readOnly = archived || !modalEdit
-              const st = courierStatus(c)
+        <CrmCard className="mt-3">
+          {(() => {
+            const c = selectedClient
+            const e = editMap[c.id] ?? toClientForm(c)
+            const archived = c.isActive === false
+            const st = courierStatus(c)
 
-              return (
-                <>
-                  <div className="mb-3 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-lg font-semibold">Карточка курьера</h2>
-                      <span className={`badge ${st.cls}`}>{st.label}</span>
-                      {archived && <span className="badge badge-muted">АРХИВ</span>}
-                    </div>
-                    <button className="btn" type="button" onClick={() => setSelectedClientId(null)}>Закрыть</button>
+            return (
+              <>
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-semibold">Карточка курьера</h2>
+                    <span className={`badge ${st.cls}`}>{st.label}</span>
+                    {archived && <span className="badge badge-muted">АРХИВ</span>}
                   </div>
+                </div>
 
-                  {!modalEdit || archived ? (
-                    <div className="grid gap-2 md:grid-cols-3 text-sm">
-                      <div className="kpi"><div className="text-xs text-gray-500">ФИО</div><div>{e.fullName || '—'}</div></div>
-                      <div className="kpi"><div className="text-xs text-gray-500">Телефон</div><div>{e.phone || '—'}</div></div>
-                      <div className="kpi"><div className="text-xs text-gray-500">Дата рождения</div><div>{(e.birthDate as string) || '—'}</div></div>
-                      <div className="kpi md:col-span-2"><div className="text-xs text-gray-500">Адрес</div><div>{e.address || '—'}</div></div>
-                      <div className="kpi"><div className="text-xs text-gray-500">Паспорт</div><div>{e.passportSeries || '—'} {e.passportNumber || ''}</div></div>
-                      <div className="kpi"><div className="text-xs text-gray-500">Контакт родственника</div><div>{e.emergencyContactPhone || '—'}</div></div>
-                      <div className="kpi"><div className="text-xs text-gray-500">Заметка</div><div>{e.notes || '—'}</div></div>
-                      {e.isBlacklisted && <div className="kpi"><div className="text-xs text-gray-500">Причина ЧС</div><div>{e.blacklistReason || '—'}</div></div>}
-                      <div className="kpi"><div className="text-xs text-gray-500">В черном списке</div><div>{e.isBlacklisted ? 'Да' : 'Нет'}</div></div>
-                    </div>
-                  ) : (
-                    <div className="grid gap-2 md:grid-cols-3">
-                      <input className="input" placeholder="ФИО" value={e.fullName ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], fullName: ev.target.value } }))} />
-                      <input className="input" placeholder="Телефон" value={e.phone ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], phone: ev.target.value } }))} />
-                      <input className="input" type="date" placeholder="Дата рождения" value={(e.birthDate as string) ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], birthDate: ev.target.value } }))} />
-                      <input className="input" placeholder="Адрес проживания" value={e.address ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], address: ev.target.value } }))} />
-                      <input className="input" placeholder="Паспорт серия" value={e.passportSeries ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], passportSeries: ev.target.value } }))} />
-                      <input className="input" placeholder="Паспорт номер" value={e.passportNumber ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], passportNumber: ev.target.value } }))} />
-                      <input className="input" placeholder="Телефон родственника/знакомого" value={e.emergencyContactPhone ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], emergencyContactPhone: ev.target.value } }))} />
-                      <input className="input" placeholder="Заметка" value={e.notes ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], notes: ev.target.value } }))} />
-                      {e.isBlacklisted && (
-                        <input className="input" placeholder="Причина ЧС" value={(e.blacklistReason as string) ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], blacklistReason: ev.target.value } }))} />
-                      )}
-                      <label className="flex items-center gap-2 px-2">
-                        <input type="checkbox" checked={!!e.isBlacklisted} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], isBlacklisted: ev.target.checked, blacklistReason: ev.target.checked ? (p[c.id]?.blacklistReason ?? '') : '' } }))} />
-                        В черный список
-                      </label>
-                    </div>
-                  )}
-
-                  <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex flex-wrap gap-2">
-                      {!archived && !modalEdit && <button type="button" className="btn" onClick={() => setModalEdit(true)}>Редактировать</button>}
-                      {!archived && modalEdit && <button type="button" className="btn" onClick={() => saveClient(c.id)}>Сохранить</button>}
-                      {!archived && modalEdit && <button type="button" className="btn" onClick={() => { setEditMap((p) => ({ ...p, [c.id]: toClientForm(c) })); setModalEdit(false) }}>Отмена</button>}
-                      {!archived ? (
-                        <button type="button" className="btn border-red-300 text-red-700" onClick={() => removeClient(c.id)}>В архив</button>
-                      ) : (
-                        <button type="button" className="btn" onClick={() => restoreClient(c.id)}>Восстановить из архива</button>
-                      )}
-                    </div>
-                    {!archived && (
-                      <button type="button" className="btn-primary" onClick={() => router.push(`/rentals?clientId=${c.id}`)}>Создать аренду</button>
-                    )}
+                {!modalEdit || archived ? (
+                  <div className="grid gap-2 md:grid-cols-3 text-sm">
+                    <div className="kpi"><div className="text-xs text-gray-500">ФИО</div><div>{e.fullName || '—'}</div></div>
+                    <div className="kpi"><div className="text-xs text-gray-500">Телефон</div><div>{e.phone || '—'}</div></div>
+                    <div className="kpi"><div className="text-xs text-gray-500">Дата рождения</div><div>{(e.birthDate as string) || '—'}</div></div>
+                    <div className="kpi md:col-span-2"><div className="text-xs text-gray-500">Адрес</div><div>{e.address || '—'}</div></div>
+                    <div className="kpi"><div className="text-xs text-gray-500">Паспорт</div><div>{e.passportSeries || '—'} {e.passportNumber || ''}</div></div>
+                    <div className="kpi"><div className="text-xs text-gray-500">Контакт родственника</div><div>{e.emergencyContactPhone || '—'}</div></div>
+                    <div className="kpi"><div className="text-xs text-gray-500">Заметка</div><div>{e.notes || '—'}</div></div>
+                    {e.isBlacklisted && <div className="kpi"><div className="text-xs text-gray-500">Причина ЧС</div><div>{e.blacklistReason || '—'}</div></div>}
                   </div>
-                </>
-              )
-            })()}
-          </div>
-        </div>
+                ) : (
+                  <div className="grid gap-2 md:grid-cols-3">
+                    <input className="input" placeholder="ФИО" value={e.fullName ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], fullName: ev.target.value } }))} />
+                    <input className="input" placeholder="Телефон" value={e.phone ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], phone: ev.target.value } }))} />
+                    <input className="input" type="date" placeholder="Дата рождения" value={(e.birthDate as string) ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], birthDate: ev.target.value } }))} />
+                    <input className="input" placeholder="Адрес проживания" value={e.address ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], address: ev.target.value } }))} />
+                    <input className="input" placeholder="Паспорт серия" value={e.passportSeries ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], passportSeries: ev.target.value } }))} />
+                    <input className="input" placeholder="Паспорт номер" value={e.passportNumber ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], passportNumber: ev.target.value } }))} />
+                    <input className="input" placeholder="Телефон родственника/знакомого" value={e.emergencyContactPhone ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], emergencyContactPhone: ev.target.value } }))} />
+                    <input className="input" placeholder="Заметка" value={e.notes ?? ''} onChange={(ev) => setEditMap((p) => ({ ...p, [c.id]: { ...p[c.id], notes: ev.target.value } }))} />
+                  </div>
+                )}
+
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    {!archived && !modalEdit && <button type="button" className="btn" onClick={() => setModalEdit(true)}>Редактировать</button>}
+                    {!archived && modalEdit && <button type="button" className="btn" onClick={() => saveClient(c.id)}>Сохранить</button>}
+                    {!archived && modalEdit && <button type="button" className="btn" onClick={() => { setEditMap((p) => ({ ...p, [c.id]: toClientForm(c) })); setModalEdit(false) }}>Отмена</button>}
+                    {!archived ? <button type="button" className="btn border-red-300 text-red-700" onClick={() => removeClient(c.id)}>В архив</button> : <button type="button" className="btn" onClick={() => restoreClient(c.id)}>Восстановить</button>}
+                  </div>
+                  {!archived && <button type="button" className="btn-primary" onClick={() => router.push(`/rentals?clientId=${c.id}`)}>Создать аренду</button>}
+                </div>
+              </>
+            )
+          })()}
+        </CrmCard>
       )}
     </main>
   )
