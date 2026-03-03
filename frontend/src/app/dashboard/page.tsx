@@ -7,7 +7,7 @@ import { api, Rental } from '@/lib/api'
 import { getTenantId, getToken, setTenantId } from '@/lib/auth'
 import { diffDays, formatRub } from '@/lib/format'
 
-type ChartMode = 'week' | 'month' | 'year'
+type ChartMode = 'day' | 'month' | 'year'
 type RevenueMode = 'day' | 'week' | 'month' | 'year'
 
 function atStartOfDay(d: Date) {
@@ -61,7 +61,7 @@ function inRange(dateRaw: string | null | undefined, from: Date, to: Date) {
 }
 
 function aggregateRevenue(days: Array<{ date: string; revenueRub: number }>, mode: ChartMode) {
-  if (mode === 'week') {
+  if (mode === 'day') {
     return days.map((d) => ({ label: d.date.slice(5), value: Number(d.revenueRub || 0) }))
   }
 
@@ -116,8 +116,13 @@ export default function DashboardPage() {
   const [allRentals, setAllRentals] = useState<Rental[]>([])
   const [showOnboarding, setShowOnboarding] = useState(false)
 
-  const [chartMode, setChartMode] = useState<ChartMode>('week')
+  const [chartMode, setChartMode] = useState<ChartMode>('month')
   const [revenueMode, setRevenueMode] = useState<RevenueMode>('week')
+
+  const today = new Date()
+  const [chartDay, setChartDay] = useState(() => today.toISOString().slice(0, 10))
+  const [chartMonth, setChartMonth] = useState(() => `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`)
+  const [chartYear, setChartYear] = useState(() => String(today.getFullYear()))
 
   const [chartRows, setChartRows] = useState<Array<{ label: string; value: number }>>([])
   const [chartRevenueTotal, setChartRevenueTotal] = useState(0)
@@ -137,6 +142,34 @@ export default function DashboardPage() {
   const [revenueTotalBlock, setRevenueTotalBlock] = useState(0)
   const [revenueRows, setRevenueRows] = useState<Array<{ label: string; value: number }>>([])
   const [error, setError] = useState('')
+
+  const chartRange = useMemo(() => {
+    if (chartMode === 'day') {
+      const d = chartDay ? new Date(`${chartDay}T00:00:00`) : new Date()
+      return { from: atStartOfDay(d), to: atEndOfDay(d) }
+    }
+    if (chartMode === 'month') {
+      const [y, m] = (chartMonth || '').split('-').map(Number)
+      const year = Number.isFinite(y) ? y : new Date().getFullYear()
+      const month = Number.isFinite(m) ? m - 1 : new Date().getMonth()
+      return {
+        from: atStartOfDay(new Date(year, month, 1)),
+        to: atEndOfDay(new Date(year, month + 1, 0)),
+      }
+    }
+    const y = Number(chartYear) || new Date().getFullYear()
+    return {
+      from: atStartOfDay(new Date(y, 0, 1)),
+      to: atEndOfDay(new Date(y, 11, 31)),
+    }
+  }, [chartMode, chartDay, chartMonth, chartYear])
+
+  const yearOptions = useMemo(() => {
+    const current = new Date().getFullYear()
+    const arr: string[] = []
+    for (let y = current; y >= 2024; y -= 1) arr.push(String(y))
+    return arr
+  }, [])
 
   useEffect(() => {
     if (!getToken()) return router.replace('/login')
@@ -180,15 +213,16 @@ export default function DashboardPage() {
 
     ;(async () => {
       try {
-        const { from, to } = toIsoRange(chartMode)
-        const rev = await api.revenueByDays(`from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`)
+        const rev = await api.revenueByDays(
+          `from=${encodeURIComponent(chartRange.from.toISOString())}&to=${encodeURIComponent(chartRange.to.toISOString())}`,
+        )
         if (cancelled) return
 
         const rows = aggregateRevenue(rev.days ?? [], chartMode)
         setChartRows(rows)
         setChartRevenueTotal(Number(rev.totalRevenueRub || 0))
 
-        const range = getRange(chartMode)
+        const range = chartRange
         const activeRentals = allRentals.filter((r) => r.status === 'ACTIVE')
         const closedRentals = allRentals.filter((r) => r.status === 'CLOSED')
 
@@ -262,7 +296,7 @@ export default function DashboardPage() {
     return () => {
       cancelled = true
     }
-  }, [chartMode, allRentals])
+  }, [chartMode, chartRange, allRentals])
 
   useEffect(() => {
     ;(async () => {
@@ -413,10 +447,34 @@ export default function DashboardPage() {
           <section className="mb-6 rounded-lg border border-white/10 bg-[#1f2126] p-4 shadow-xl">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-lg font-semibold text-white">Финансовые показатели парка</h2>
-              <div className="flex gap-2">
-                <button className={tabClass(chartMode === 'week')} onClick={() => setChartMode('week')}>Неделя</button>
+              <div className="flex flex-wrap gap-2">
+                <button className={tabClass(chartMode === 'day')} onClick={() => setChartMode('day')}>День</button>
                 <button className={tabClass(chartMode === 'month')} onClick={() => setChartMode('month')}>Месяц</button>
                 <button className={tabClass(chartMode === 'year')} onClick={() => setChartMode('year')}>Год</button>
+
+                {chartMode === 'day' && (
+                  <input
+                    type="date"
+                    className="input h-7 px-2 py-1 text-xs"
+                    value={chartDay}
+                    onChange={(e) => setChartDay(e.target.value)}
+                  />
+                )}
+                {chartMode === 'month' && (
+                  <input
+                    type="month"
+                    className="input h-7 px-2 py-1 text-xs"
+                    value={chartMonth}
+                    onChange={(e) => setChartMonth(e.target.value)}
+                  />
+                )}
+                {chartMode === 'year' && (
+                  <select className="select h-7 px-2 py-1 text-xs" value={chartYear} onChange={(e) => setChartYear(e.target.value)}>
+                    {yearOptions.map((y) => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                )}
               </div>
             </div>
 
