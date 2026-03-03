@@ -16,7 +16,22 @@ export default function OwnerFranchiseeDetailsPage() {
   const [tenantBillingRows, setTenantBillingRows] = useState<any[]>([])
   const [error, setError] = useState('')
 
+  const [period, setPeriod] = useState<'MONTH' | 'QUARTER' | 'YEAR'>('MONTH')
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7))
+
+  function monthsForPeriod(periodValue: 'MONTH' | 'QUARTER' | 'YEAR', monthValue: string) {
+    const [y, m] = monthValue.split('-').map(Number)
+    const d = new Date(Date.UTC(y, m - 1, 1))
+    if (periodValue === 'MONTH') return [monthValue]
+
+    const count = periodValue === 'QUARTER' ? 3 : 12
+    const result: string[] = []
+    for (let i = 0; i < count; i++) {
+      const x = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - i, 1))
+      result.push(`${x.getUTCFullYear()}-${String(x.getUTCMonth() + 1).padStart(2, '0')}`)
+    }
+    return result
+  }
 
   useEffect(() => {
     if (!getToken()) return router.replace('/login')
@@ -27,11 +42,14 @@ export default function OwnerFranchiseeDetailsPage() {
         const me = await api.me()
         if (me.role !== 'OWNER') return router.replace('/dashboard')
 
-        const [frs, ownerBilling, ts] = await Promise.all([
+        const [frs, ts] = await Promise.all([
           api.adminFranchisees(),
-          api.franchiseOwnerMonthly(month),
           api.adminTenantsByFranchisee(params.id),
         ])
+
+        const reports = await Promise.all(
+          monthsForPeriod(period, month).map((x) => api.franchiseOwnerMonthly(x)),
+        )
         const found = frs.find((f: any) => f.id === params.id)
         const franchiseTenants = (ts || []).filter((t: any) => t.mode === 'FRANCHISE')
 
@@ -39,15 +57,41 @@ export default function OwnerFranchiseeDetailsPage() {
           return router.replace('/owner/franchisees')
         }
 
+        const billingByFranchisee = reports
+          .map((r) => (r?.franchisees || []).find((x: any) => x.franchiseeId === params.id))
+          .filter(Boolean)
+
+        const aggFranchisee = billingByFranchisee.reduce(
+          (acc: any, x: any) => ({
+            franchiseeId: x.franchiseeId,
+            franchiseeName: x.franchiseeName,
+            revenueRub: Number(acc.revenueRub || 0) + Number(x.revenueRub || 0),
+            royaltyDueRub: Number(acc.royaltyDueRub || 0) + Number(x.royaltyDueRub || 0),
+            tenants: Math.max(Number(acc.tenants || 0), Number(x.tenants || 0)),
+          }),
+          { revenueRub: 0, royaltyDueRub: 0, tenants: 0 },
+        )
+
+        const perTenantMap = new Map<string, any>()
+        for (const report of reports) {
+          for (const row of (report?.tenants || []).filter((x: any) => x.franchiseeId === params.id)) {
+            const cur = perTenantMap.get(row.tenantId) || { ...row, revenueRub: 0, royaltyDueRub: 0, paidPaymentsCount: 0 }
+            cur.revenueRub += Number(row.revenueRub || 0)
+            cur.royaltyDueRub += Number(row.royaltyDueRub || 0)
+            cur.paidPaymentsCount += Number(row.paidPaymentsCount || 0)
+            perTenantMap.set(row.tenantId, cur)
+          }
+        }
+
         setFranchisee(found)
-        setBilling((ownerBilling?.franchisees || []).find((x: any) => x.franchiseeId === params.id) || null)
-        setTenantBillingRows((ownerBilling?.tenants || []).filter((x: any) => x.franchiseeId === params.id))
+        setBilling(aggFranchisee)
+        setTenantBillingRows(Array.from(perTenantMap.values()))
         setTenants(franchiseTenants)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Ошибка загрузки франчайзи')
       }
     })()
-  }, [router, params, month])
+  }, [router, params, month, period])
 
   const avgRevenuePerPoint = tenants.length ? Number(billing?.revenueRub || 0) / tenants.length : 0
   const avgRoyaltyPerPoint = tenants.length ? Number(billing?.royaltyDueRub || 0) / tenants.length : 0
@@ -58,7 +102,14 @@ export default function OwnerFranchiseeDetailsPage() {
       <Topbar />
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">Франчайзи: {franchisee?.name || '—'}</h1>
-        <input type="month" className="input w-44" value={month} onChange={(e) => setMonth(e.target.value)} />
+        <div className="flex items-center gap-2">
+          <select className="select" value={period} onChange={(e) => setPeriod(e.target.value as 'MONTH' | 'QUARTER' | 'YEAR')}>
+            <option value="MONTH">Месяц</option>
+            <option value="QUARTER">Квартал</option>
+            <option value="YEAR">Год</option>
+          </select>
+          <input type="month" className="input w-44" value={month} onChange={(e) => setMonth(e.target.value)} />
+        </div>
       </div>
       {error && <div className="alert">{error}</div>}
 

@@ -16,7 +16,22 @@ export default function OwnerSaasDetailsPage() {
   const [tenantBilling, setTenantBilling] = useState<any>(null)
   const [saasRank, setSaasRank] = useState<number | null>(null)
 
+  const [period, setPeriod] = useState<'MONTH' | 'QUARTER' | 'YEAR'>('MONTH')
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7))
+
+  function monthsForPeriod(periodValue: 'MONTH' | 'QUARTER' | 'YEAR', monthValue: string) {
+    const [y, m] = monthValue.split('-').map(Number)
+    const d = new Date(Date.UTC(y, m - 1, 1))
+    if (periodValue === 'MONTH') return [monthValue]
+
+    const count = periodValue === 'QUARTER' ? 3 : 12
+    const result: string[] = []
+    for (let i = 0; i < count; i++) {
+      const x = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - i, 1))
+      result.push(`${x.getUTCFullYear()}-${String(x.getUTCMonth() + 1).padStart(2, '0')}`)
+    }
+    return result
+  }
 
   const toDateInput = (value?: string | null) => (value ? new Date(value).toISOString().slice(0, 10) : '')
 
@@ -29,18 +44,30 @@ export default function OwnerSaasDetailsPage() {
         const me = await api.me()
         if (me.role !== 'OWNER') return router.replace('/dashboard')
 
-        const [rows, ownerBilling] = await Promise.all([
-          api.adminSaasTenants(),
-          api.franchiseOwnerMonthly(month),
-        ])
+        const rows = await api.adminSaasTenants()
+
+        const reports = await Promise.all(
+          monthsForPeriod(period, month).map((x) => api.franchiseOwnerMonthly(x)),
+        )
         const found = rows.find((x: any) => x.id === params.id)
         if (!found) return router.replace('/owner/saas')
 
-        const tenantLine = (ownerBilling?.tenants || []).find((x: any) => x.tenantId === found.id) || null
         const saasTenantIds = new Set(rows.map((x: any) => x.id))
-        const saasBillingSorted = (ownerBilling?.tenants || [])
-          .filter((x: any) => saasTenantIds.has(x.tenantId))
+        const tenantAggMap = new Map<string, any>()
+
+        for (const report of reports) {
+          for (const row of (report?.tenants || []).filter((x: any) => saasTenantIds.has(x.tenantId))) {
+            const cur = tenantAggMap.get(row.tenantId) || { ...row, revenueRub: 0, royaltyDueRub: 0, paidPaymentsCount: 0 }
+            cur.revenueRub += Number(row.revenueRub || 0)
+            cur.royaltyDueRub += Number(row.royaltyDueRub || 0)
+            cur.paidPaymentsCount += Number(row.paidPaymentsCount || 0)
+            tenantAggMap.set(row.tenantId, cur)
+          }
+        }
+
+        const saasBillingSorted = Array.from(tenantAggMap.values())
           .sort((a: any, b: any) => Number(b.revenueRub || 0) - Number(a.revenueRub || 0))
+        const tenantLine = saasBillingSorted.find((x: any) => x.tenantId === found.id) || null
         const rank = tenantLine ? saasBillingSorted.findIndex((x: any) => x.tenantId === tenantLine.tenantId) + 1 : null
 
         setTenantBilling(tenantLine)
@@ -57,7 +84,7 @@ export default function OwnerSaasDetailsPage() {
         setError(err instanceof Error ? err.message : 'Ошибка загрузки SaaS tenant')
       }
     })()
-  }, [router, params, month])
+  }, [router, params, month, period])
 
   const trialLabel = useMemo(() => tenant?.saasTrialEndsAt ? new Date(tenant.saasTrialEndsAt).toLocaleDateString('ru-RU') : '—', [tenant])
 
@@ -82,7 +109,14 @@ export default function OwnerSaasDetailsPage() {
       <Topbar />
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">SaaS tenant: {tenant?.name || '—'}</h1>
-        <input type="month" className="input w-44" value={month} onChange={(e) => setMonth(e.target.value)} />
+        <div className="flex items-center gap-2">
+          <select className="select" value={period} onChange={(e) => setPeriod(e.target.value as 'MONTH' | 'QUARTER' | 'YEAR')}>
+            <option value="MONTH">Месяц</option>
+            <option value="QUARTER">Квартал</option>
+            <option value="YEAR">Год</option>
+          </select>
+          <input type="month" className="input w-44" value={month} onChange={(e) => setMonth(e.target.value)} />
+        </div>
       </div>
       {error && <div className="alert">{error}</div>}
 
