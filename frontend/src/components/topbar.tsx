@@ -31,7 +31,7 @@ const opsNav: NavGroup[] = [
   {
     title: 'Операции',
     items: [
-      { href: '/dashboard', label: 'Дашборд точки', roles: ['FRANCHISEE', 'MANAGER', 'MECHANIC'] },
+      { href: '/dashboard', label: 'Дашборд', roles: ['FRANCHISEE', 'MANAGER', 'MECHANIC'] },
       { href: '/rentals', label: 'Аренды', roles: ['FRANCHISEE', 'MANAGER'] },
     ],
   },

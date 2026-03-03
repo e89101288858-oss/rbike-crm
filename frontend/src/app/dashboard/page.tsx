@@ -236,23 +236,12 @@ export default function DashboardPage() {
         setEndingIn2to3(c23)
         setEndingIn4plus(c4)
         setOverdueActive(overdue)
-
-        const journalChecks: number[] = await Promise.all(
-          newRentals.map(async (r) => {
-            try {
-              const j = await api.rentalJournal(r.id)
-              const events = Array.isArray(j?.events) ? j.events : []
-              const hasExtend = events.some((e: any) => String(e?.type || '').toUpperCase().includes('EXTEND'))
-              return hasExtend ? 1 : 0
-            } catch {
-              return 0
-            }
-          }),
-        )
-
-        if (cancelled) return
-
-        const extCount = journalChecks.reduce((s, x) => s + x, 0)
+        const selectedTenant = tenants.find((t: any) => t.id === getTenantId())
+        const baseMinDays = Math.max(1, Number(selectedTenant?.minRentalDays || 7))
+        const extCount = newRentals.filter((r) => {
+          const plannedDays = Math.max(1, diffDays(r.startDate, r.plannedEndDate))
+          return plannedDays > baseMinDays
+        }).length
         setExtensionsCount(extCount)
         setExtensionsRate(newRentals.length ? (extCount / newRentals.length) * 100 : 0)
 
@@ -308,9 +297,6 @@ export default function DashboardPage() {
     return Math.min(100, Math.max(0, (occupiedBikeDays / possible) * 100))
   }, [allBikesCount, rangeDays, occupiedBikeDays])
 
-  const gaugeRadius = 72
-  const gaugeCircumference = Math.PI * gaugeRadius
-  const gaugeOffset = gaugeCircumference * (1 - parkLoadPercent / 100)
 
   return (
     <main className="page with-sidebar min-h-screen text-gray-100">
@@ -325,20 +311,20 @@ export default function DashboardPage() {
           {showOnboarding && (
             <section className="mb-6 rounded-lg border border-orange-500/40 bg-orange-500/10 p-4">
               <div className="grid gap-2 md:grid-cols-3 text-sm">
-                <div className={`kpi ${clientsCount > 0 ? 'border-emerald-500/40 bg-emerald-500/10' : ''}`}>
+                <div className={`kpi flex flex-col ${clientsCount > 0 ? 'border-emerald-500/40 bg-emerald-500/10' : ''}`}>
                   <div className="text-xs text-gray-300">Курьеры</div>
                   <div className="mt-1 text-2xl font-semibold">{formatInt(clientsCount)}</div>
-                  <button className="btn mt-2" onClick={() => router.push('/clients')}>Добавить курьера</button>
+                  <button className="btn-primary mt-3 w-full" onClick={() => router.push('/clients')}>Добавить курьера</button>
                 </div>
-                <div className={`kpi ${allBikesCount > 0 ? 'border-emerald-500/40 bg-emerald-500/10' : ''}`}>
+                <div className={`kpi flex flex-col ${allBikesCount > 0 ? 'border-emerald-500/40 bg-emerald-500/10' : ''}`}>
                   <div className="text-xs text-gray-300">Велосипеды</div>
                   <div className="mt-1 text-2xl font-semibold">{formatInt(allBikesCount)}</div>
-                  <button className="btn mt-2" onClick={() => router.push('/bikes')}>Добавить велосипед</button>
+                  <button className="btn-primary mt-3 w-full" onClick={() => router.push('/bikes')}>Добавить велосипед</button>
                 </div>
-                <div className={`kpi ${rentalsCount > 0 ? 'border-emerald-500/40 bg-emerald-500/10' : ''}`}>
+                <div className={`kpi flex flex-col ${rentalsCount > 0 ? 'border-emerald-500/40 bg-emerald-500/10' : ''}`}>
                   <div className="text-xs text-gray-300">Аренды</div>
                   <div className="mt-1 text-2xl font-semibold">{formatInt(rentalsCount)}</div>
-                  <button className="btn mt-2" onClick={() => router.push('/rentals')}>Добавить аренду</button>
+                  <button className="btn-primary mt-3 w-full" onClick={() => router.push('/rentals')}>Добавить аренду</button>
                 </div>
               </div>
             </section>
@@ -407,26 +393,26 @@ export default function DashboardPage() {
           </div>
 
             <div className="rounded-lg border border-white/10 bg-[#1f2126] p-4 shadow-xl">
-              <h2 className="mb-3 text-lg font-semibold text-white">Процент загрузки парка</h2>
-              <div className="mx-auto w-full max-w-[280px]">
-                <svg viewBox="0 0 200 120" className="w-full">
+              <h2 className="mb-2 text-lg font-semibold text-white">Процент загрузки парка</h2>
+              <div className="mx-auto w-full">
+                <svg viewBox="0 0 240 150" className="h-[260px] w-full">
                   <path
-                    d="M 20 100 A 80 80 0 0 1 180 100"
+                    d="M 20 130 A 100 100 0 0 1 220 130"
                     fill="none"
                     stroke="rgba(255,255,255,0.15)"
-                    strokeWidth="14"
+                    strokeWidth="18"
                     strokeLinecap="round"
                   />
                   <path
-                    d="M 20 100 A 80 80 0 0 1 180 100"
+                    d="M 20 130 A 100 100 0 0 1 220 130"
                     fill="none"
                     stroke="#f97316"
-                    strokeWidth="14"
+                    strokeWidth="18"
                     strokeLinecap="round"
-                    strokeDasharray={gaugeCircumference}
-                    strokeDashoffset={gaugeOffset}
+                    strokeDasharray={Math.PI * 100}
+                    strokeDashoffset={(Math.PI * 100) * (1 - parkLoadPercent / 100)}
                   />
-                  <text x="100" y="92" textAnchor="middle" className="fill-white text-3xl font-bold">
+                  <text x="120" y="122" textAnchor="middle" className="fill-white text-4xl font-bold">
                     {parkLoadPercent.toFixed(0)}%
                   </text>
                 </svg>
