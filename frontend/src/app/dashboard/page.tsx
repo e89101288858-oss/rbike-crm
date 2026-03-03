@@ -128,12 +128,23 @@ export default function DashboardPage() {
     }
   }, [chartMode, chartMonth, chartYear])
 
-  const yearOptions = useMemo(() => {
-    const current = new Date().getFullYear()
-    const arr: string[] = []
-    for (let y = current; y >= 2024; y -= 1) arr.push(String(y))
-    return arr
-  }, [])
+  const monthLabel = useMemo(() => {
+    const [y, m] = (chartMonth || '').split('-').map(Number)
+    const dt = new Date(Number.isFinite(y) ? y : today.getFullYear(), (Number.isFinite(m) ? m : today.getMonth() + 1) - 1, 1)
+    return dt.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })
+  }, [chartMonth, today])
+
+  function shiftPeriod(delta: number) {
+    if (chartMode === 'month') {
+      const [y, m] = chartMonth.split('-').map(Number)
+      const d = new Date((y || today.getFullYear()), ((m || (today.getMonth() + 1)) - 1), 1)
+      d.setMonth(d.getMonth() + delta)
+      setChartMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
+      return
+    }
+
+    setChartYear((prev) => String((Number(prev) || today.getFullYear()) + delta))
+  }
 
   useEffect(() => {
     if (!getToken()) return router.replace('/login')
@@ -392,21 +403,13 @@ export default function DashboardPage() {
               <div className="flex flex-wrap gap-2">
                 <button className={tabClass(chartMode === 'month')} onClick={() => setChartMode('month')}>Месяц</button>
                 <button className={tabClass(chartMode === 'year')} onClick={() => setChartMode('year')}>Год</button>
-                {chartMode === 'month' && (
-                  <input
-                    type="month"
-                    className="input h-7 px-2 py-1 text-xs"
-                    value={chartMonth}
-                    onChange={(e) => setChartMonth(e.target.value)}
-                  />
-                )}
-                {chartMode === 'year' && (
-                  <select className="select h-7 px-2 py-1 text-xs" value={chartYear} onChange={(e) => setChartYear(e.target.value)}>
-                    {yearOptions.map((y) => (
-                      <option key={y} value={y}>{y}</option>
-                    ))}
-                  </select>
-                )}
+                <div className="flex items-center gap-1 rounded-sm border border-white/10 bg-white/5 px-2 py-1 text-xs text-gray-200">
+                  <button className="px-1 text-gray-300 hover:text-white" onClick={() => shiftPeriod(-1)} aria-label="Предыдущий период">‹</button>
+                  <span className="min-w-[92px] text-center">
+                    {chartMode === 'month' ? monthLabel : chartYear}
+                  </span>
+                  <button className="px-1 text-gray-300 hover:text-white" onClick={() => shiftPeriod(1)} aria-label="Следующий период">›</button>
+                </div>
               </div>
             </div>
 
