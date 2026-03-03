@@ -6,6 +6,7 @@ import { Topbar } from '@/components/topbar'
 import { api, Battery } from '@/lib/api'
 import { getTenantId, getToken, setTenantId } from '@/lib/auth'
 import { statusLabel } from '@/lib/format'
+import { CrmActionRow, CrmCard, CrmEmpty, CrmStat } from '@/components/crm-ui'
 
 const BATTERY_STATUSES = ['AVAILABLE', 'RENTED', 'MAINTENANCE', 'LOST'] as const
 
@@ -202,17 +203,23 @@ export default function BatteriesPage() {
   return (
     <main className="page with-sidebar">
       <Topbar tenants={tenants} />
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={includeArchived} onChange={(e) => setIncludeArchived(e.target.checked)} />
-          Показать архив
-        </label>
-      </div>
+      <CrmActionRow className="mb-3">
+        {selectedId ? (
+          <button className="btn" onClick={() => setSelectedId(null)}>Назад к списку</button>
+        ) : (
+          <>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={includeArchived} onChange={(e) => setIncludeArchived(e.target.checked)} /> Показать архив</label>
+            <input className="input min-w-0 flex-1 max-w-[760px]" placeholder="Поиск по коду/серийному" value={query} onChange={(e) => setQuery(e.target.value)} />
+            <button className="btn whitespace-nowrap" onClick={load}>Найти</button>
+            <button type="button" className="btn-primary whitespace-nowrap" onClick={() => setCreateModalOpen(true)}>Добавить АКБ</button>
+          </>
+        )}
+      </CrmActionRow>
 
-      <div className="mb-3 flex items-center gap-2">
-        <input className="input min-w-0 flex-1 max-w-[760px]" placeholder="Поиск по коду/серийному" value={query} onChange={(e) => setQuery(e.target.value)} />
-        <button className="btn whitespace-nowrap" onClick={load}>Найти</button>
-        <button type="button" className="btn-primary whitespace-nowrap" onClick={() => setCreateModalOpen(true)}>Добавить АКБ</button>
+      <div className="mb-3 grid gap-2 md:grid-cols-3">
+        <CrmStat label="АКБ по фильтру" value={items.length} />
+        <CrmStat label="На странице" value={paged.length} />
+        <CrmStat label="Свободные" value={items.filter((x) => x.status === 'AVAILABLE').length} />
       </div>
 
       <div className="toast-stack">
@@ -220,6 +227,8 @@ export default function BatteriesPage() {
         {success && <div className="alert-success">{success}</div>}
       </div>
 
+      {!selectedId && (
+        <>
       <div className="table-wrap">
         <table className="table table-sticky mobile-cards">
           <thead>
@@ -238,7 +247,7 @@ export default function BatteriesPage() {
                 </tr>
               )
             })}
-            {!paged.length && <tr><td colSpan={5} className="text-center text-gray-600">АКБ пока нет</td></tr>}
+            {!paged.length && <tr><td colSpan={5} className="text-center text-gray-600"><CrmEmpty title="АКБ пока нет" /></td></tr>}
           </tbody>
         </table>
       </div>
@@ -256,6 +265,8 @@ export default function BatteriesPage() {
           <button className="btn" onClick={() => setPage(Math.min(totalPages, Math.max(1, Number(pageInput || 1))))}>ОК</button>
         </div>
       </div>
+        </>
+      )}
 
       {createModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setCreateModalOpen(false)}>
@@ -285,58 +296,52 @@ export default function BatteriesPage() {
       )}
 
       {selected && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setSelectedId(null)}>
-          <div className="panel w-full max-w-4xl" onClick={(e) => e.stopPropagation()}>
-            {(() => {
-              const b = selected
-              const f = forms[b.id] ?? toForm(b)
-              const archived = b.isActive === false
-              const readOnly = archived || !modalEdit
-              return (
-                <>
-                  <div className="mb-3 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2"><h2 className="text-lg font-semibold">Карточка АКБ</h2><span className="badge badge-muted">{statusLabel(f.status)}</span>{archived && <span className="badge badge-muted">АРХИВ</span>}</div>
-                    <button className="btn" onClick={() => setSelectedId(null)}>Закрыть</button>
-                  </div>
+        <CrmCard className="mt-3">
+          {(() => {
+            const b = selected
+            const f = forms[b.id] ?? toForm(b)
+            const archived = b.isActive === false
+            return (
+              <>
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2"><h2 className="text-lg font-semibold">Карточка АКБ</h2><span className="badge badge-muted">{statusLabel(f.status)}</span>{archived && <span className="badge badge-muted">АРХИВ</span>}</div>
+                </div>
 
-                  {!modalEdit || archived ? (
-                    <div className="grid gap-2 md:grid-cols-2 text-sm">
-                      <div className="kpi"><div className="text-xs text-gray-500">Код</div><div>{f.code || '—'}</div></div>
-                      <div className="kpi"><div className="text-xs text-gray-500">Серийный номер</div><div>{f.serialNumber || '—'}</div></div>
-                      <div className="kpi"><div className="text-xs text-gray-500">Велосипед</div><div>{bikes.find((x: any) => x.id === f.bikeId)?.code || 'Не привязана'}</div></div>
-                      <div className="kpi"><div className="text-xs text-gray-500">Статус</div><div>{statusLabel(f.status)}</div></div>
-                      <div className="kpi md:col-span-2"><div className="text-xs text-gray-500">Заметка</div><div>{f.notes || '—'}</div></div>
-                    </div>
-                  ) : (
-                    <div className="grid gap-2 md:grid-cols-2">
-                      <input className="input" placeholder="Код АКБ" value={f.code} onChange={(e) => setForms((p) => ({ ...p, [b.id]: { ...p[b.id], code: e.target.value } }))} />
-                      <input className="input" placeholder="Серийный номер" value={f.serialNumber} onChange={(e) => setForms((p) => ({ ...p, [b.id]: { ...p[b.id], serialNumber: e.target.value } }))} />
-                      <select className="select" value={f.bikeId} onChange={(e) => setForms((p) => ({ ...p, [b.id]: { ...p[b.id], bikeId: e.target.value } }))}>
-                        <option value="">Не привязана</option>
-                        {bikes.map((x: any) => <option key={x.id} value={x.id}>{x.code}</option>)}
-                      </select>
-                      <select className="select" value={f.status} onChange={(e) => setForms((p) => ({ ...p, [b.id]: { ...p[b.id], status: e.target.value } }))}>
-                        {BATTERY_STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
-                      </select>
-                      <input className="input md:col-span-2" placeholder="Заметка" value={f.notes} onChange={(e) => setForms((p) => ({ ...p, [b.id]: { ...p[b.id], notes: e.target.value } }))} />
-                    </div>
-                  )}
-
-                  <div className="mt-4 flex flex-wrap justify-between gap-2">
-                    <div className="flex gap-2">
-                      {!archived && !modalEdit && <button className="btn" onClick={() => setModalEdit(true)}>Редактировать</button>}
-                      {!archived && modalEdit && <button className="btn" onClick={() => saveBattery(b.id)}>Сохранить</button>}
-                      {!archived && modalEdit && <button className="btn" onClick={() => { setForms((p) => ({ ...p, [b.id]: toForm(b) })); setModalEdit(false) }}>Отмена</button>}
-                      {!archived ? (
-                        <button className="btn border-red-300 text-red-700" onClick={() => removeBattery(b.id)}>В архив</button>
-                      ) : <button className="btn" onClick={() => restoreBattery(b.id)}>Восстановить</button>}
-                    </div>
+                {!modalEdit || archived ? (
+                  <div className="grid gap-2 md:grid-cols-2 text-sm">
+                    <div className="kpi"><div className="text-xs text-gray-500">Код</div><div>{f.code || '—'}</div></div>
+                    <div className="kpi"><div className="text-xs text-gray-500">Серийный номер</div><div>{f.serialNumber || '—'}</div></div>
+                    <div className="kpi"><div className="text-xs text-gray-500">Велосипед</div><div>{bikes.find((x: any) => x.id === f.bikeId)?.code || 'Не привязана'}</div></div>
+                    <div className="kpi"><div className="text-xs text-gray-500">Статус</div><div>{statusLabel(f.status)}</div></div>
+                    <div className="kpi md:col-span-2"><div className="text-xs text-gray-500">Заметка</div><div>{f.notes || '—'}</div></div>
                   </div>
-                </>
-              )
-            })()}
-          </div>
-        </div>
+                ) : (
+                  <div className="grid gap-2 md:grid-cols-2">
+                    <input className="input" placeholder="Код АКБ" value={f.code} onChange={(e) => setForms((p) => ({ ...p, [b.id]: { ...p[b.id], code: e.target.value } }))} />
+                    <input className="input" placeholder="Серийный номер" value={f.serialNumber} onChange={(e) => setForms((p) => ({ ...p, [b.id]: { ...p[b.id], serialNumber: e.target.value } }))} />
+                    <select className="select" value={f.bikeId} onChange={(e) => setForms((p) => ({ ...p, [b.id]: { ...p[b.id], bikeId: e.target.value } }))}>
+                      <option value="">Не привязана</option>
+                      {bikes.map((x: any) => <option key={x.id} value={x.id}>{x.code}</option>)}
+                    </select>
+                    <select className="select" value={f.status} onChange={(e) => setForms((p) => ({ ...p, [b.id]: { ...p[b.id], status: e.target.value } }))}>
+                      {BATTERY_STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
+                    </select>
+                    <input className="input md:col-span-2" placeholder="Заметка" value={f.notes} onChange={(e) => setForms((p) => ({ ...p, [b.id]: { ...p[b.id], notes: e.target.value } }))} />
+                  </div>
+                )}
+
+                <div className="mt-4 flex flex-wrap justify-between gap-2">
+                  <div className="flex gap-2">
+                    {!archived && !modalEdit && <button className="btn" onClick={() => setModalEdit(true)}>Редактировать</button>}
+                    {!archived && modalEdit && <button className="btn" onClick={() => saveBattery(b.id)}>Сохранить</button>}
+                    {!archived && modalEdit && <button className="btn" onClick={() => { setForms((p) => ({ ...p, [b.id]: toForm(b) })); setModalEdit(false) }}>Отмена</button>}
+                    {!archived ? <button className="btn border-red-300 text-red-700" onClick={() => removeBattery(b.id)}>В архив</button> : <button className="btn" onClick={() => restoreBattery(b.id)}>Восстановить</button>}
+                  </div>
+                </div>
+              </>
+            )
+          })()}
+        </CrmCard>
       )}
     </main>
   )
