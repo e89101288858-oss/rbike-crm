@@ -29,6 +29,15 @@ export class FranchiseBillingService {
 
     const [tenants, paidByTenant] = await Promise.all([
       this.prisma.tenant.findMany({
+        where: {
+          isActive: true,
+          mode: 'FRANCHISE',
+          name: { not: { startsWith: 'DEMO_CLOSED_' } },
+          franchisee: {
+            isActive: true,
+            name: { not: { startsWith: 'Demo ' } },
+          },
+        },
         include: {
           franchisee: {
             select: { id: true, name: true },
@@ -125,7 +134,12 @@ export class FranchiseBillingService {
 
     const [tenants, paidByTenant] = await Promise.all([
       this.prisma.tenant.findMany({
-        where: { franchiseeId },
+        where: {
+          franchiseeId,
+          isActive: true,
+          mode: 'FRANCHISE',
+          name: { not: { startsWith: 'DEMO_CLOSED_' } },
+        },
         orderBy: { name: 'asc' },
       }),
       this.prisma.payment.groupBy({

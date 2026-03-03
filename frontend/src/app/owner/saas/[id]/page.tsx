@@ -170,7 +170,7 @@ export default function OwnerSaasDetailsPage() {
 
       <section className="crm-card text-sm">
         <div className="mb-2 text-xs text-gray-500">Текущий trial до: {trialLabel}</div>
-        <div className="mb-2 text-xs text-gray-500">Платежей (PAID, месяц): {tenantBilling?.paidPaymentsCount ?? 0} · Роялти (месяц): {formatRub(Number(tenantBilling?.royaltyDueRub || 0))}</div>
+        <div className="mb-2 text-xs text-gray-500">Платежей (PAID, месяц): {tenantBilling?.paidPaymentsCount ?? 0}</div>
         {edit && (
           <div className="grid gap-2 md:grid-cols-2">
             <select className="select" value={edit.saasPlan} onChange={(e) => setEdit((p: any) => ({ ...p, saasPlan: e.target.value }))}>

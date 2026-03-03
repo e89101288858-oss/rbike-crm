@@ -124,9 +124,6 @@ export default function OwnerHomePage() {
   }
 
   const billingTenants = billing?.tenants || []
-  const saasRevenue = billingTenants
-    .filter((t: any) => tenantModeMap.get(t.tenantId) === 'SAAS')
-    .reduce((s: number, t: any) => s + Number(t.revenueRub || 0), 0)
   const franchiseRevenue = billingTenants
     .filter((t: any) => tenantModeMap.get(t.tenantId) === 'FRANCHISE')
     .reduce((s: number, t: any) => s + Number(t.revenueRub || 0), 0)
@@ -190,7 +187,7 @@ export default function OwnerHomePage() {
 
       <section className="mb-4 grid gap-2 md:grid-cols-2">
         <div className="crm-stat"><div className="text-xs text-gray-500">Выручка Франшиза</div><div className="mt-1 text-2xl font-semibold">{formatRub(franchiseRevenue)}</div></div>
-        <div className="crm-stat"><div className="text-xs text-gray-500">Выручка SaaS</div><div className="mt-1 text-2xl font-semibold">{formatRub(saasRevenue)}</div></div>
+        <div className="crm-stat"><div className="text-xs text-gray-500">SaaS активных</div><div className="mt-1 text-2xl font-semibold">{Number(summary?.subscriptions?.active || 0)}</div></div>
       </section>
 
       <section className="crm-card mb-4 text-sm">
@@ -205,7 +202,7 @@ export default function OwnerHomePage() {
         <h2 className="mb-2 text-base font-semibold">Быстрые переходы</h2>
         <div className="flex flex-wrap gap-2">
           <button className="btn" onClick={() => router.push('/owner/franchisees')}>Франчайзи</button>
-          <button className="btn" onClick={() => router.push('/owner/saas')}>Подписка</button>
+          <button className="btn" onClick={() => router.push('/owner/saas')}>SaaS</button>
           <button className="btn" onClick={() => router.push('/owner/settings')}>Настройки</button>
         </div>
       </section>

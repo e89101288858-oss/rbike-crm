@@ -327,7 +327,73 @@ export class AuthService {
     return pattern
   }
 
+
+  private isDemoEmail(email: string | null | undefined) {
+    if (!email) return false
+    return email.startsWith('demo+') && email.endsWith('@rbcrm.local')
+  }
+
+  private async cleanupDemoTenant(tx: any, tenantId: string, userId: string, franchiseeId?: string | null) {
+    await tx.rentalBattery.deleteMany({ where: { tenantId } })
+    await tx.payment.deleteMany({ where: { tenantId } })
+    await tx.rentalChange.deleteMany({ where: { tenantId } })
+    await tx.document.deleteMany({ where: { tenantId } })
+    await tx.rental.deleteMany({ where: { tenantId } })
+    await tx.expenseBike.deleteMany({ where: { tenantId } })
+    await tx.expense.deleteMany({ where: { tenantId } })
+    await tx.repair.deleteMany({ where: { tenantId } })
+    await tx.battery.deleteMany({ where: { tenantId } })
+    await tx.bike.deleteMany({ where: { tenantId } })
+    await tx.client.deleteMany({ where: { tenantId } })
+    await tx.contractTemplate.deleteMany({ where: { tenantId } })
+
+    await tx.tenant.updateMany({
+      where: { id: tenantId },
+      data: { isActive: false, name: `DEMO_CLOSED_${tenantId.slice(0, 8)}` },
+    })
+
+    await tx.user.update({
+      where: { id: userId },
+      data: { isActive: false, tokenVersion: { increment: 1 } },
+    })
+
+    if (franchiseeId) {
+      await tx.franchisee.update({
+        where: { id: franchiseeId },
+        data: { isActive: false },
+      })
+    }
+  }
+
+  private async cleanupStaleDemoSessions() {
+    const cutoff = new Date(Date.now() - 6 * 60 * 60 * 1000)
+    const staleUsers = await this.prisma.user.findMany({
+      where: {
+        isActive: true,
+        email: { startsWith: 'demo+' },
+        createdAt: { lt: cutoff },
+      },
+      select: {
+        id: true,
+        email: true,
+        franchiseeId: true,
+        userTenants: { select: { tenantId: true } },
+      },
+      take: 50,
+    })
+
+    for (const u of staleUsers) {
+      const tenantId = u.userTenants[0]?.tenantId
+      if (!tenantId) continue
+      await this.prisma.$transaction(async (tx) => {
+        await this.cleanupDemoTenant(tx, tenantId, u.id, u.franchiseeId)
+      })
+      await this.audit(u.id, 'DEMO_STALE_AUTO_CLEANUP', 'TENANT', tenantId)
+    }
+  }
   async demoAccess() {
+    await this.cleanupStaleDemoSessions()
+
     const slug = Date.now().toString(36)
     const now = new Date()
     const from = new Date(Date.UTC(2025, 0, 1))

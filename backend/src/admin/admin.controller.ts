@@ -281,7 +281,12 @@ export class AdminController {
       throw new NotFoundException('Franchisee not found')
     }
     return this.prisma.tenant.findMany({
-      where: { franchiseeId, ...(mode ? { mode } : {}) },
+      where: {
+        franchiseeId,
+        ...(mode ? { mode } : {}),
+        isActive: true,
+        name: { not: { startsWith: 'DEMO_CLOSED_' } },
+      },
       orderBy: { createdAt: 'asc' },
     })
   }
@@ -289,7 +294,15 @@ export class AdminController {
   @Get('admin/saas/tenants')
   async listSaasTenants() {
     return this.prisma.tenant.findMany({
-      where: { mode: 'SAAS' },
+      where: {
+        mode: 'SAAS',
+        isActive: true,
+        name: { not: { startsWith: 'DEMO_CLOSED_' } },
+        franchisee: {
+          isActive: true,
+          name: { not: { startsWith: 'Demo ' } },
+        },
+      },
       orderBy: { createdAt: 'asc' },
       include: {
         franchisee: {
@@ -304,6 +317,16 @@ export class AdminController {
     const now = new Date()
     const trialExpiringBefore = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
 
+    const saasBaseWhere = {
+      mode: 'SAAS' as const,
+      isActive: true,
+      name: { not: { startsWith: 'DEMO_CLOSED_' } },
+      franchisee: {
+        isActive: true,
+        name: { not: { startsWith: 'Demo ' } },
+      },
+    }
+
     const [
       totalSaasTenants,
       trialCount,
@@ -315,17 +338,17 @@ export class AdminController {
       enterpriseCount,
       trialExpiringSoon,
     ] = await Promise.all([
-      this.prisma.tenant.count({ where: { mode: 'SAAS' } }),
-      this.prisma.tenant.count({ where: { mode: 'SAAS', saasSubscriptionStatus: 'TRIAL' } }),
-      this.prisma.tenant.count({ where: { mode: 'SAAS', saasSubscriptionStatus: 'ACTIVE' } }),
-      this.prisma.tenant.count({ where: { mode: 'SAAS', saasSubscriptionStatus: 'PAST_DUE' } }),
-      this.prisma.tenant.count({ where: { mode: 'SAAS', saasSubscriptionStatus: 'CANCELED' } }),
-      this.prisma.tenant.count({ where: { mode: 'SAAS', saasPlan: 'STARTER' } }),
-      this.prisma.tenant.count({ where: { mode: 'SAAS', saasPlan: 'PRO' } }),
-      this.prisma.tenant.count({ where: { mode: 'SAAS', saasPlan: 'ENTERPRISE' } }),
+      this.prisma.tenant.count({ where: saasBaseWhere }),
+      this.prisma.tenant.count({ where: { ...saasBaseWhere, saasSubscriptionStatus: 'TRIAL' } }),
+      this.prisma.tenant.count({ where: { ...saasBaseWhere, saasSubscriptionStatus: 'ACTIVE' } }),
+      this.prisma.tenant.count({ where: { ...saasBaseWhere, saasSubscriptionStatus: 'PAST_DUE' } }),
+      this.prisma.tenant.count({ where: { ...saasBaseWhere, saasSubscriptionStatus: 'CANCELED' } }),
+      this.prisma.tenant.count({ where: { ...saasBaseWhere, saasPlan: 'STARTER' } }),
+      this.prisma.tenant.count({ where: { ...saasBaseWhere, saasPlan: 'PRO' } }),
+      this.prisma.tenant.count({ where: { ...saasBaseWhere, saasPlan: 'ENTERPRISE' } }),
       this.prisma.tenant.count({
         where: {
-          mode: 'SAAS',
+          ...saasBaseWhere,
           saasSubscriptionStatus: 'TRIAL',
           saasTrialEndsAt: {
             gte: now,
