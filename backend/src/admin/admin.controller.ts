@@ -299,6 +299,59 @@ export class AdminController {
     })
   }
 
+  @Get('admin/saas/summary')
+  async getSaasSummary() {
+    const now = new Date()
+    const trialExpiringBefore = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+
+    const [
+      totalSaasTenants,
+      trialCount,
+      activeCount,
+      pastDueCount,
+      canceledCount,
+      starterCount,
+      proCount,
+      enterpriseCount,
+      trialExpiringSoon,
+    ] = await Promise.all([
+      this.prisma.tenant.count({ where: { mode: 'SAAS' } }),
+      this.prisma.tenant.count({ where: { mode: 'SAAS', saasSubscriptionStatus: 'TRIAL' } }),
+      this.prisma.tenant.count({ where: { mode: 'SAAS', saasSubscriptionStatus: 'ACTIVE' } }),
+      this.prisma.tenant.count({ where: { mode: 'SAAS', saasSubscriptionStatus: 'PAST_DUE' } }),
+      this.prisma.tenant.count({ where: { mode: 'SAAS', saasSubscriptionStatus: 'CANCELED' } }),
+      this.prisma.tenant.count({ where: { mode: 'SAAS', saasPlan: 'STARTER' } }),
+      this.prisma.tenant.count({ where: { mode: 'SAAS', saasPlan: 'PRO' } }),
+      this.prisma.tenant.count({ where: { mode: 'SAAS', saasPlan: 'ENTERPRISE' } }),
+      this.prisma.tenant.count({
+        where: {
+          mode: 'SAAS',
+          saasSubscriptionStatus: 'TRIAL',
+          saasTrialEndsAt: {
+            gte: now,
+            lte: trialExpiringBefore,
+          },
+        },
+      }),
+    ])
+
+    return {
+      totalSaasTenants,
+      subscriptions: {
+        trial: trialCount,
+        active: activeCount,
+        pastDue: pastDueCount,
+        canceled: canceledCount,
+      },
+      plans: {
+        starter: starterCount,
+        pro: proCount,
+        enterprise: enterpriseCount,
+      },
+      trialExpiringSoon,
+    }
+  }
+
   @Patch('admin/saas/tenants/:id/subscription')
   async updateSaasSubscription(
     @Param('id') id: string,
