@@ -6,6 +6,7 @@ import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'
 import { getToken } from '@/lib/auth'
 import { formatRub } from '@/lib/format'
+import { PageSkeleton, StatsSkeleton, TableSkeleton } from '@/components/skeleton'
 
 export default function OwnerSaasDetailsPage() {
   const router = useRouter()
@@ -13,6 +14,7 @@ export default function OwnerSaasDetailsPage() {
   const [tenant, setTenant] = useState<any>(null)
   const [edit, setEdit] = useState<any>(null)
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
   const [tenantBilling, setTenantBilling] = useState<any>(null)
   const [saasRank, setSaasRank] = useState<number | null>(null)
 
@@ -56,6 +58,7 @@ export default function OwnerSaasDetailsPage() {
     if (!params?.id) return
 
     ;(async () => {
+      setLoading(true)
       try {
         const me = await api.me()
         if (me.role !== 'OWNER') return router.replace('/dashboard')
@@ -98,6 +101,8 @@ export default function OwnerSaasDetailsPage() {
         })
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Ошибка загрузки SaaS клиента')
+      } finally {
+        setLoading(false)
       }
     })()
   }, [router, params, month, period, quarter, year])
@@ -147,6 +152,15 @@ export default function OwnerSaasDetailsPage() {
       </div>
       {error && <div className="alert">{error}</div>}
 
+      {loading && (
+        <div className="space-y-3">
+          <StatsSkeleton />
+          <PageSkeleton><TableSkeleton /></PageSkeleton>
+        </div>
+      )}
+
+      {!loading && (
+        <>
       <section className="mb-4 grid gap-2 md:grid-cols-4">
         <div className="crm-stat"><div className="text-xs text-gray-500">План</div><div className="mt-1 text-2xl font-semibold">{tenant?.saasPlan || '—'}</div></div>
         <div className="crm-stat"><div className="text-xs text-gray-500">Статус</div><div className="mt-1 text-2xl font-semibold">{tenant?.saasSubscriptionStatus || '—'}</div></div>
@@ -181,6 +195,8 @@ export default function OwnerSaasDetailsPage() {
           <button className="btn-primary" onClick={save}>Сохранить</button>
         </div>
       </section>
+        </>
+      )}
     </main>
   )
 }

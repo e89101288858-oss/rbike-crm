@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'
 import { getTenantId, getToken, setTenantId } from '@/lib/auth'
+import { PageSkeleton, StatsSkeleton, TableSkeleton } from '@/components/skeleton'
 
 type Tab = 'GENERAL' | 'REQUESTS' | 'USERS' | 'TEMPLATE' | 'AUDIT'
 
@@ -13,6 +14,7 @@ export default function OwnerSettingsPage() {
   const [tab, setTab] = useState<Tab>('GENERAL')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [loading, setLoading] = useState(true)
 
   const [tenants, setTenants] = useState<any[]>([])
   const [franchisees, setFranchisees] = useState<any[]>([])
@@ -71,7 +73,11 @@ export default function OwnerSettingsPage() {
 
   useEffect(() => {
     if (!getToken()) return router.replace('/login')
-    void load()
+    ;(async () => {
+      setLoading(true)
+      await load()
+      setLoading(false)
+    })()
   }, [router])
 
   useEffect(() => {
@@ -158,6 +164,15 @@ export default function OwnerSettingsPage() {
 
       {success && <div className="alert-success">{success}</div>}
 
+      {loading && (
+        <div className="space-y-3">
+          <StatsSkeleton />
+          <PageSkeleton><TableSkeleton /></PageSkeleton>
+        </div>
+      )}
+
+      {!loading && (
+        <>
       <section className="mb-4 flex flex-wrap gap-2">
         <button className={`btn ${tab === 'GENERAL' ? 'btn-primary' : ''}`} onClick={() => setTab('GENERAL')}>Общие</button>
         <button className={`btn ${tab === 'REQUESTS' ? 'btn-primary' : ''}`} onClick={() => setTab('REQUESTS')}>Заявки</button>
@@ -281,6 +296,8 @@ export default function OwnerSettingsPage() {
             ))}
           </div>
         </section>
+      )}
+        </>
       )}
     </main>
   )

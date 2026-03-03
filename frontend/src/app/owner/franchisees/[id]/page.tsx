@@ -6,6 +6,7 @@ import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'
 import { getToken } from '@/lib/auth'
 import { formatRub } from '@/lib/format'
+import { PageSkeleton, StatsSkeleton, TableSkeleton } from '@/components/skeleton'
 
 export default function OwnerFranchiseeDetailsPage() {
   const router = useRouter()
@@ -15,6 +16,7 @@ export default function OwnerFranchiseeDetailsPage() {
   const [billing, setBilling] = useState<any>(null)
   const [tenantBillingRows, setTenantBillingRows] = useState<any[]>([])
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
 
   const [period, setPeriod] = useState<'MONTH' | 'QUARTER' | 'YEAR'>('MONTH')
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7))
@@ -54,6 +56,7 @@ export default function OwnerFranchiseeDetailsPage() {
     if (!params?.id) return
 
     ;(async () => {
+      setLoading(true)
       try {
         const me = await api.me()
         if (me.role !== 'OWNER') return router.replace('/dashboard')
@@ -105,6 +108,8 @@ export default function OwnerFranchiseeDetailsPage() {
         setTenants(franchiseTenants)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Ошибка загрузки франчайзи')
+      } finally {
+        setLoading(false)
       }
     })()
   }, [router, params, month, period, quarter, year])
@@ -140,6 +145,15 @@ export default function OwnerFranchiseeDetailsPage() {
       </div>
       {error && <div className="alert">{error}</div>}
 
+      {loading && (
+        <div className="space-y-3">
+          <StatsSkeleton />
+          <PageSkeleton><TableSkeleton /></PageSkeleton>
+        </div>
+      )}
+
+      {!loading && (
+        <>
       <section className="mb-4 grid gap-2 md:grid-cols-4">
         <div className="crm-stat"><div className="text-xs text-gray-500">Точек</div><div className="mt-1 text-2xl font-semibold">{tenants.length}</div></div>
         <div className="crm-stat"><div className="text-xs text-gray-500">Активных точек</div><div className="mt-1 text-2xl font-semibold">{tenants.filter((t) => t.isActive).length}</div></div>
@@ -211,6 +225,8 @@ export default function OwnerFranchiseeDetailsPage() {
           </table>
         </div>
       </section>
+        </>
+      )}
     </main>
   )
 }
