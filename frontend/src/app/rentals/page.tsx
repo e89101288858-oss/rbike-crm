@@ -44,6 +44,8 @@ export default function RentalsPage() {
   const [pageSize, setPageSize] = useState(50)
   const [pageInput, setPageInput] = useState('1')
   const [createModalOpen, setCreateModalOpen] = useState(false)
+  const [extendModalRentalId, setExtendModalRentalId] = useState<string | null>(null)
+  const [extendDays, setExtendDays] = useState('')
   const [closeModalRentalId, setCloseModalRentalId] = useState<string | null>(null)
   const [closeReason, setCloseReason] = useState('')
   const [deleteModalRentalId, setDeleteModalRentalId] = useState<string | null>(null)
@@ -124,15 +126,16 @@ export default function RentalsPage() {
     }
   }
 
-  async function extendRental(rentalId: string) {
+  async function extendRental(rentalId: string, daysRaw: string) {
     setError('')
     setSuccess('')
     try {
-      const days = Number(extendMap[rentalId] || 0)
+      const days = Number(daysRaw || 0)
       if (!Number.isInteger(days) || days <= 0) throw new Error('Введите дни продления (целое > 0)')
       await api.extendRental(rentalId, days)
-      setExtendMap((p) => ({ ...p, [rentalId]: '' }))
       await loadAll()
+      setExtendModalRentalId(null)
+      setExtendDays('')
       setSuccess(`Аренда продлена на ${days} дн.`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка продления аренды')
@@ -434,6 +437,28 @@ export default function RentalsPage() {
         </div>
       </div>
 
+
+      {extendModalRentalId && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4" onClick={() => setExtendModalRentalId(null)}>
+          <div className="panel w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <h3 className="mb-2 text-base font-semibold">Продлить аренду</h3>
+            <p className="mb-2 text-xs text-gray-400">Укажи количество дней продления</p>
+            <input
+              type="number"
+              min={1}
+              className="input w-full"
+              placeholder="Дней продления"
+              value={extendDays}
+              onChange={(e) => setExtendDays(e.target.value)}
+            />
+            <div className="mt-3 flex justify-end gap-2">
+              <button type="button" className="btn" onClick={() => setExtendModalRentalId(null)}>Отмена</button>
+              <button type="button" className="btn-primary" onClick={() => extendRental(extendModalRentalId, extendDays)}>Продлить</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {closeModalRentalId && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4" onClick={() => setCloseModalRentalId(null)}>
           <div className="panel w-full max-w-md" onClick={(e) => e.stopPropagation()}>
@@ -534,11 +559,10 @@ export default function RentalsPage() {
         const daysLeft = diffDays(new Date().toISOString(), r.plannedEndDate)
         const highlight = r.status === 'ACTIVE' ? daysHighlightClass(daysLeft) : 'border-[#2f3136] bg-[#1f2126]'
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setSelectedRentalId(null)}>
-            <div className={`w-full max-w-6xl rounded-sm border p-3 shadow-sm text-sm panel ${highlight}`} onClick={(e) => e.stopPropagation()}>
+          <section className={`mt-4 w-full rounded-sm border p-3 shadow-sm text-sm panel ${highlight}`}>
               <div className="mb-2 flex items-center justify-between gap-2">
                 <div className="font-medium">{r.client.fullName} — {r.bike.code}</div>
-                <button className="btn" onClick={() => setSelectedRentalId(null)}>Закрыть</button>
+                <button className="btn" onClick={() => setSelectedRentalId(null)}>Закрыть карточку</button>
               </div>
 
               <div>Факт завершения: {formatDate(r.actualEndDate)}</div>
@@ -551,8 +575,7 @@ export default function RentalsPage() {
                   <>
                     <input type="number" className="input w-44" min={1} step={10} placeholder="Ставка ₽/сутки" value={dailyRateMap[r.id] ?? Math.round((Number(r.weeklyRateRub || 0) / 7) * 100) / 100} onChange={(e) => setDailyRateMap((prev) => ({ ...prev, [r.id]: e.target.value }))} />
                     <button className="btn" onClick={() => setRentalDailyRate(r.id, Number(r.weeklyRateRub || 0))}>Обновить ставку</button>
-                    <input type="number" className="input w-40" placeholder="Дней продления" value={extendMap[r.id] ?? ''} onChange={(e) => setExtendMap((prev) => ({ ...prev, [r.id]: e.target.value }))} />
-                    <button className="btn" onClick={() => extendRental(r.id)}>Продлить</button>
+                    <button className="btn" onClick={() => { setExtendModalRentalId(r.id); setExtendDays('') }}>Продлить</button>
                   </>
                 )}
                 <button className="btn" onClick={() => loadJournal(r.id)}>Журнал</button>
@@ -673,8 +696,7 @@ export default function RentalsPage() {
                   </div>
                 </div>
               )}
-            </div>
-          </div>
+          </section>
         )
       })()}
     </main>
