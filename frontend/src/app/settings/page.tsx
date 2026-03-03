@@ -82,7 +82,7 @@ export default function TenantSettingsPage() {
 
       <section className="panel text-sm">
         <div className="mb-3 text-xs text-gray-500">
-          Точка: <b>{settings?.name || '—'}</b> · Режим: <b>{settings?.mode || '—'}</b>
+          Точка: <b>{settings?.name || '—'}</b>
         </div>
 
         <div className="grid gap-2 md:grid-cols-2">
