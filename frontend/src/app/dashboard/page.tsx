@@ -287,7 +287,6 @@ export default function DashboardPage() {
 
   const showFranchiseeDashboard = role === 'FRANCHISEE' || role === 'OWNER'
   const rentalsCount = allRentals.length
-  const onboardingCompleted = clientsCount > 0 && allBikesCount > 0 && rentalsCount > 0
 
   const rangeDays = Math.max(1, Math.floor((chartRange.to.getTime() - chartRange.from.getTime()) / (24 * 60 * 60 * 1000)) + 1)
   const occupiedBikeDays = useMemo(() => {
@@ -325,50 +324,22 @@ export default function DashboardPage() {
         <>
           {showOnboarding && (
             <section className="mb-6 rounded-lg border border-orange-500/40 bg-orange-500/10 p-4">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <h2 className="text-lg font-semibold text-orange-100">Быстрый старт</h2>
-                <button
-                  className="btn"
-                  onClick={() => {
-                    setShowOnboarding(false)
-                    if (typeof window !== 'undefined') localStorage.removeItem('rbike_onboarding')
-                  }}
-                >
-                  Скрыть
-                </button>
-              </div>
-              <p className="mb-3 text-sm text-orange-200">
-                Быстрый старт для нового аккаунта: создай первого курьера, велосипед и первую аренду.
-              </p>
-              <div className="mb-3 grid gap-2 md:grid-cols-3 text-sm">
+              <div className="grid gap-2 md:grid-cols-3 text-sm">
                 <div className={`kpi ${clientsCount > 0 ? 'border-emerald-500/40 bg-emerald-500/10' : ''}`}>
                   <div className="text-xs text-gray-300">Курьеры</div>
                   <div className="mt-1 text-2xl font-semibold">{formatInt(clientsCount)}</div>
+                  <button className="btn mt-2" onClick={() => router.push('/clients')}>Добавить курьера</button>
                 </div>
                 <div className={`kpi ${allBikesCount > 0 ? 'border-emerald-500/40 bg-emerald-500/10' : ''}`}>
                   <div className="text-xs text-gray-300">Велосипеды</div>
                   <div className="mt-1 text-2xl font-semibold">{formatInt(allBikesCount)}</div>
+                  <button className="btn mt-2" onClick={() => router.push('/bikes')}>Добавить велосипед</button>
                 </div>
                 <div className={`kpi ${rentalsCount > 0 ? 'border-emerald-500/40 bg-emerald-500/10' : ''}`}>
                   <div className="text-xs text-gray-300">Аренды</div>
                   <div className="mt-1 text-2xl font-semibold">{formatInt(rentalsCount)}</div>
+                  <button className="btn mt-2" onClick={() => router.push('/rentals')}>Добавить аренду</button>
                 </div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button className="btn" onClick={() => router.push('/clients')}>+ Курьер</button>
-                <button className="btn" onClick={() => router.push('/bikes')}>+ Велосипед</button>
-                <button className="btn" onClick={() => router.push('/rentals')}>+ Аренда</button>
-                {onboardingCompleted && (
-                  <button
-                    className="btn-primary"
-                    onClick={() => {
-                      setShowOnboarding(false)
-                      if (typeof window !== 'undefined') localStorage.removeItem('rbike_onboarding')
-                    }}
-                  >
-                    Готово
-                  </button>
-                )}
               </div>
             </section>
           )}
@@ -403,12 +374,10 @@ export default function DashboardPage() {
               <div className="flex flex-wrap gap-2">
                 <button className={tabClass(chartMode === 'month')} onClick={() => setChartMode('month')}>Месяц</button>
                 <button className={tabClass(chartMode === 'year')} onClick={() => setChartMode('year')}>Год</button>
-                <div className="flex items-center gap-1 rounded-sm border border-white/10 bg-white/5 px-2 py-1 text-xs text-gray-200">
-                  <button className="px-1 text-gray-300 hover:text-white" onClick={() => shiftPeriod(-1)} aria-label="Предыдущий период">‹</button>
-                  <span className="min-w-[92px] text-center">
-                    {chartMode === 'month' ? monthLabel : chartYear}
-                  </span>
-                  <button className="px-1 text-gray-300 hover:text-white" onClick={() => shiftPeriod(1)} aria-label="Следующий период">›</button>
+                <div className="flex items-center gap-2 px-1 py-1 text-xs text-orange-400">
+                  <button className="px-1 text-orange-400 hover:text-orange-300" onClick={() => shiftPeriod(-1)} aria-label="Предыдущий период">‹</button>
+                  <span className="min-w-[92px] text-center capitalize">{chartMode === 'month' ? monthLabel : chartYear}</span>
+                  <button className="px-1 text-orange-400 hover:text-orange-300" onClick={() => shiftPeriod(1)} aria-label="Следующий период">›</button>
                 </div>
               </div>
             </div>
@@ -421,7 +390,7 @@ export default function DashboardPage() {
                   return (
                     <div key={r.label} className="flex h-full w-full flex-col items-center">
                       <div className="flex w-full flex-1 items-end">
-                        <div className="w-full rounded-sm bg-orange-500/80" style={{ height: h }} />
+                        <div className="w-full rounded-sm bg-orange-500" style={{ height: h }} />
                       </div>
                       <div className="mt-1 text-[10px] text-gray-400">{r.label}</div>
                     </div>
@@ -432,10 +401,8 @@ export default function DashboardPage() {
               {!chartRows.length && <p className="text-sm text-gray-400">Нет данных за период</p>}
             </div>
 
-            <div className="mt-4 grid gap-2 md:grid-cols-3">
+            <div className="mt-4">
               <div className="rounded-md border border-white/10 bg-white/5 p-3 text-sm text-gray-200">Всего велосипедов: <b>{formatInt(allBikesCount)}</b></div>
-              <div className="rounded-md border border-white/10 bg-white/5 p-3 text-sm text-gray-200">Создано аренд за период: <b>{formatInt(newRentalsPeriod)}</b></div>
-              <div className="rounded-md border border-white/10 bg-white/5 p-3 text-sm text-gray-200">Выручка за период: <b>{formatRub(chartRevenueTotal)}</b></div>
             </div>
           </div>
 
@@ -453,7 +420,7 @@ export default function DashboardPage() {
                   <path
                     d="M 20 100 A 80 80 0 0 1 180 100"
                     fill="none"
-                    stroke="#fb923c"
+                    stroke="#f97316"
                     strokeWidth="14"
                     strokeLinecap="round"
                     strokeDasharray={gaugeCircumference}
