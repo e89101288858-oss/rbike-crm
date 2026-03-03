@@ -8,7 +8,6 @@ import { getTenantId, getToken, setTenantId } from '@/lib/auth'
 import { diffDays, formatRub } from '@/lib/format'
 
 type ChartMode = 'day' | 'month' | 'year'
-type RevenueMode = 'day' | 'week' | 'month' | 'year'
 
 function atStartOfDay(d: Date) {
   const x = new Date(d)
@@ -20,38 +19,6 @@ function atEndOfDay(d: Date) {
   const x = new Date(d)
   x.setHours(23, 59, 59, 999)
   return x
-}
-
-function getRange(mode: ChartMode | RevenueMode) {
-  const now = new Date()
-
-  if (mode === 'day') {
-    return { from: atStartOfDay(now), to: atEndOfDay(now) }
-  }
-
-  if (mode === 'week') {
-    const to = atEndOfDay(now)
-    const from = atStartOfDay(new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000))
-    return { from, to }
-  }
-
-  if (mode === 'month') {
-    const from = atStartOfDay(new Date(now.getFullYear(), now.getMonth(), 1))
-    const to = atEndOfDay(new Date(now.getFullYear(), now.getMonth() + 1, 0))
-    return { from, to }
-  }
-
-  const from = atStartOfDay(new Date(now.getFullYear(), 0, 1))
-  const to = atEndOfDay(new Date(now.getFullYear(), 11, 31))
-  return { from, to }
-}
-
-function toIsoRange(mode: ChartMode | RevenueMode) {
-  const r = getRange(mode)
-  return {
-    from: r.from.toISOString(),
-    to: r.to.toISOString(),
-  }
 }
 
 function inRange(dateRaw: string | null | undefined, from: Date, to: Date) {
@@ -68,8 +35,9 @@ function aggregateRevenue(days: Array<{ date: string; revenueRub: number }>, mod
   }
 
   if (mode === 'day') {
-    const key = from.toISOString().slice(0, 10)
-    return [{ label: key.slice(5), value: Number(byDate.get(key) || 0) }]
+    const value = days.reduce((sum, d) => sum + Number(d.revenueRub || 0), 0)
+    const label = `${String(from.getDate()).padStart(2, '0')}.${String(from.getMonth() + 1).padStart(2, '0')}`
+    return [{ label, value }]
   }
 
   if (mode === 'month') {
@@ -127,7 +95,6 @@ export default function DashboardPage() {
   const [showOnboarding, setShowOnboarding] = useState(false)
 
   const [chartMode, setChartMode] = useState<ChartMode>('month')
-  const [revenueMode, setRevenueMode] = useState<RevenueMode>('week')
 
   const today = new Date()
   const [chartDay, setChartDay] = useState(() => today.toISOString().slice(0, 10))
@@ -149,8 +116,6 @@ export default function DashboardPage() {
   const [earlyClosuresCount, setEarlyClosuresCount] = useState(0)
   const [earlyClosuresRate, setEarlyClosuresRate] = useState(0)
 
-  const [revenueTotalBlock, setRevenueTotalBlock] = useState(0)
-  const [revenueRows, setRevenueRows] = useState<Array<{ label: string; value: number }>>([])
   const [error, setError] = useState('')
 
   const chartRange = useMemo(() => {
@@ -308,55 +273,7 @@ export default function DashboardPage() {
     }
   }, [chartMode, chartRange, allRentals])
 
-  useEffect(() => {
-    ;(async () => {
-      try {
-        const { from, to } = toIsoRange(revenueMode)
-        const rev = await api.revenueByDays(`from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`)
-        setRevenueTotalBlock(Number(rev.totalRevenueRub || 0))
-
-        const days = rev.days ?? []
-        const byDate = new Map<string, number>()
-        for (const d of days) {
-          const key = String(d.date).slice(0, 10)
-          byDate.set(key, (byDate.get(key) || 0) + Number(d.revenueRub || 0))
-        }
-
-        let rows: Array<{ label: string; value: number }> = []
-        if (revenueMode === 'day') {
-          const key = new Date().toISOString().slice(0, 10)
-          rows = [{ label: key.slice(5), value: Number(byDate.get(key) || 0) }]
-        } else if (revenueMode === 'week') {
-          rows = days.map((d: any) => ({ label: String(d.date).slice(5), value: Number(d.revenueRub || 0) }))
-        } else if (revenueMode === 'month') {
-          const now = new Date()
-          const year = now.getFullYear()
-          const month = now.getMonth()
-          const daysInMonth = new Date(year, month + 1, 0).getDate()
-          for (let day = 1; day <= daysInMonth; day++) {
-            const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-            rows.push({ label: String(day), value: Number(byDate.get(key) || 0) })
-          }
-        } else {
-          const year = new Date().getFullYear()
-          for (let m = 0; m < 12; m++) {
-            const prefix = `${year}-${String(m + 1).padStart(2, '0')}`
-            let value = 0
-            for (const [d, v] of byDate.entries()) {
-              if (d.startsWith(prefix)) value += Number(v || 0)
-            }
-            rows.push({ label: prefix.slice(5), value })
-          }
-        }
-        setRevenueRows(rows)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Ошибка загрузки выручки')
-      }
-    })()
-  }, [revenueMode])
-
   const maxBar = useMemo(() => Math.max(1, ...chartRows.map((r) => r.value)), [chartRows])
-  const maxRevenueBar = useMemo(() => Math.max(1, ...revenueRows.map((r) => r.value)), [revenueRows])
 
   // line overlay removed by design: bars only
 
@@ -491,12 +408,12 @@ export default function DashboardPage() {
 
             <div className="relative rounded-md border border-white/10 bg-[#181a1f] p-4">
               <div className="overflow-x-auto">
-                <div className="flex h-56 min-w-max items-end gap-2">
+                <div className={`h-56 items-end gap-2 ${chartRows.length <= 12 ? "grid w-full" : "flex min-w-max"}`} style={chartRows.length <= 12 ? { gridTemplateColumns: `repeat(${chartRows.length || 1}, minmax(0, 1fr))` } : undefined}>
                   {chartRows.map((r) => {
                     const ratio = maxBar > 0 ? r.value / maxBar : 0
                     const h = r.value <= 0 ? '0%' : `${Math.max(6, Math.round(ratio * 100))}%`
                     return (
-                      <div key={r.label} className="flex h-full w-8 shrink-0 flex-col items-center">
+                      <div key={r.label} className={`flex h-full ${chartRows.length <= 12 ? "w-full" : "w-8 shrink-0"} flex-col items-center`}>
                         <div className="flex w-full flex-1 items-end">
                           <div className="w-full rounded-sm bg-orange-500/80" style={{ height: h }} />
                         </div>
@@ -558,35 +475,6 @@ export default function DashboardPage() {
             </div>
           </section>
 
-          <section className="rounded-lg border border-white/10 bg-[#1f2126] p-5 text-white shadow-xl">
-            <h2 className="mb-2 text-lg font-semibold">Общая выручка</h2>
-            <div className="mb-4 text-4xl font-bold tracking-tight">{formatRub(revenueTotalBlock)}</div>
-            <div className="mb-4 flex flex-wrap gap-2">
-              <button className={tabClass(revenueMode === 'day')} onClick={() => setRevenueMode('day')}>День</button>
-              <button className={tabClass(revenueMode === 'week')} onClick={() => setRevenueMode('week')}>Неделя</button>
-              <button className={tabClass(revenueMode === 'month')} onClick={() => setRevenueMode('month')}>Месяц</button>
-              <button className={tabClass(revenueMode === 'year')} onClick={() => setRevenueMode('year')}>Год</button>
-            </div>
-            <div className="rounded-md border border-white/10 bg-[#181a1f] p-3">
-              <div className="overflow-x-auto">
-                <div className="flex h-28 min-w-max items-end gap-2">
-                  {revenueRows.map((r) => {
-                    const ratio = maxRevenueBar > 0 ? r.value / maxRevenueBar : 0
-                    const h = r.value <= 0 ? '0%' : `${Math.max(6, Math.round(ratio * 100))}%`
-                    return (
-                      <div key={r.label} className="flex h-full w-7 shrink-0 flex-col items-center">
-                        <div className="flex w-full flex-1 items-end">
-                          <div className="w-full rounded-sm bg-orange-500/80" style={{ height: h }} />
-                        </div>
-                        <div className="mt-1 text-[10px] text-gray-500">{r.label}</div>
-                      </div>
-                    )
-                  })}
-                  {!revenueRows.length && <div className="text-xs text-gray-500">Нет данных за период</div>}
-                </div>
-              </div>
-            </div>
-          </section>
         </>
       )}
     </main>
