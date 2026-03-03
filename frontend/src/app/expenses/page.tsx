@@ -184,7 +184,6 @@ export default function ExpensesPage() {
     <main className="page with-sidebar">
       <Topbar tenants={tenants} />
       <div className="mb-4 flex items-center justify-between gap-2">
-        <h1 className="text-2xl font-semibold">Расходы</h1>
       </div>
 
       <div className="toast-stack">

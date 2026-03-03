@@ -153,7 +153,6 @@ export default function OwnerSettingsPage() {
   return (
     <main className="page with-sidebar">
       <Topbar />
-      <h1 className="mb-4 text-2xl font-bold">OWNER · Настройки</h1>
 
       {error && <div className="alert">{error}</div>}
       {success && <div className="alert-success">{success}</div>}

@@ -109,7 +109,6 @@ export default function FinancePage() {
   return (
     <main className="page with-sidebar">
       <Topbar tenants={tenants} />
-      <h1 className="mb-4 text-2xl font-bold">Финансы / Выручка</h1>
 
       <div className="panel mb-4 grid gap-2 md:grid-cols-4">
         <input type="date" className="input" value={from} onChange={(e) => setFrom(e.target.value)} />

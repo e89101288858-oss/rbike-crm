@@ -214,7 +214,6 @@ export default function ClientsPage() {
     <main className="page with-sidebar">
       <Topbar tenants={tenants} />
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Курьеры</h1>
         <div className="flex items-center gap-4">
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={blacklistOnly} onChange={(e) => setBlacklistOnly(e.target.checked)} />

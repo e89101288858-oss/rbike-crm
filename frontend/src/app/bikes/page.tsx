@@ -172,7 +172,6 @@ export default function BikesPage() {
     <main className="page with-sidebar">
       <Topbar tenants={tenants} />
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Велосипеды</h1>
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={includeArchived} onChange={(e) => setIncludeArchived(e.target.checked)} /> Показать архив</label>
       </div>
       <div className="toast-stack">

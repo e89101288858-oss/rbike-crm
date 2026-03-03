@@ -301,7 +301,6 @@ export default function DashboardPage() {
   return (
     <main className="page with-sidebar min-h-screen text-gray-100">
       <Topbar tenants={tenants} />
-      <h1 className="mb-6 text-3xl font-bold text-white">Дашборд</h1>
       {error && <p className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
 
       {!showFranchiseeDashboard ? (
@@ -387,9 +386,6 @@ export default function DashboardPage() {
               {!chartRows.length && <p className="text-sm text-gray-400">Нет данных за период</p>}
             </div>
 
-            <div className="mt-4">
-              <div className="rounded-md border border-white/10 bg-white/5 p-3 text-sm text-gray-200">Всего велосипедов: <b>{formatInt(allBikesCount)}</b></div>
-            </div>
           </div>
 
             <div className="rounded-lg border border-white/10 bg-[#1f2126] p-4 shadow-xl">

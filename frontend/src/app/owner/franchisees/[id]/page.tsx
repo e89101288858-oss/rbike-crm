@@ -117,7 +117,6 @@ export default function OwnerFranchiseeDetailsPage() {
     <main className="page with-sidebar">
       <Topbar />
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold">Франчайзи: {franchisee?.name || '—'}</h1>
         <div className="flex items-center gap-2">
           <select className="select" value={period} onChange={(e) => setPeriod(e.target.value as 'MONTH' | 'QUARTER' | 'YEAR')}>
             <option value="MONTH">Месяц</option>

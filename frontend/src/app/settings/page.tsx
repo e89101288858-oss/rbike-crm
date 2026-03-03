@@ -165,7 +165,6 @@ export default function TenantSettingsPage() {
     return (
       <main className="page with-sidebar">
         <Topbar tenants={tenants} />
-        <h1 className="mb-3 text-2xl font-bold">Настройки</h1>
         <p className="alert">Недостаточно прав</p>
       </main>
     )
@@ -174,7 +173,6 @@ export default function TenantSettingsPage() {
   return (
     <main className="page with-sidebar">
       <Topbar tenants={tenants} />
-      <h1 className="mb-4 text-2xl font-bold">Настройки</h1>
       {error && <div className="alert">{error}</div>}
       {success && <div className="alert-success">{success}</div>}
 

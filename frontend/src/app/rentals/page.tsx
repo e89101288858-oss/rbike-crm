@@ -356,7 +356,6 @@ export default function RentalsPage() {
     <main className="page with-sidebar">
       <Topbar tenants={tenants} />
       <div className="mb-4 flex items-center justify-between gap-2">
-        <h1 className="text-2xl font-semibold">Аренды</h1>
         <div className="flex items-center gap-2 whitespace-nowrap">
           <button className={listTab === 'ACTIVE' ? 'btn-primary' : 'btn'} onClick={() => setListTab('ACTIVE')}>Активные</button>
           <button className={listTab === 'CLOSED' ? 'btn-primary' : 'btn'} onClick={() => setListTab('CLOSED')}>Завершенные</button>

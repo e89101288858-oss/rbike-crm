@@ -97,7 +97,6 @@ export default function PaymentsPage() {
   return (
     <main className="page with-sidebar">
       <Topbar tenants={tenants} />
-      <h1 className="mb-4 text-2xl font-bold">Платежи</h1>
 
       <div className="mb-4 flex items-center gap-2">
         <button className="btn" onClick={load} disabled={loading}>{loading ? 'Обновление…' : 'Обновить'}</button>

@@ -48,7 +48,6 @@ export default function OwnerFranchiseesPage() {
   return (
     <main className="page with-sidebar">
       <Topbar />
-      <h1 className="mb-4 text-2xl font-bold">Франчайзи</h1>
       {error && <div className="alert">{error}</div>}
 
       <section className="mb-4 grid gap-2 md:grid-cols-4">
