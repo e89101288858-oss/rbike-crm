@@ -39,8 +39,9 @@ export default function OwnerHomePage() {
     })()
   }, [router, month])
 
-  const franchiseTotal = franchisees.length
-  const franchiseActive = franchisees.filter((f) => f.isActive).length
+  const franchiseOnly = franchisees.filter((f) => (f.tenants || []).some((t: any) => t.mode === 'FRANCHISE'))
+  const franchiseTotal = franchiseOnly.length
+  const franchiseActive = franchiseOnly.filter((f) => f.isActive).length
 
   return (
     <main className="page with-sidebar">

@@ -41,8 +41,9 @@ export default function OwnerFranchiseesPage() {
     })()
   }, [router, month])
 
-  const total = franchisees.length
-  const active = franchisees.filter((f) => f.isActive).length
+  const franchiseOnly = franchisees.filter((f) => (f.tenants || []).some((t: any) => t.mode === 'FRANCHISE'))
+  const total = franchiseOnly.length
+  const active = franchiseOnly.filter((f) => f.isActive).length
 
   return (
     <main className="page with-sidebar">
@@ -72,8 +73,8 @@ export default function OwnerFranchiseesPage() {
               </tr>
             </thead>
             <tbody>
-              {franchisees.map((f: any) => {
-                const points = tenantMap[f.id] || []
+              {franchiseOnly.map((f: any) => {
+                const points = (tenantMap[f.id] || []).filter((t: any) => t.mode === 'FRANCHISE')
                 const activePoints = points.filter((t: any) => t.isActive).length
                 const billingLine = (billing?.franchisees || []).find((x: any) => x.franchiseeId === f.id)
                 return (
