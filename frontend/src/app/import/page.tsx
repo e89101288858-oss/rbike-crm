@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'
 import { getTenantId, getToken, setTenantId } from '@/lib/auth'
+import { CrmActionRow, CrmCard, CrmEmpty, CrmSectionTitle, CrmStat } from '@/components/crm-ui'
 
 const BIKE_STATUSES = new Set(['AVAILABLE', 'RENTED', 'MAINTENANCE', 'BLOCKED', 'LOST'])
 
@@ -220,12 +221,21 @@ export default function ImportPage() {
       {error && <p className="alert">{error}</p>}
       {success && <p className="alert-success">{success}</p>}
 
+      {role !== 'MECHANIC' && (
+        <div className="mb-3 grid gap-2 md:grid-cols-4">
+          <CrmStat label="Вело: всего" value={bikeAnalysis.totalRows} />
+          <CrmStat label="Вело: валидно" value={bikeAnalysis.validRows} />
+          <CrmStat label="Курьеры: всего" value={clientAnalysis.totalRows} />
+          <CrmStat label="Курьеры: валидно" value={clientAnalysis.validRows} />
+        </div>
+      )}
+
       {role === 'MECHANIC' ? (
         <section className="panel text-sm text-gray-700">У вас нет доступа к импорту CSV.</section>
       ) : (
         <>
-      <section className="panel mb-6">
-        <h2 className="mb-2 font-semibold">Велосипеды</h2>
+      <CrmCard className="mb-6">
+        <CrmSectionTitle>Велосипеды</CrmSectionTitle>
         <p className="mb-2 text-sm text-gray-600">Колонки: code;model;frameNumber;motorWheelNumber;simCardNumber;status</p>
         <div className="mb-2 flex flex-wrap items-center gap-2">
           <input type="file" accept=".csv,text/csv" className="input max-w-sm" onChange={onBikeFileChange} />
@@ -247,10 +257,10 @@ export default function ImportPage() {
           </div>
         )}
         <button className="btn-primary mt-3" onClick={importBikes}>Импортировать велосипеды</button>
-      </section>
+      </CrmCard>
 
-      <section className="panel">
-        <h2 className="mb-2 font-semibold">Курьеры</h2>
+      <CrmCard>
+        <CrmSectionTitle>Курьеры</CrmSectionTitle>
         <p className="mb-2 text-sm text-gray-600">Колонки: fullName;phone;address;passportSeries;passportNumber;notes</p>
         <div className="mb-2 flex flex-wrap items-center gap-2">
           <input type="file" accept=".csv,text/csv" className="input max-w-sm" onChange={onClientFileChange} />
@@ -272,7 +282,7 @@ export default function ImportPage() {
           </div>
         )}
         <button className="btn-primary mt-3" onClick={importClients}>Импортировать курьеров</button>
-      </section>
+      </CrmCard>
         </>
       )}
     </main>

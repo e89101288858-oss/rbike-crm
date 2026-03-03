@@ -6,6 +6,7 @@ import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'
 import { getTenantId, getToken, setTenantId } from '@/lib/auth'
 import { formatDate, formatRub } from '@/lib/format'
+import { CrmActionRow, CrmCard, CrmEmpty, CrmSectionTitle, CrmStat } from '@/components/crm-ui'
 
 export default function FinancePage() {
   const router = useRouter()
@@ -110,7 +111,7 @@ export default function FinancePage() {
     <main className="page with-sidebar">
       <Topbar tenants={tenants} />
 
-      <div className="panel mb-4 grid gap-2 md:grid-cols-4">
+      <CrmActionRow className="mb-3">
         <input type="date" className="input" value={from} onChange={(e) => setFrom(e.target.value)} />
         <input type="date" className="input" value={to} onChange={(e) => setTo(e.target.value)} />
         <select className="select" value={bikeId} onChange={(e) => setBikeId(e.target.value)}>
@@ -118,27 +119,15 @@ export default function FinancePage() {
           {bikes.map((b) => <option key={b.id} value={b.id}>{b.code}</option>)}
         </select>
         <button className="btn-primary" onClick={load}>Применить</button>
-      </div>
+      </CrmActionRow>
 
       {error && <p className="alert">{error}</p>}
 
-      <section className="panel mb-4">
-        <h2 className="mb-2 text-lg font-semibold">Итоги за период</h2>
-        <div className="grid gap-2 md:grid-cols-3 text-sm">
-          <div className="kpi">
-            <div className="text-xs text-gray-500">Выручка</div>
-            <div className="mt-1 font-semibold">{formatRub(revenueTotal)}</div>
-          </div>
-          <div className="kpi">
-            <div className="text-xs text-gray-500">Расходы</div>
-            <div className="mt-1 font-semibold">{formatRub(totalExpensesRub)}</div>
-          </div>
-          <div className="kpi">
-            <div className="text-xs text-gray-500">Прибыль</div>
-            <div className={`mt-1 font-semibold ${netTotalRub < 0 ? 'text-rose-300' : 'text-emerald-300'}`}>{formatRub(netTotalRub)}</div>
-          </div>
-        </div>
-      </section>
+      <div className="mb-4 grid gap-2 md:grid-cols-3">
+        <CrmStat label="Выручка" value={formatRub(revenueTotal)} />
+        <CrmStat label="Расходы" value={formatRub(totalExpensesRub)} />
+        <CrmStat label="Прибыль" value={<span className={netTotalRub < 0 ? 'text-rose-300' : 'text-emerald-300'}>{formatRub(netTotalRub)}</span>} />
+      </div>
 
       {role === 'FRANCHISEE' && royaltyPercent > 0 && (
         <section className="panel mb-4">
@@ -182,7 +171,7 @@ export default function FinancePage() {
               </div>
             )
           })}
-          {!days.length && <p className="text-gray-600">Нет данных за период</p>}
+          {!days.length && <CrmEmpty title="Нет данных за период" />}
         </div>
 
         {sortedDays.length > 0 && (
@@ -225,7 +214,7 @@ export default function FinancePage() {
               })}
               {!byBike.length && (
                 <tr>
-                  <td colSpan={5} className="text-center text-gray-600">Нет данных по велосипедам</td>
+                  <td colSpan={5} className="text-center text-gray-600"><CrmEmpty title="Нет данных по велосипедам" /></td>
                 </tr>
               )}
             </tbody>
