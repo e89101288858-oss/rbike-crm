@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'
@@ -18,6 +18,9 @@ export default function OwnerDashboardPage() {
   const [saasSummary, setSaasSummary] = useState<any>(null)
   const [saasTenants, setSaasTenants] = useState<any[]>([])
   const [section, setSection] = useState<'FRANCHISE' | 'SAAS'>('FRANCHISE')
+  const [saasPlanFilter, setSaasPlanFilter] = useState<'ALL' | 'STARTER' | 'PRO' | 'ENTERPRISE'>('ALL')
+  const [saasStatusFilter, setSaasStatusFilter] = useState<'ALL' | 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED'>('ALL')
+  const [trialSoonOnly, setTrialSoonOnly] = useState(false)
   const [savingTenantId, setSavingTenantId] = useState('')
   const [saasEdits, setSaasEdits] = useState<Record<string, {
     saasPlan: 'STARTER' | 'PRO' | 'ENTERPRISE'
@@ -130,6 +133,34 @@ export default function OwnerDashboardPage() {
   const allTenants = Object.values(tenantMap).flat() as any[]
   const tenantsTotal = allTenants.length
   const tenantsActive = allTenants.filter((t: any) => t.isActive).length
+
+  const statusBadgeClass = (status?: 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED') => {
+    if (status === 'ACTIVE') return 'badge-ok'
+    if (status === 'TRIAL') return 'badge-warn'
+    if (status === 'PAST_DUE' || status === 'CANCELED') return 'badge-danger'
+    return 'badge-muted'
+  }
+
+  const filteredSaasTenants = useMemo(() => {
+    const now = Date.now()
+    const soonEdge = now + 7 * 24 * 60 * 60 * 1000
+
+    return saasTenants
+      .filter((t: any) => (saasPlanFilter === 'ALL' ? true : t.saasPlan === saasPlanFilter))
+      .filter((t: any) => (saasStatusFilter === 'ALL' ? true : t.saasSubscriptionStatus === saasStatusFilter))
+      .filter((t: any) => {
+        if (!trialSoonOnly) return true
+        if (t.saasSubscriptionStatus !== 'TRIAL') return false
+        if (!t.saasTrialEndsAt) return false
+        const ts = new Date(t.saasTrialEndsAt).getTime()
+        return ts >= now && ts <= soonEdge
+      })
+      .sort((a: any, b: any) => {
+        const ta = a.saasTrialEndsAt ? new Date(a.saasTrialEndsAt).getTime() : Number.POSITIVE_INFINITY
+        const tb = b.saasTrialEndsAt ? new Date(b.saasTrialEndsAt).getTime() : Number.POSITIVE_INFINITY
+        return ta - tb
+      })
+  }, [saasTenants, saasPlanFilter, saasStatusFilter, trialSoonOnly])
 
   return (
     <main className="page with-sidebar">
@@ -299,7 +330,28 @@ export default function OwnerDashboardPage() {
           </section>
 
           <section className="panel text-sm">
-            <h2 className="mb-2 text-base font-semibold">SaaS tenant’ы</h2>
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-base font-semibold">SaaS tenant’ы</h2>
+              <div className="flex flex-wrap items-center gap-2">
+                <select className="select" value={saasPlanFilter} onChange={(e) => setSaasPlanFilter(e.target.value as any)}>
+                  <option value="ALL">Все планы</option>
+                  <option value="STARTER">STARTER</option>
+                  <option value="PRO">PRO</option>
+                  <option value="ENTERPRISE">ENTERPRISE</option>
+                </select>
+                <select className="select" value={saasStatusFilter} onChange={(e) => setSaasStatusFilter(e.target.value as any)}>
+                  <option value="ALL">Все статусы</option>
+                  <option value="TRIAL">TRIAL</option>
+                  <option value="ACTIVE">ACTIVE</option>
+                  <option value="PAST_DUE">PAST_DUE</option>
+                  <option value="CANCELED">CANCELED</option>
+                </select>
+                <label className="flex items-center gap-2 px-2 text-xs text-gray-500">
+                  <input type="checkbox" checked={trialSoonOnly} onChange={(e) => setTrialSoonOnly(e.target.checked)} />
+                  Trial ≤ 7 дней
+                </label>
+              </div>
+            </div>
             <div className="table-wrap">
               <table className="table table-sticky mobile-cards">
                 <thead>
@@ -313,7 +365,7 @@ export default function OwnerDashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {saasTenants.map((t: any) => {
+                  {filteredSaasTenants.map((t: any) => {
                     const edit = saasEdits[t.id]
                     return (
                       <tr key={t.id}>
@@ -336,6 +388,11 @@ export default function OwnerDashboardPage() {
                           </select>
                         </td>
                         <td data-label="Статус подписки">
+                          <div className="mb-1">
+                            <span className={`badge ${statusBadgeClass((edit?.saasSubscriptionStatus || t.saasSubscriptionStatus) as any)}`}>
+                              {edit?.saasSubscriptionStatus || t.saasSubscriptionStatus || '—'}
+                            </span>
+                          </div>
                           <select
                             className="select"
                             value={edit?.saasSubscriptionStatus || 'TRIAL'}
@@ -380,7 +437,7 @@ export default function OwnerDashboardPage() {
                       </tr>
                     )
                   })}
-                  {!saasTenants.length && (
+                  {!filteredSaasTenants.length && (
                     <tr>
                       <td colSpan={6} className="text-center text-gray-500">SaaS tenant’ов пока нет</td>
                     </tr>
