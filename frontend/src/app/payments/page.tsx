@@ -6,6 +6,7 @@ import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'
 import { getTenantId, getToken, setTenantId } from '@/lib/auth'
 import { formatDate, formatDateTime, formatRub, statusLabel } from '@/lib/format'
+import { CrmActionRow, CrmCard, CrmEmpty, CrmStat } from '@/components/crm-ui'
 
 export default function PaymentsPage() {
   const router = useRouter()
@@ -98,28 +99,31 @@ export default function PaymentsPage() {
     <main className="page with-sidebar">
       <Topbar tenants={tenants} />
 
-      <div className="mb-4 flex items-center gap-2">
+      <CrmActionRow className="mb-3">
         <button className="btn" onClick={load} disabled={loading}>{loading ? 'Обновление…' : 'Обновить'}</button>
         <select className="select" value={status} onChange={(e) => setStatus(e.target.value as 'PLANNED' | 'PAID')}>
           <option value="PAID">Оплаченные</option>
           <option value="PLANNED">Плановые</option>
         </select>
+        <div className="ml-auto flex items-center gap-2 text-sm text-gray-400">
+          <span>Стр. {pageSafe} / {totalPages}</span>
+          <button className="btn" disabled={pageSafe <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>Назад</button>
+          <button className="btn" disabled={pageSafe >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>Вперёд</button>
+        </div>
+      </CrmActionRow>
+
+      <div className="mb-3 grid gap-2 md:grid-cols-3">
+        <CrmStat label="Всего записей" value={sortedItems.length} />
+        <CrmStat label="Текущий статус" value={status === 'PAID' ? 'Оплаченные' : 'Плановые'} />
+        <CrmStat label="Сумма на странице" value={formatRub(pageItems.reduce((acc, it) => acc + Number(it.amount || 0), 0))} />
       </div>
 
       {error && <p className="alert">{error}</p>}
       {success && <p className="alert-success">{success}</p>}
 
-      <div className="mb-3 flex items-center justify-between text-sm">
-        <div className="text-gray-500">Страница {pageSafe} из {totalPages}</div>
-        <div className="flex gap-2">
-          <button className="btn" disabled={pageSafe <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>Назад</button>
-          <button className="btn" disabled={pageSafe >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>Вперёд</button>
-        </div>
-      </div>
-
       <div className="space-y-2 md:hidden">
         {pageItems.map((p) => (
-          <div key={p.id} className="panel text-sm">
+          <div key={p.id} className="crm-card text-sm">
             <div className="font-semibold">{p.rental?.client?.fullName || '—'}</div>
             <div>Велосипед: {p.rental?.bike?.code || '—'}</div>
             <div>Сумма: <span className={Number(p.amount) < 0 ? 'text-red-700' : ''}>{formatRub(Number(p.amount ?? 0))}</span></div>
@@ -142,10 +146,11 @@ export default function PaymentsPage() {
             )}
           </div>
         ))}
-        {!sortedItems.length && <p className="text-sm text-gray-600">Нет платежей в этом статусе</p>}
+        {!sortedItems.length && <CrmEmpty title="Нет платежей в этом статусе" />}
       </div>
 
-      <div className="table-wrap hidden md:block">
+      <CrmCard className="hidden md:block !p-0">
+        <div className="table-wrap">
         <table className="table table-sticky">
           <thead>
             <tr>
@@ -189,12 +194,13 @@ export default function PaymentsPage() {
             ))}
             {!sortedItems.length && (
               <tr>
-                <td colSpan={7} className="text-center text-gray-600">Нет платежей в этом статусе</td>
+                <td colSpan={7} className="text-center text-gray-600"><CrmEmpty title="Нет платежей в этом статусе" /></td>
               </tr>
             )}
           </tbody>
         </table>
-      </div>
+        </div>
+      </CrmCard>
     </main>
   )
 }
