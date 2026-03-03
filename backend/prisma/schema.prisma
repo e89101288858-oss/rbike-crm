@@ -95,6 +95,11 @@ model User {
   passwordHash String
   tokenVersion Int          @default(0)
   passwordChangedAt DateTime?
+  lastLoginAt DateTime?
+  lastLoginIp String?
+  lastLoginUserAgent String?
+  passwordResetTokenHash String?
+  passwordResetExpiresAt DateTime?
   role         UserRole
   franchiseeId String?
   franchisee   Franchisee?  @relation(fields: [franchiseeId], references: [id])

@@ -18,6 +18,18 @@ import { ChangeMyPasswordDto } from './dto/change-my-password.dto'
 export class MyTenantSettingsController {
   constructor(private readonly prisma: PrismaService) {}
 
+  private async audit(userId: string | undefined, action: string, targetType: string, targetId?: string, details?: any) {
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action,
+        targetType,
+        targetId,
+        details: details ?? undefined,
+      },
+    })
+  }
+
   @Get('tenant-settings')
   async getSettings(@Req() req: Request) {
     const tenantId = req.tenantId!
@@ -35,7 +47,7 @@ export class MyTenantSettingsController {
   }
 
   @Patch('tenant-settings')
-  async updateSettings(@Req() req: Request, @Body() dto: UpdateMyTenantSettingsDto) {
+  async updateSettings(@Req() req: Request, @CurrentUser() user: JwtUser, @Body() dto: UpdateMyTenantSettingsDto) {
     const tenantId = req.tenantId!
 
     const tenant = await this.prisma.tenant.findUnique({
@@ -43,7 +55,7 @@ export class MyTenantSettingsController {
       select: { mode: true },
     })
 
-    return this.prisma.tenant.update({
+    const updated = await this.prisma.tenant.update({
       where: { id: tenantId },
       data: {
         ...(dto.dailyRateRub !== undefined && { dailyRateRub: dto.dailyRateRub }),
@@ -59,6 +71,13 @@ export class MyTenantSettingsController {
         royaltyPercent: true,
       },
     })
+
+    await this.audit(user.userId, 'SELF_SERVICE_UPDATE_TENANT_SETTINGS', 'TENANT', tenantId, {
+      dailyRateRub: updated.dailyRateRub,
+      minRentalDays: updated.minRentalDays,
+    })
+
+    return updated
   }
 
   @Get('account-settings')
@@ -96,6 +115,9 @@ export class MyTenantSettingsController {
           fullName: true,
           phone: true,
           passwordChangedAt: true,
+          lastLoginAt: true,
+          lastLoginIp: true,
+          lastLoginUserAgent: true,
         },
       }),
     ])
@@ -192,6 +214,16 @@ export class MyTenantSettingsController {
       }
     })
 
+    await this.audit(user.userId, 'SELF_SERVICE_UPDATE_ACCOUNT_SETTINGS', 'TENANT', tenantId, {
+      email: dto.email,
+      fullName: dto.fullName,
+      phone: dto.phone,
+      companyName: dto.companyName,
+      city: dto.city,
+      tenantName: dto.tenantName,
+      address: dto.address,
+    })
+
     return this.getAccountSettings(req, user)
   }
 
@@ -213,6 +245,7 @@ export class MyTenantSettingsController {
       },
     })
 
+    await this.audit(user.userId, 'SELF_SERVICE_CHANGE_PASSWORD', 'USER', user.userId)
     return { ok: true }
   }
 
@@ -222,6 +255,7 @@ export class MyTenantSettingsController {
       where: { id: user.userId },
       data: { tokenVersion: { increment: 1 } },
     })
+    await this.audit(user.userId, 'SELF_SERVICE_LOGOUT_ALL_SESSIONS', 'USER', user.userId)
     return { ok: true }
   }
 }

@@ -120,6 +120,18 @@ export const api = {
       body: JSON.stringify(payload),
     }),
 
+  passwordResetRequest: (email: string) =>
+    request<{ ok: boolean; resetToken?: string }>('/auth/password-reset/request', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+
+  passwordResetConfirm: (token: string, newPassword: string) =>
+    request<{ ok: boolean }>('/auth/password-reset/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ token, newPassword }),
+    }),
+
   me: () => request<{ userId: string; role: string; franchiseeId: string | null }>('/me'),
 
   myTenants: () =>

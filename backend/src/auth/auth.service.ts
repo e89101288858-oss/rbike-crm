@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import * as bcrypt from 'bcrypt'
+import { createHash, randomBytes } from 'crypto'
 import { PrismaService } from '../prisma/prisma.service'
 import { RegisterSaasDto } from './dto/register-saas.dto'
 
@@ -10,6 +11,18 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
   ) {}
+
+  private async audit(userId: string | undefined, action: string, targetType: string, targetId?: string, details?: any) {
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action,
+        targetType,
+        targetId,
+        details: details ?? undefined,
+      },
+    })
+  }
 
   async registerRequest(email: string, password: string, fullName?: string, phone?: string) {
     const existingUser = await this.prisma.user.findUnique({ where: { email } })
@@ -122,7 +135,7 @@ export class AuthService {
     }
   }
 
-  async login(email: string, password: string) {
+  async login(email: string, password: string, ip?: string | null, userAgent?: string | null) {
     const user = await this.prisma.user.findUnique({ where: { email } })
 
     if (!user || !user.isActive) {
@@ -134,6 +147,15 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials')
     }
 
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        lastLoginAt: new Date(),
+        lastLoginIp: ip ?? null,
+        lastLoginUserAgent: userAgent ?? null,
+      },
+    })
+
     const payload = {
       userId: user.id,
       role: user.role,
@@ -143,5 +165,59 @@ export class AuthService {
 
     const accessToken = await this.jwt.signAsync(payload)
     return { accessToken }
+  }
+
+  async requestPasswordReset(email: string) {
+    const user = await this.prisma.user.findUnique({ where: { email } })
+    if (!user || !user.isActive) return { ok: true }
+
+    const token = randomBytes(24).toString('hex')
+    const tokenHash = createHash('sha256').update(token).digest('hex')
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000)
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordResetTokenHash: tokenHash,
+        passwordResetExpiresAt: expiresAt,
+      },
+    })
+
+    await this.audit(undefined, 'PASSWORD_RESET_REQUEST', 'USER', user.id, {
+      email: user.email,
+      expiresAt,
+      // NOTE: without SMTP integration this token is returned for frontend flow.
+    })
+
+    return { ok: true, resetToken: token }
+  }
+
+  async confirmPasswordReset(token: string, newPassword: string) {
+    const tokenHash = createHash('sha256').update(token).digest('hex')
+
+    const user = await this.prisma.user.findFirst({
+      where: {
+        passwordResetTokenHash: tokenHash,
+        passwordResetExpiresAt: { gt: new Date() },
+        isActive: true,
+      },
+    })
+
+    if (!user) throw new BadRequestException('Ссылка сброса недействительна или истекла')
+
+    const passwordHash = await bcrypt.hash(newPassword, 10)
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        passwordChangedAt: new Date(),
+        tokenVersion: { increment: 1 },
+        passwordResetTokenHash: null,
+        passwordResetExpiresAt: null,
+      },
+    })
+
+    await this.audit(user.id, 'PASSWORD_RESET_CONFIRM', 'USER', user.id)
+    return { ok: true }
   }
 }

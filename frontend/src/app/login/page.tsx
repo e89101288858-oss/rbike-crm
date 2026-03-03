@@ -26,6 +26,12 @@ export default function LoginPage() {
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
 
+  const [showReset, setShowReset] = useState(false)
+  const [resetEmail, setResetEmail] = useState('')
+  const [resetToken, setResetToken] = useState('')
+  const [resetNewPassword, setResetNewPassword] = useState('')
+  const [resetNewPasswordConfirm, setResetNewPasswordConfirm] = useState('')
+
   useEffect(() => {
     if (typeof window === 'undefined') return
     const params = new URLSearchParams(window.location.search)
@@ -96,6 +102,44 @@ export default function LoginPage() {
     }
   }
 
+  async function onRequestPasswordReset(e: FormEvent) {
+    e.preventDefault()
+    setError('')
+    setSuccess('')
+    setLoading(true)
+    try {
+      const res = await api.passwordResetRequest(resetEmail.trim())
+      setSuccess('Если email найден, инструкция по сбросу отправлена.')
+      if (res?.resetToken) {
+        setResetToken(res.resetToken)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка запроса сброса')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function onConfirmPasswordReset(e: FormEvent) {
+    e.preventDefault()
+    setError('')
+    setSuccess('')
+    setLoading(true)
+    try {
+      if (resetNewPassword !== resetNewPasswordConfirm) throw new Error('Новые пароли не совпадают')
+      await api.passwordResetConfirm(resetToken.trim(), resetNewPassword)
+      setSuccess('Пароль сброшен. Войдите с новым паролем.')
+      setShowReset(false)
+      setResetToken('')
+      setResetNewPassword('')
+      setResetNewPasswordConfirm('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка подтверждения сброса')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <main className="page max-w-md">
       <h1 className="mb-4 text-3xl font-bold">rbCRM</h1>
@@ -111,13 +155,34 @@ export default function LoginPage() {
       </div>
 
       {tab === 'login' ? (
-        <form onSubmit={onSubmitLogin} className="panel space-y-3">
-          <input className="input w-full" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <input className="input w-full" placeholder="Пароль" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-          <button disabled={loading} className="btn-primary w-full">{loading ? 'Входим…' : 'Войти'}</button>
+        <div className="panel space-y-3">
+          {!showReset ? (
+            <form onSubmit={onSubmitLogin} className="space-y-3">
+              <input className="input w-full" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+              <input className="input w-full" placeholder="Пароль" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+              <button disabled={loading} className="btn-primary w-full">{loading ? 'Входим…' : 'Войти'}</button>
+              <button type="button" className="btn w-full" onClick={() => setShowReset(true)}>Забыли пароль?</button>
+            </form>
+          ) : (
+            <>
+              <form onSubmit={onRequestPasswordReset} className="space-y-3">
+                <input className="input w-full" placeholder="Email для восстановления" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} required />
+                <button disabled={loading} className="btn-primary w-full">{loading ? 'Отправляем…' : 'Запросить сброс'}</button>
+              </form>
+
+              <form onSubmit={onConfirmPasswordReset} className="space-y-3">
+                <input className="input w-full" placeholder="Токен из письма" value={resetToken} onChange={(e) => setResetToken(e.target.value)} required />
+                <input className="input w-full" placeholder="Новый пароль" type="password" value={resetNewPassword} onChange={(e) => setResetNewPassword(e.target.value)} required minLength={6} />
+                <input className="input w-full" placeholder="Повторите новый пароль" type="password" value={resetNewPasswordConfirm} onChange={(e) => setResetNewPasswordConfirm(e.target.value)} required minLength={6} />
+                <button disabled={loading} className="btn-primary w-full">{loading ? 'Сохраняем…' : 'Подтвердить сброс'}</button>
+                <button type="button" className="btn w-full" onClick={() => setShowReset(false)}>Назад ко входу</button>
+              </form>
+            </>
+          )}
+
           {error && <p className="alert">{error}</p>}
           {success && <p className="alert-success">{success}</p>}
-        </form>
+        </div>
       ) : (
         <form onSubmit={onSubmitRegister} className="panel space-y-3">
           <input className="input w-full" placeholder="ФИО" value={regFullName} onChange={(e) => setRegFullName(e.target.value)} required minLength={2} />

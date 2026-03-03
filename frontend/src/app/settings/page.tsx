@@ -259,8 +259,13 @@ export default function TenantSettingsPage() {
 
       <section className="panel text-sm">
         <h2 className="mb-2 text-base font-semibold">Безопасность</h2>
-        <div className="mb-3 text-xs text-gray-500">
+        <div className="mb-2 text-xs text-gray-500">
           Последняя смена пароля: <b>{account?.user?.passwordChangedAt ? new Date(account.user.passwordChangedAt).toLocaleString('ru-RU') : 'ещё не менялся'}</b>
+        </div>
+        <div className="mb-3 text-xs text-gray-500">
+          Последний вход: <b>{account?.user?.lastLoginAt ? new Date(account.user.lastLoginAt).toLocaleString('ru-RU') : 'нет данных'}</b>
+          {account?.user?.lastLoginIp ? <> · IP: <b>{account.user.lastLoginIp}</b></> : null}
+          {account?.user?.lastLoginUserAgent ? <> · Устройство: <b>{account.user.lastLoginUserAgent}</b></> : null}
         </div>
 
         <div className="grid gap-2 md:grid-cols-3">

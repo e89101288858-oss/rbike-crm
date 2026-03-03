@@ -1,8 +1,11 @@
-import { Body, Controller, Post } from '@nestjs/common'
+import { Body, Controller, Post, Req } from '@nestjs/common'
+import type { Request } from 'express'
 import { AuthService } from './auth.service'
 import { LoginDto } from './dto/login.dto'
 import { RegisterRequestDto } from './dto/register-request.dto'
 import { RegisterSaasDto } from './dto/register-saas.dto'
+import { PasswordResetRequestDto } from './dto/password-reset-request.dto'
+import { PasswordResetConfirmDto } from './dto/password-reset-confirm.dto'
 
 @Controller('auth')
 export class AuthController {
@@ -19,7 +22,19 @@ export class AuthController {
   }
 
   @Post('login')
-  async login(@Body() dto: LoginDto) {
-    return this.auth.login(dto.email, dto.password)
+  async login(@Body() dto: LoginDto, @Req() req: Request) {
+    const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || null
+    const userAgent = (req.headers['user-agent'] as string) || null
+    return this.auth.login(dto.email, dto.password, ip, userAgent)
+  }
+
+  @Post('password-reset/request')
+  async requestPasswordReset(@Body() dto: PasswordResetRequestDto) {
+    return this.auth.requestPasswordReset(dto.email)
+  }
+
+  @Post('password-reset/confirm')
+  async confirmPasswordReset(@Body() dto: PasswordResetConfirmDto) {
+    return this.auth.confirmPasswordReset(dto.token, dto.newPassword)
   }
 }
