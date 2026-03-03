@@ -19,7 +19,7 @@ import { AssignUserToTenantDto } from './dto/assign-user-to-tenant.dto'
 
 @Controller('tenants')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('OWNER', 'FRANCHISEE')
+@Roles('OWNER', 'FRANCHISEE', 'SAAS_USER')
 export class TenantUsersController {
   constructor(private readonly prisma: PrismaService) {}
 
@@ -40,12 +40,12 @@ export class TenantUsersController {
 
     if (currentUser.role === 'OWNER') {
       // allowed for any existing tenant
-    } else if (currentUser.role === 'FRANCHISEE') {
+    } else if (currentUser.role === 'FRANCHISEE' || currentUser.role === 'SAAS_USER') {
       if (!currentUser.franchiseeId || currentUser.franchiseeId !== tenant.franchiseeId) {
         throw new BadRequestException('Tenant does not belong to current franchisee')
       }
     } else {
-      throw new BadRequestException('Only OWNER or FRANCHISEE can manage tenant users')
+      throw new BadRequestException('Only OWNER, FRANCHISEE or SAAS_USER can manage tenant users')
     }
 
     const user = await this.prisma.user.findUnique({
@@ -101,12 +101,12 @@ export class TenantUsersController {
 
     if (currentUser.role === 'OWNER') {
       // allowed for any existing tenant
-    } else if (currentUser.role === 'FRANCHISEE') {
+    } else if (currentUser.role === 'FRANCHISEE' || currentUser.role === 'SAAS_USER') {
       if (!currentUser.franchiseeId || currentUser.franchiseeId !== tenant.franchiseeId) {
         throw new BadRequestException('Tenant does not belong to current franchisee')
       }
     } else {
-      throw new BadRequestException('Only OWNER or FRANCHISEE can manage tenant users')
+      throw new BadRequestException('Only OWNER, FRANCHISEE or SAAS_USER can manage tenant users')
     }
 
     const existing = await this.prisma.userTenant.findUnique({
@@ -150,12 +150,12 @@ export class TenantUsersController {
 
     if (currentUser.role === 'OWNER') {
       // allowed for any existing tenant
-    } else if (currentUser.role === 'FRANCHISEE') {
+    } else if (currentUser.role === 'FRANCHISEE' || currentUser.role === 'SAAS_USER') {
       if (!currentUser.franchiseeId || currentUser.franchiseeId !== tenant.franchiseeId) {
         throw new BadRequestException('Tenant does not belong to current franchisee')
       }
     } else {
-      throw new BadRequestException('Only OWNER or FRANCHISEE can view tenant users')
+      throw new BadRequestException('Only OWNER, FRANCHISEE or SAAS_USER can view tenant users')
     }
 
     const userTenants = await this.prisma.userTenant.findMany({

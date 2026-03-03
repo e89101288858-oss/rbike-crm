@@ -275,7 +275,7 @@ export default function DashboardPage() {
     setShowOnboarding(fromQuery || fromStorage)
   }, [])
 
-  const showFranchiseeDashboard = role === 'FRANCHISEE' || role === 'OWNER'
+  const showFranchiseeDashboard = role === 'FRANCHISEE' || role === 'SAAS_USER' || role === 'OWNER'
   const rentalsCount = allRentals.length
 
   const rangeDays = Math.max(1, Math.floor((chartRange.to.getTime() - chartRange.from.getTime()) / (24 * 60 * 60 * 1000)) + 1)

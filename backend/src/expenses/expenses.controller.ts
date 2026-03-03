@@ -13,7 +13,7 @@ import { ExpensesService } from './expenses.service'
 
 @Controller('expenses')
 @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard)
-@Roles('OWNER', 'FRANCHISEE', 'MANAGER')
+@Roles('OWNER', 'FRANCHISEE', 'SAAS_USER', 'MANAGER')
 export class ExpensesController {
   constructor(private readonly expensesService: ExpensesService) {}
 

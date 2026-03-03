@@ -2,7 +2,7 @@
 
 import { ChangeEvent, useEffect, useMemo, useState } from 'react'
 
-type UserRole = 'OWNER' | 'FRANCHISEE' | 'MANAGER' | 'MECHANIC' | ''
+type UserRole = 'OWNER' | 'FRANCHISEE' | 'SAAS_USER' | 'MANAGER' | 'MECHANIC' | ''
 import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'

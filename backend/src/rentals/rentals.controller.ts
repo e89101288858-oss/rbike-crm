@@ -48,7 +48,7 @@ function diffDaysCeil(from: Date, to: Date) {
 
 @Controller('rentals')
 @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard)
-@Roles('OWNER', 'FRANCHISEE', 'MANAGER')
+@Roles('OWNER', 'FRANCHISEE', 'SAAS_USER', 'MANAGER')
 export class RentalsController {
   constructor(private readonly prisma: PrismaService) {}
 

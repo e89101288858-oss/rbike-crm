@@ -1,6 +1,6 @@
 import { IsEmail, IsIn, IsString, IsUUID, MinLength, ValidateIf } from 'class-validator'
 
-export const ALLOWED_ROLES = ['FRANCHISEE', 'MANAGER', 'MECHANIC'] as const
+export const ALLOWED_ROLES = ['FRANCHISEE', 'SAAS_USER', 'MANAGER', 'MECHANIC'] as const
 
 export type AllowedRole = (typeof ALLOWED_ROLES)[number]
 

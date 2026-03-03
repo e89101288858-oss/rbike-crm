@@ -14,7 +14,7 @@ import { ChangeMyPasswordDto } from './dto/change-my-password.dto'
 
 @Controller('my')
 @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard)
-@Roles('OWNER', 'FRANCHISEE', 'MANAGER')
+@Roles('OWNER', 'FRANCHISEE', 'SAAS_USER', 'MANAGER')
 export class MyTenantSettingsController {
   constructor(private readonly prisma: PrismaService) {}
 

@@ -161,7 +161,7 @@ export default function TenantSettingsPage() {
     }
   }
 
-  if (role && role !== 'FRANCHISEE' && role !== 'MANAGER' && role !== 'OWNER') {
+  if (role && role !== 'FRANCHISEE' && role !== 'SAAS_USER' && role !== 'MANAGER' && role !== 'OWNER') {
     return (
       <main className="page with-sidebar">
         <Topbar tenants={tenants} />

@@ -531,7 +531,7 @@ export const api = {
   adminDeleteTenant: (id: string) => request<any>(`/tenants/${id}`, { method: 'DELETE' }),
 
   adminUsers: () => request<any[]>('/admin/users'),
-  adminCreateUser: (payload: { email: string; password: string; role: 'FRANCHISEE' | 'MANAGER' | 'MECHANIC'; franchiseeId?: string }) =>
+  adminCreateUser: (payload: { email: string; password: string; role: 'FRANCHISEE' | 'SAAS_USER' | 'MANAGER' | 'MECHANIC'; franchiseeId?: string }) =>
     request<any>('/admin/users', {
       method: 'POST',
       body: JSON.stringify(payload),

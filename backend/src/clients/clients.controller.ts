@@ -12,7 +12,7 @@ import { UpdateClientDto } from './dto/update-client.dto'
 
 @Controller('clients')
 @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard)
-@Roles('OWNER', 'FRANCHISEE', 'MANAGER')
+@Roles('OWNER', 'FRANCHISEE', 'SAAS_USER', 'MANAGER')
 export class ClientsController {
   constructor(private readonly prisma: PrismaService) {}
 

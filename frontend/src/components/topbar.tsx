@@ -8,7 +8,7 @@ import { api } from '@/lib/api'
 import { API_BASE } from '@/lib/config'
 
 type TenantOption = { id: string; name: string; franchisee?: { name: string } }
-type UserRole = 'OWNER' | 'FRANCHISEE' | 'MANAGER' | 'MECHANIC' | ''
+type UserRole = 'OWNER' | 'FRANCHISEE' | 'SAAS_USER' | 'MANAGER' | 'MECHANIC' | ''
 
 type NavGroup = {
   title: string
@@ -31,31 +31,31 @@ const opsNav: NavGroup[] = [
   {
     title: 'Операции',
     items: [
-      { href: '/dashboard', label: 'Дашборд', roles: ['FRANCHISEE', 'MANAGER', 'MECHANIC'] },
-      { href: '/rentals', label: 'Аренды', roles: ['FRANCHISEE', 'MANAGER'] },
+      { href: '/dashboard', label: 'Дашборд', roles: ['FRANCHISEE', 'SAAS_USER', 'MANAGER', 'MECHANIC'] },
+      { href: '/rentals', label: 'Аренды', roles: ['FRANCHISEE', 'SAAS_USER', 'MANAGER'] },
     ],
   },
   {
     title: 'Справочники',
     items: [
-      { href: '/clients', label: 'Курьеры', roles: ['FRANCHISEE', 'MANAGER'] },
-      { href: '/bikes', label: 'Велосипеды', roles: ['FRANCHISEE', 'MANAGER', 'MECHANIC'] },
-      { href: '/batteries', label: 'АКБ', roles: ['FRANCHISEE', 'MANAGER', 'MECHANIC'] },
+      { href: '/clients', label: 'Курьеры', roles: ['FRANCHISEE', 'SAAS_USER', 'MANAGER'] },
+      { href: '/bikes', label: 'Велосипеды', roles: ['FRANCHISEE', 'SAAS_USER', 'MANAGER', 'MECHANIC'] },
+      { href: '/batteries', label: 'АКБ', roles: ['FRANCHISEE', 'SAAS_USER', 'MANAGER', 'MECHANIC'] },
     ],
   },
   {
     title: 'Аналитика',
     items: [
-      { href: '/finance', label: 'Финансы', roles: ['FRANCHISEE', 'MANAGER'] },
-      { href: '/expenses', label: 'Расходы', roles: ['FRANCHISEE', 'MANAGER'] },
-      { href: '/payments', label: 'Платежи', roles: ['FRANCHISEE', 'MANAGER'] },
+      { href: '/finance', label: 'Финансы', roles: ['FRANCHISEE', 'SAAS_USER', 'MANAGER'] },
+      { href: '/expenses', label: 'Расходы', roles: ['FRANCHISEE', 'SAAS_USER', 'MANAGER'] },
+      { href: '/payments', label: 'Платежи', roles: ['FRANCHISEE', 'SAAS_USER', 'MANAGER'] },
     ],
   },
   {
     title: 'Инструменты',
     items: [
-      { href: '/import', label: 'Импорт CSV', roles: ['FRANCHISEE', 'MANAGER'] },
-      { href: '/settings', label: 'Настройки точки', roles: ['FRANCHISEE', 'MANAGER'] },
+      { href: '/import', label: 'Импорт CSV', roles: ['FRANCHISEE', 'SAAS_USER', 'MANAGER'] },
+      { href: '/settings', label: 'Настройки точки', roles: ['FRANCHISEE', 'SAAS_USER', 'MANAGER'] },
     ],
   },
 ]

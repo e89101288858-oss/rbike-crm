@@ -8,7 +8,7 @@ import { getTenantId, getToken, setTenantId } from '@/lib/auth'
 import { statusLabel } from '@/lib/format'
 import { CrmActionRow, CrmCard, CrmEmpty, CrmStat } from '@/components/crm-ui'
 
-type UserRole = 'OWNER' | 'FRANCHISEE' | 'MANAGER' | 'MECHANIC' | ''
+type UserRole = 'OWNER' | 'FRANCHISEE' | 'SAAS_USER' | 'MANAGER' | 'MECHANIC' | ''
 
 const BIKE_STATUSES = ['AVAILABLE', 'RENTED', 'MAINTENANCE', 'BLOCKED', 'LOST'] as const
 

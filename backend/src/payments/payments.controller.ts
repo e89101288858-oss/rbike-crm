@@ -14,7 +14,7 @@ import { PaymentsService } from './payments.service'
 
 @Controller('payments')
 @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard)
-@Roles('OWNER', 'FRANCHISEE', 'MANAGER')
+@Roles('OWNER', 'FRANCHISEE', 'SAAS_USER', 'MANAGER')
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 

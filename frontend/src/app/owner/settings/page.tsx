@@ -235,6 +235,7 @@ export default function OwnerSettingsPage() {
               <option value="MANAGER">MANAGER</option>
               <option value="MECHANIC">MECHANIC</option>
               <option value="FRANCHISEE">FRANCHISEE</option>
+              <option value="SAAS_USER">SAAS_USER</option>
             </select>
             <select className="select" value={newUser.franchiseeId} onChange={(e) => setNewUser((p) => ({ ...p, franchiseeId: e.target.value }))} disabled={newUser.role !== 'FRANCHISEE'}>
               <option value="">Франчайзи</option>
@@ -251,6 +252,7 @@ export default function OwnerSettingsPage() {
                   <select className="select" value={u.role} onChange={(e) => setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, role: e.target.value } : x))} disabled={u.role === 'OWNER'}>
                     <option value="OWNER">OWNER</option>
                     <option value="FRANCHISEE">FRANCHISEE</option>
+              <option value="SAAS_USER">SAAS_USER</option>
                     <option value="MANAGER">MANAGER</option>
                     <option value="MECHANIC">MECHANIC</option>
                   </select>

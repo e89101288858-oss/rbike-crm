@@ -10,6 +10,7 @@ datasource db {
 enum UserRole {
   OWNER
   FRANCHISEE
+  SAAS_USER
   MANAGER
   MECHANIC
 }

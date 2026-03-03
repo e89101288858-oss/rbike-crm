@@ -12,12 +12,12 @@ import { UpdateBatteryDto } from './dto/update-battery.dto'
 
 @Controller('batteries')
 @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard)
-@Roles('OWNER', 'FRANCHISEE', 'MANAGER', 'MECHANIC')
+@Roles('OWNER', 'FRANCHISEE', 'SAAS_USER', 'MANAGER', 'MECHANIC')
 export class BatteriesController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Post()
-  @Roles('OWNER', 'FRANCHISEE', 'MANAGER', 'MECHANIC')
+  @Roles('OWNER', 'FRANCHISEE', 'SAAS_USER', 'MANAGER', 'MECHANIC')
   async create(@Req() req: Request, @Body() dto: CreateBatteryDto) {
     const tenantId = req.tenantId!
 

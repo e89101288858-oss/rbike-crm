@@ -40,7 +40,7 @@ export class TenantGuard implements CanActivate {
       return true
     }
 
-    if (user.role === 'FRANCHISEE') {
+    if (user.role === 'FRANCHISEE' || user.role === 'SAAS_USER') {
       if (user.franchiseeId === tenant.franchiseeId) {
         request.tenantId = tenantId
         return true
