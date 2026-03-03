@@ -6,6 +6,7 @@ import { Topbar } from '@/components/topbar'
 import { api, Rental } from '@/lib/api'
 import { getTenantId, getToken, setTenantId } from '@/lib/auth'
 import { diffDays, formatRub } from '@/lib/format'
+import { CrmCard, CrmStat, CrmActionRow, CrmEmpty } from '@/components/crm-ui'
 
 type ChartMode = 'month' | 'year'
 
@@ -330,26 +331,10 @@ export default function DashboardPage() {
           )}
 
           <section className="mb-6 grid gap-3 md:grid-cols-4">
-            <div className="rounded-lg border border-white/10 bg-[#1f2126] p-4">
-              <div className="text-xs text-gray-400">Активные аренды</div>
-              <div className="mt-1 text-3xl font-semibold text-white">{formatInt(activeNow)}</div>
-              <div className="mt-1 text-xs text-gray-500">на текущий момент</div>
-            </div>
-            <div className="rounded-lg border border-white/10 bg-[#1f2126] p-4">
-              <div className="text-xs text-gray-400">Новые аренды</div>
-              <div className="mt-1 text-3xl font-semibold text-white">{formatInt(newRentalsPeriod)}</div>
-              <div className="mt-1 text-xs text-gray-500">за выбранный период</div>
-            </div>
-            <div className="rounded-lg border border-white/10 bg-[#1f2126] p-4">
-              <div className="text-xs text-gray-400">Выручка за период</div>
-              <div className="mt-1 text-3xl font-semibold text-white">{formatRub(chartRevenueTotal)}</div>
-              <div className="mt-1 text-xs text-gray-500">оплаченные платежи</div>
-            </div>
-            <div className="rounded-lg border border-white/10 bg-[#1f2126] p-4">
-              <div className="text-xs text-gray-400">Средняя длительность</div>
-              <div className="mt-1 text-3xl font-semibold text-white">{avgClosedDays ? `${avgClosedDays.toFixed(1)} дн.` : '—'}</div>
-              <div className="mt-1 text-xs text-gray-500">по закрытым арендам</div>
-            </div>
+            <CrmStat label="Активные аренды" value={formatInt(activeNow)} hint="на текущий момент" />
+            <CrmStat label="Новые аренды" value={formatInt(newRentalsPeriod)} hint="за выбранный период" />
+            <CrmStat label="Выручка за период" value={formatRub(chartRevenueTotal)} hint="оплаченные платежи" />
+            <CrmStat label="Средняя длительность" value={avgClosedDays ? `${avgClosedDays.toFixed(1)} дн.` : '—'} hint="по закрытым арендам" />
           </section>
 
           <section className="mb-6 grid gap-3 lg:grid-cols-3">
@@ -383,7 +368,7 @@ export default function DashboardPage() {
                 })}
               </div>
 
-              {!chartRows.length && <p className="text-sm text-gray-400">Нет данных за период</p>}
+              {!chartRows.length && <CrmEmpty title="Нет данных за период" />}
             </div>
 
           </div>

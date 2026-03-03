@@ -6,6 +6,7 @@ import { Topbar } from '@/components/topbar'
 import { api, Bike, Expense } from '@/lib/api'
 import { getTenantId, getToken, setTenantId } from '@/lib/auth'
 import { formatDate, formatRub } from '@/lib/format'
+import { CrmActionRow, CrmCard, CrmEmpty, CrmStat } from '@/components/crm-ui'
 
 type ScopeType = 'SINGLE' | 'MULTI' | 'ALL_BIKES'
 
@@ -191,16 +192,27 @@ export default function ExpensesPage() {
         {success && <div className="alert-success">{success}</div>}
       </div>
 
-      <div className="mb-3 flex items-center gap-2">
-        <input className="input min-w-0 flex-1 max-w-[760px]" placeholder="Поиск: категория / заметка" value={query} onChange={(e) => setQuery(e.target.value)} />
-        <label className="flex items-center gap-2 text-xs text-gray-400 whitespace-nowrap">
-          <input type="checkbox" checked={includeArchived} onChange={(e) => setIncludeArchived(e.target.checked)} />
-          Показать архив
-        </label>
-        <button className="btn" onClick={load}>Найти</button>
-        <button type="button" className="btn-primary" onClick={() => setCreateModalOpen(true)}>Добавить расход</button>
+      <CrmActionRow className="mb-3">
+        {selectedId ? (
+          <button className="btn" onClick={() => setSelectedId(null)}>Назад к списку</button>
+        ) : (
+          <>
+            <input className="input min-w-0 flex-1 max-w-[760px]" placeholder="Поиск: категория / заметка" value={query} onChange={(e) => setQuery(e.target.value)} />
+            <label className="flex items-center gap-2 text-xs text-gray-400 whitespace-nowrap"><input type="checkbox" checked={includeArchived} onChange={(e) => setIncludeArchived(e.target.checked)} /> Показать архив</label>
+            <button className="btn" onClick={load}>Найти</button>
+            <button type="button" className="btn-primary" onClick={() => setCreateModalOpen(true)}>Добавить расход</button>
+          </>
+        )}
+      </CrmActionRow>
+
+      <div className="mb-3 grid gap-2 md:grid-cols-3">
+        <CrmStat label="Расходов по фильтру" value={rows.length} />
+        <CrmStat label="На странице" value={pagedRows.length} />
+        <CrmStat label="Сумма по фильтру" value={formatRub(rows.reduce((s, r) => s + Number(r.amountRub || 0), 0))} />
       </div>
 
+      {!selectedId && (
+      <>
       <div className="table-wrap">
         <table className="table table-sticky mobile-cards">
           <thead>
@@ -222,7 +234,7 @@ export default function ExpensesPage() {
                 <td data-label="Действие"><button className="btn" onClick={(e) => { e.stopPropagation(); setSelectedId(r.id) }}>Открыть</button></td>
               </tr>
             ))}
-            {!pagedRows.length && <tr><td colSpan={5} className="text-center text-gray-600">Расходов пока нет</td></tr>}
+            {!pagedRows.length && <tr><td colSpan={5} className="text-center text-gray-600"><CrmEmpty title="Расходов пока нет" /></td></tr>}
           </tbody>
         </table>
       </div>
@@ -240,6 +252,8 @@ export default function ExpensesPage() {
           <button className="btn" onClick={() => setPage(Math.min(totalPages, Math.max(1, Number(pageInput || 1))))}>ОК</button>
         </div>
       </div>
+      </>
+      )}
 
       {createModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setCreateModalOpen(false)}>
@@ -286,28 +300,25 @@ export default function ExpensesPage() {
       )}
 
       {selected && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setSelectedId(null)}>
-          <div className="panel w-full max-w-xl" onClick={(e) => e.stopPropagation()}>
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <h3 className="text-base font-semibold">Расход</h3>
-              <button className="btn" onClick={() => setSelectedId(null)}>Закрыть</button>
-            </div>
-            <div className="grid gap-2 text-sm">
-              <div className="kpi"><div className="text-xs text-gray-500">Дата</div><div>{formatDate(selected.spentAt)}</div></div>
-              <div className="kpi"><div className="text-xs text-gray-500">Категория</div><div>{selected.category}</div></div>
-              <div className="kpi"><div className="text-xs text-gray-500">Сумма</div><div>{formatRub(selected.amountRub)}</div></div>
-              <div className="kpi"><div className="text-xs text-gray-500">Привязка</div><div>{scopeLabel(selected)}</div></div>
-              <div className="kpi"><div className="text-xs text-gray-500">Комментарий</div><div>{selected.notes || '—'}</div></div>
-            </div>
-            <div className="mt-3 flex justify-end gap-2">
-              {selected.isActive !== false ? (
-                <button className="btn border-red-500/60 text-red-300" onClick={() => archiveExpense(selected.id)}>В архив</button>
-              ) : (
-                <button className="btn" onClick={() => restoreExpense(selected.id)}>Восстановить</button>
-              )}
-            </div>
+        <CrmCard className="mt-3">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h3 className="text-base font-semibold">Расход</h3>
           </div>
-        </div>
+          <div className="grid gap-2 text-sm md:grid-cols-2">
+            <div className="kpi"><div className="text-xs text-gray-500">Дата</div><div>{formatDate(selected.spentAt)}</div></div>
+            <div className="kpi"><div className="text-xs text-gray-500">Категория</div><div>{selected.category}</div></div>
+            <div className="kpi"><div className="text-xs text-gray-500">Сумма</div><div>{formatRub(selected.amountRub)}</div></div>
+            <div className="kpi"><div className="text-xs text-gray-500">Привязка</div><div>{scopeLabel(selected)}</div></div>
+            <div className="kpi md:col-span-2"><div className="text-xs text-gray-500">Комментарий</div><div>{selected.notes || '—'}</div></div>
+          </div>
+          <div className="mt-3 flex justify-end gap-2">
+            {selected.isActive !== false ? (
+              <button className="btn border-red-500/60 text-red-300" onClick={() => archiveExpense(selected.id)}>В архив</button>
+            ) : (
+              <button className="btn" onClick={() => restoreExpense(selected.id)}>Восстановить</button>
+            )}
+          </div>
+        </CrmCard>
       )}
     </main>
   )
