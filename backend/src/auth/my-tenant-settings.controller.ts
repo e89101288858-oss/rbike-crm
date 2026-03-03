@@ -72,6 +72,11 @@ export class MyTenantSettingsController {
           id: true,
           name: true,
           address: true,
+          mode: true,
+          saasPlan: true,
+          saasSubscriptionStatus: true,
+          saasMaxBikes: true,
+          saasMaxActiveRentals: true,
           franchiseeId: true,
           franchisee: {
             select: {
@@ -95,10 +100,41 @@ export class MyTenantSettingsController {
       }),
     ])
 
+    const planLimits: Record<string, { maxBikes: number; maxActiveRentals: number }> = {
+      STARTER: { maxBikes: 25, maxActiveRentals: 20 },
+      PRO: { maxBikes: 120, maxActiveRentals: 100 },
+      ENTERPRISE: { maxBikes: Number.POSITIVE_INFINITY, maxActiveRentals: Number.POSITIVE_INFINITY },
+    }
+
+    let usage: { bikes: number; activeRentals: number } | null = null
+    let limits: { maxBikes: number | null; maxActiveRentals: number | null } | null = null
+
+    if (tenant?.mode === 'SAAS') {
+      const [bikes, activeRentals] = await Promise.all([
+        this.prisma.bike.count({ where: { tenantId, isActive: true } }),
+        this.prisma.rental.count({ where: { tenantId, status: 'ACTIVE' } }),
+      ])
+      usage = { bikes, activeRentals }
+
+      const plan = tenant.saasPlan ?? 'STARTER'
+      const base = planLimits[plan] ?? planLimits.STARTER
+      limits = {
+        maxBikes: tenant.saasMaxBikes ?? (Number.isFinite(base.maxBikes) ? base.maxBikes : null),
+        maxActiveRentals:
+          tenant.saasMaxActiveRentals ?? (Number.isFinite(base.maxActiveRentals) ? base.maxActiveRentals : null),
+      }
+    }
+
     return {
       user: me,
       tenant,
       franchisee: tenant?.franchisee,
+      billing: {
+        plan: tenant?.saasPlan ?? null,
+        status: tenant?.saasSubscriptionStatus ?? null,
+        limits,
+        usage,
+      },
     }
   }
 
