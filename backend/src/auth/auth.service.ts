@@ -235,4 +235,69 @@ export class AuthService {
     await this.audit(user.id, 'PASSWORD_RESET_CONFIRM', 'USER', user.id)
     return { ok: true }
   }
+
+  async demoAccess() {
+    const slug = Date.now().toString(36)
+
+    const created = await this.prisma.$transaction(async (tx) => {
+      const franchisee = await tx.franchisee.create({
+        data: {
+          name: `Demo ${slug}`,
+          companyName: `Demo ${slug}`,
+          city: 'Demo City',
+          isActive: true,
+        },
+      })
+
+      const tenant = await tx.tenant.create({
+        data: {
+          franchiseeId: franchisee.id,
+          name: `Демо точка ${slug}`,
+          isActive: true,
+          mode: 'SAAS',
+          dailyRateRub: 500,
+          minRentalDays: 7,
+          royaltyPercent: 0,
+          saasPlan: 'PRO',
+          saasSubscriptionStatus: 'ACTIVE',
+        },
+      })
+
+      const passwordHash = await bcrypt.hash(randomBytes(12).toString('hex'), 10)
+      const user = await tx.user.create({
+        data: {
+          email: `demo+${slug}@rbcrm.local`,
+          fullName: 'Demo User',
+          passwordHash,
+          role: 'FRANCHISEE',
+          franchiseeId: franchisee.id,
+          isActive: true,
+        },
+      })
+
+      await tx.userTenant.create({ data: { userId: user.id, tenantId: tenant.id } })
+
+      return { user, tenant }
+    })
+
+    const payload = {
+      userId: created.user.id,
+      role: created.user.role,
+      franchiseeId: created.user.franchiseeId ?? null,
+      tokenVersion: created.user.tokenVersion ?? 0,
+    }
+
+    const accessToken = await this.jwt.signAsync(payload)
+
+    await this.audit(created.user.id, 'DEMO_ACCESS_ISSUED', 'TENANT', created.tenant.id, {
+      tenantId: created.tenant.id,
+      userId: created.user.id,
+    })
+
+    return {
+      accessToken,
+      tenantId: created.tenant.id,
+      demo: true,
+    }
+  }
 }

@@ -61,6 +61,25 @@ export default function LoginPage() {
     }
   }
 
+  async function onDemoAccess() {
+    setError('')
+    setSuccess('')
+    setLoading(true)
+    try {
+      const res = await api.demoAccess()
+      setToken(res.accessToken)
+      setTenantId(res.tenantId)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('rbike_onboarding', '1')
+      }
+      router.push('/dashboard?demo=1')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка входа в демо')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   async function onSubmitRegister(e: FormEvent) {
     e.preventDefault()
     setError('')
@@ -161,6 +180,7 @@ export default function LoginPage() {
               <input className="input w-full" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
               <input className="input w-full" placeholder="Пароль" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
               <button disabled={loading} className="btn-primary w-full">{loading ? 'Входим…' : 'Войти'}</button>
+              <button type="button" className="btn w-full" onClick={onDemoAccess}>Попробовать демо</button>
               <button type="button" className="btn w-full" onClick={() => setShowReset(true)}>Забыли пароль?</button>
             </form>
           ) : (

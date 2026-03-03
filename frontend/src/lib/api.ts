@@ -132,6 +132,11 @@ export const api = {
       body: JSON.stringify({ token, newPassword }),
     }),
 
+  demoAccess: () =>
+    request<{ accessToken: string; tenantId: string }>('/auth/demo-access', {
+      method: 'POST',
+    }),
+
   me: () => request<{ userId: string; role: string; franchiseeId: string | null }>('/me'),
 
   myTenants: () =>

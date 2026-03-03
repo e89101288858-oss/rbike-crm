@@ -37,4 +37,9 @@ export class AuthController {
   async confirmPasswordReset(@Body() dto: PasswordResetConfirmDto) {
     return this.auth.confirmPasswordReset(dto.token, dto.newPassword)
   }
+
+  @Post('demo-access')
+  async demoAccess() {
+    return this.auth.demoAccess()
+  }
 }
