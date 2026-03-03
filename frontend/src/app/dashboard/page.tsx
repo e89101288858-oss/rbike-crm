@@ -490,19 +490,20 @@ export default function DashboardPage() {
             </div>
 
             <div className="relative rounded-md border border-white/10 bg-[#181a1f] p-4">
-              <div className="grid h-56 items-end gap-3" style={{ gridTemplateColumns: `repeat(${Math.max(chartRows.length, 1)}, minmax(0, 1fr))` }}>
-                {chartRows.map((r) => {
-                  const h = `${Math.max(8, Math.round((r.value / maxBar) * 100))}%`
-                  return (
-                    <div key={r.label} className="flex flex-col items-center gap-2">
-                      <div className="w-full rounded-md border border-orange-500/30 bg-gradient-to-t from-orange-600/60 to-orange-300/20" style={{ height: h }} />
-                      <div className="text-xs text-gray-400">{r.label}</div>
-                    </div>
-                  )
-                })}
+              <div className="overflow-x-auto">
+                <div className="flex h-56 min-w-max items-end gap-2">
+                  {chartRows.map((r) => {
+                    const ratio = maxBar > 0 ? r.value / maxBar : 0
+                    const h = r.value <= 0 ? '0%' : `${Math.max(6, Math.round(ratio * 100))}%`
+                    return (
+                      <div key={r.label} className="flex w-8 shrink-0 flex-col items-center gap-2">
+                        <div className="w-full rounded-sm bg-orange-500/80" style={{ height: h }} />
+                        <div className="text-[10px] text-gray-400">{r.label}</div>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
-
-              {/* bars only */}
 
               {!chartRows.length && <p className="text-sm text-gray-400">Нет данных за период</p>}
             </div>
@@ -565,17 +566,20 @@ export default function DashboardPage() {
               <button className={tabClass(revenueMode === 'year')} onClick={() => setRevenueMode('year')}>Год</button>
             </div>
             <div className="rounded-md border border-white/10 bg-[#181a1f] p-3">
-              <div className="grid h-28 items-end gap-2" style={{ gridTemplateColumns: `repeat(${Math.max(revenueRows.length, 1)}, minmax(0, 1fr))` }}>
-                {revenueRows.map((r) => {
-                  const h = `${Math.max(8, Math.round((r.value / maxRevenueBar) * 100))}%`
-                  return (
-                    <div key={r.label} className="flex flex-col items-center gap-1">
-                      <div className="w-full rounded-sm border border-orange-500/30 bg-gradient-to-t from-orange-600/60 to-orange-300/20" style={{ height: h }} />
-                      <div className="text-[10px] text-gray-500">{r.label}</div>
-                    </div>
-                  )
-                })}
-                {!revenueRows.length && <div className="col-span-12 text-xs text-gray-500">Нет данных за период</div>}
+              <div className="overflow-x-auto">
+                <div className="flex h-28 min-w-max items-end gap-2">
+                  {revenueRows.map((r) => {
+                    const ratio = maxRevenueBar > 0 ? r.value / maxRevenueBar : 0
+                    const h = r.value <= 0 ? '0%' : `${Math.max(6, Math.round(ratio * 100))}%`
+                    return (
+                      <div key={r.label} className="flex w-7 shrink-0 flex-col items-center gap-1">
+                        <div className="w-full rounded-sm bg-orange-500/80" style={{ height: h }} />
+                        <div className="text-[10px] text-gray-500">{r.label}</div>
+                      </div>
+                    )
+                  })}
+                  {!revenueRows.length && <div className="text-xs text-gray-500">Нет данных за период</div>}
+                </div>
               </div>
             </div>
           </section>
