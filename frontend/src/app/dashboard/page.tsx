@@ -7,7 +7,7 @@ import { api, Rental } from '@/lib/api'
 import { getTenantId, getToken, setTenantId } from '@/lib/auth'
 import { diffDays, formatRub } from '@/lib/format'
 
-type ChartMode = 'day' | 'month' | 'year'
+type ChartMode = 'month' | 'year'
 
 function atStartOfDay(d: Date) {
   const x = new Date(d)
@@ -32,12 +32,6 @@ function aggregateRevenue(days: Array<{ date: string; revenueRub: number }>, mod
   for (const d of days) {
     const k = String(d.date).slice(0, 10)
     byDate.set(k, (byDate.get(k) || 0) + Number(d.revenueRub || 0))
-  }
-
-  if (mode === 'day') {
-    const value = days.reduce((sum, d) => sum + Number(d.revenueRub || 0), 0)
-    const label = `${String(from.getDate()).padStart(2, '0')}.${String(from.getMonth() + 1).padStart(2, '0')}`
-    return [{ label, value }]
   }
 
   if (mode === 'month') {
@@ -97,7 +91,6 @@ export default function DashboardPage() {
   const [chartMode, setChartMode] = useState<ChartMode>('month')
 
   const today = new Date()
-  const [chartDay, setChartDay] = useState(() => today.toISOString().slice(0, 10))
   const [chartMonth, setChartMonth] = useState(() => `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`)
   const [chartYear, setChartYear] = useState(() => String(today.getFullYear()))
 
@@ -119,10 +112,6 @@ export default function DashboardPage() {
   const [error, setError] = useState('')
 
   const chartRange = useMemo(() => {
-    if (chartMode === 'day') {
-      const d = chartDay ? new Date(`${chartDay}T00:00:00`) : new Date()
-      return { from: atStartOfDay(d), to: atEndOfDay(d) }
-    }
     if (chartMode === 'month') {
       const [y, m] = (chartMonth || '').split('-').map(Number)
       const year = Number.isFinite(y) ? y : new Date().getFullYear()
@@ -137,7 +126,7 @@ export default function DashboardPage() {
       from: atStartOfDay(new Date(y, 0, 1)),
       to: atEndOfDay(new Date(y, 11, 31)),
     }
-  }, [chartMode, chartDay, chartMonth, chartYear])
+  }, [chartMode, chartMonth, chartYear])
 
   const yearOptions = useMemo(() => {
     const current = new Date().getFullYear()
@@ -289,6 +278,29 @@ export default function DashboardPage() {
   const rentalsCount = allRentals.length
   const onboardingCompleted = clientsCount > 0 && allBikesCount > 0 && rentalsCount > 0
 
+  const rangeDays = Math.max(1, Math.floor((chartRange.to.getTime() - chartRange.from.getTime()) / (24 * 60 * 60 * 1000)) + 1)
+  const occupiedBikeDays = useMemo(() => {
+    let total = 0
+    for (const r of allRentals) {
+      const start = new Date(r.startDate)
+      const rawEnd = r.actualEndDate ? new Date(r.actualEndDate) : new Date(r.plannedEndDate)
+      const from = start > chartRange.from ? start : chartRange.from
+      const to = rawEnd < chartRange.to ? rawEnd : chartRange.to
+      if (to < from) continue
+      const days = Math.floor((atEndOfDay(to).getTime() - atStartOfDay(from).getTime()) / (24 * 60 * 60 * 1000)) + 1
+      total += Math.max(0, days)
+    }
+    return total
+  }, [allRentals, chartRange])
+
+  const parkLoadPercent = useMemo(() => {
+    const possible = Math.max(1, allBikesCount * rangeDays)
+    return Math.min(100, Math.max(0, (occupiedBikeDays / possible) * 100))
+  }, [allBikesCount, rangeDays, occupiedBikeDays])
+
+  const gaugeSegments = 24
+  const activeSegments = Math.round((parkLoadPercent / 100) * gaugeSegments)
+
   return (
     <main className="page with-sidebar min-h-screen text-gray-100">
       <Topbar tenants={tenants} />
@@ -372,22 +384,13 @@ export default function DashboardPage() {
             </div>
           </section>
 
-          <section className="mb-6 rounded-lg border border-white/10 bg-[#1f2126] p-4 shadow-xl">
+          <section className="mb-6 grid gap-3 lg:grid-cols-3">
+            <div className="rounded-lg border border-white/10 bg-[#1f2126] p-4 shadow-xl lg:col-span-2">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-lg font-semibold text-white">Финансовые показатели парка</h2>
               <div className="flex flex-wrap gap-2">
-                <button className={tabClass(chartMode === 'day')} onClick={() => setChartMode('day')}>День</button>
                 <button className={tabClass(chartMode === 'month')} onClick={() => setChartMode('month')}>Месяц</button>
                 <button className={tabClass(chartMode === 'year')} onClick={() => setChartMode('year')}>Год</button>
-
-                {chartMode === 'day' && (
-                  <input
-                    type="date"
-                    className="input h-7 px-2 py-1 text-xs"
-                    value={chartDay}
-                    onChange={(e) => setChartDay(e.target.value)}
-                  />
-                )}
                 {chartMode === 'month' && (
                   <input
                     type="month"
@@ -431,6 +434,33 @@ export default function DashboardPage() {
               <div className="rounded-md border border-white/10 bg-white/5 p-3 text-sm text-gray-200">Всего велосипедов: <b>{formatInt(allBikesCount)}</b></div>
               <div className="rounded-md border border-white/10 bg-white/5 p-3 text-sm text-gray-200">Создано аренд за период: <b>{formatInt(newRentalsPeriod)}</b></div>
               <div className="rounded-md border border-white/10 bg-white/5 p-3 text-sm text-gray-200">Выручка за период: <b>{formatRub(chartRevenueTotal)}</b></div>
+            </div>
+          </div>
+
+            <div className="rounded-lg border border-white/10 bg-[#1f2126] p-4 shadow-xl">
+              <h2 className="mb-3 text-lg font-semibold text-white">Процент загрузки парка</h2>
+              <div className="mx-auto mt-2 w-full max-w-[260px]">
+                <div className="flex items-end justify-center gap-[4px]">
+                  {Array.from({ length: gaugeSegments }).map((_, i) => {
+                    const active = i < activeSegments
+                    const angle = -120 + (240 / (gaugeSegments - 1)) * i
+                    return (
+                      <div
+                        key={i}
+                        className={`h-6 w-2 rounded-sm ${active ? 'bg-orange-400' : 'bg-white/15'}`}
+                        style={{ transform: `rotate(${angle}deg) translateY(6px)`, transformOrigin: 'bottom center' }}
+                      />
+                    )
+                  })}
+                </div>
+                <div className="-mt-1 text-center">
+                  <div className="text-5xl font-bold text-white">{parkLoadPercent.toFixed(0)}</div>
+                  <div className="text-xs text-gray-400">%</div>
+                  <div className="mt-2 text-xs text-gray-500">
+                    Формула: занятые вело-дни / (велосипеды × дни периода)
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
 
