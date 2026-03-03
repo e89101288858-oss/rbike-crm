@@ -298,8 +298,9 @@ export default function DashboardPage() {
     return Math.min(100, Math.max(0, (occupiedBikeDays / possible) * 100))
   }, [allBikesCount, rangeDays, occupiedBikeDays])
 
-  const gaugeSegments = 24
-  const activeSegments = Math.round((parkLoadPercent / 100) * gaugeSegments)
+  const gaugeRadius = 72
+  const gaugeCircumference = Math.PI * gaugeRadius
+  const gaugeOffset = gaugeCircumference * (1 - parkLoadPercent / 100)
 
   return (
     <main className="page with-sidebar min-h-screen text-gray-100">
@@ -410,21 +411,19 @@ export default function DashboardPage() {
             </div>
 
             <div className="relative rounded-md border border-white/10 bg-[#181a1f] p-4">
-              <div className="overflow-x-auto">
-                <div className={`h-56 items-end gap-2 ${chartRows.length <= 12 ? "grid w-full" : "flex min-w-max"}`} style={chartRows.length <= 12 ? { gridTemplateColumns: `repeat(${chartRows.length || 1}, minmax(0, 1fr))` } : undefined}>
-                  {chartRows.map((r) => {
-                    const ratio = maxBar > 0 ? r.value / maxBar : 0
-                    const h = r.value <= 0 ? '0%' : `${Math.max(6, Math.round(ratio * 100))}%`
-                    return (
-                      <div key={r.label} className={`flex h-full ${chartRows.length <= 12 ? "w-full" : "w-8 shrink-0"} flex-col items-center`}>
-                        <div className="flex w-full flex-1 items-end">
-                          <div className="w-full rounded-sm bg-orange-500/80" style={{ height: h }} />
-                        </div>
-                        <div className="mt-1 text-[10px] text-gray-400">{r.label}</div>
+              <div className="grid h-56 w-full items-end gap-2" style={{ gridTemplateColumns: `repeat(${Math.max(chartRows.length, 1)}, minmax(0, 1fr))` }}>
+                {chartRows.map((r) => {
+                  const ratio = maxBar > 0 ? r.value / maxBar : 0
+                  const h = r.value <= 0 ? '0%' : `${Math.max(6, Math.round(ratio * 100))}%`
+                  return (
+                    <div key={r.label} className="flex h-full w-full flex-col items-center">
+                      <div className="flex w-full flex-1 items-end">
+                        <div className="w-full rounded-sm bg-orange-500/80" style={{ height: h }} />
                       </div>
-                    )
-                  })}
-                </div>
+                      <div className="mt-1 text-[10px] text-gray-400">{r.label}</div>
+                    </div>
+                  )
+                })}
               </div>
 
               {!chartRows.length && <p className="text-sm text-gray-400">Нет данных за период</p>}
@@ -439,27 +438,28 @@ export default function DashboardPage() {
 
             <div className="rounded-lg border border-white/10 bg-[#1f2126] p-4 shadow-xl">
               <h2 className="mb-3 text-lg font-semibold text-white">Процент загрузки парка</h2>
-              <div className="mx-auto mt-2 w-full max-w-[260px]">
-                <div className="flex items-end justify-center gap-[4px]">
-                  {Array.from({ length: gaugeSegments }).map((_, i) => {
-                    const active = i < activeSegments
-                    const angle = -120 + (240 / (gaugeSegments - 1)) * i
-                    return (
-                      <div
-                        key={i}
-                        className={`h-6 w-2 rounded-sm ${active ? 'bg-orange-400' : 'bg-white/15'}`}
-                        style={{ transform: `rotate(${angle}deg) translateY(6px)`, transformOrigin: 'bottom center' }}
-                      />
-                    )
-                  })}
-                </div>
-                <div className="-mt-1 text-center">
-                  <div className="text-5xl font-bold text-white">{parkLoadPercent.toFixed(0)}</div>
-                  <div className="text-xs text-gray-400">%</div>
-                  <div className="mt-2 text-xs text-gray-500">
-                    Формула: занятые вело-дни / (велосипеды × дни периода)
-                  </div>
-                </div>
+              <div className="mx-auto w-full max-w-[280px]">
+                <svg viewBox="0 0 200 120" className="w-full">
+                  <path
+                    d="M 20 100 A 80 80 0 0 1 180 100"
+                    fill="none"
+                    stroke="rgba(255,255,255,0.15)"
+                    strokeWidth="14"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M 20 100 A 80 80 0 0 1 180 100"
+                    fill="none"
+                    stroke="#fb923c"
+                    strokeWidth="14"
+                    strokeLinecap="round"
+                    strokeDasharray={gaugeCircumference}
+                    strokeDashoffset={gaugeOffset}
+                  />
+                  <text x="100" y="92" textAnchor="middle" className="fill-white text-3xl font-bold">
+                    {parkLoadPercent.toFixed(0)}%
+                  </text>
+                </svg>
               </div>
             </div>
           </section>
