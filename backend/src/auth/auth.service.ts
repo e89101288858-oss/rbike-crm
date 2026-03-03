@@ -5,6 +5,12 @@ import { createHash, randomBytes } from 'crypto'
 import { PrismaService } from '../prisma/prisma.service'
 import { RegisterSaasDto } from './dto/register-saas.dto'
 
+type MonthPattern = {
+  rentals: number
+  avgRate: number
+  expense: number
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -236,8 +242,96 @@ export class AuthService {
     return { ok: true }
   }
 
+  private monthStarts(from: Date, to: Date) {
+    const out: Date[] = []
+    const cur = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), 1))
+    const end = new Date(Date.UTC(to.getUTCFullYear(), to.getUTCMonth(), 1))
+    while (cur.getTime() <= end.getTime()) {
+      out.push(new Date(cur))
+      cur.setUTCMonth(cur.getUTCMonth() + 1)
+    }
+    return out
+  }
+
+  private rint(min: number, max: number) {
+    return Math.floor(Math.random() * (max - min + 1)) + min
+  }
+
+  private pick<T>(arr: T[]): T {
+    return arr[this.rint(0, arr.length - 1)]
+  }
+
+  private fakeClientName() {
+    const first = ['Алекс', 'Макс', 'Ник', 'Лев', 'Мир', 'Арс', 'Тим', 'Рэн', 'Дан', 'Кир', 'Сэм', 'Роб']
+    const last = ['Северин', 'Громов', 'Леснов', 'Орбитов', 'Ястребов', 'Кедров', 'Лучин', 'Невский', 'Сайферов', 'Ритмов']
+    return `${this.pick(first)} ${this.pick(last)}`
+  }
+
+  private async loadNnPattern(): Promise<Record<string, MonthPattern>> {
+    const now = new Date()
+    const from = new Date(Date.UTC(2025, 0, 1))
+    const pattern: Record<string, MonthPattern> = {}
+
+    const nnFranchisee = await this.prisma.franchisee.findFirst({
+      where: {
+        OR: [
+          { name: { contains: 'Ниж', mode: 'insensitive' } },
+          { companyName: { contains: 'Ниж', mode: 'insensitive' } },
+        ],
+      },
+      select: { id: true },
+    })
+
+    const months = this.monthStarts(from, now)
+    if (!nnFranchisee) {
+      months.forEach((m) => {
+        pattern[m.toISOString().slice(0, 7)] = {
+          rentals: this.rint(22, 55),
+          avgRate: this.rint(2200, 3600),
+          expense: this.rint(35000, 120000),
+        }
+      })
+      return pattern
+    }
+
+    const tenants = await this.prisma.tenant.findMany({ where: { franchiseeId: nnFranchisee.id }, select: { id: true } })
+    const tenantIds = tenants.map((t) => t.id)
+    if (tenantIds.length === 0) return pattern
+
+    for (const m of months) {
+      const monthStart = new Date(Date.UTC(m.getUTCFullYear(), m.getUTCMonth(), 1))
+      const monthEnd = new Date(Date.UTC(m.getUTCFullYear(), m.getUTCMonth() + 1, 1))
+
+      const [rentals, paymentsAgg, expensesAgg] = await Promise.all([
+        this.prisma.rental.count({
+          where: { tenantId: { in: tenantIds }, createdAt: { gte: monthStart, lt: monthEnd } },
+        }),
+        this.prisma.payment.aggregate({
+          _sum: { amount: true },
+          _avg: { amount: true },
+          where: { tenantId: { in: tenantIds }, createdAt: { gte: monthStart, lt: monthEnd }, status: 'PAID' },
+        }),
+        this.prisma.expense.aggregate({
+          _sum: { amountRub: true },
+          where: { tenantId: { in: tenantIds }, spentAt: { gte: monthStart, lt: monthEnd }, isActive: true },
+        }),
+      ])
+
+      pattern[m.toISOString().slice(0, 7)] = {
+        rentals: Math.max(12, rentals || this.rint(20, 45)),
+        avgRate: Math.max(1600, Math.round(Number(paymentsAgg._avg.amount || 2600))),
+        expense: Math.max(15000, Math.round(Number(expensesAgg._sum.amountRub || 60000))),
+      }
+    }
+
+    return pattern
+  }
+
   async demoAccess() {
     const slug = Date.now().toString(36)
+    const now = new Date()
+    const from = new Date(Date.UTC(2025, 0, 1))
+    const pattern = await this.loadNnPattern()
 
     const created = await this.prisma.$transaction(async (tx) => {
       const franchisee = await tx.franchisee.create({
@@ -277,6 +371,107 @@ export class AuthService {
 
       await tx.userTenant.create({ data: { userId: user.id, tenantId: tenant.id } })
 
+      const bikeCount = this.rint(28, 54)
+      const bikeRows = Array.from({ length: bikeCount }).map((_, i) => ({
+        tenantId: tenant.id,
+        code: `D-${slug.slice(-4).toUpperCase()}-${String(i + 1).padStart(3, '0')}`,
+        model: this.pick(['Urban X', 'City Pro', 'Volt Go', 'Flex Ride']),
+        status: 'AVAILABLE' as const,
+        isActive: true,
+      }))
+      await tx.bike.createMany({ data: bikeRows })
+      const bikes = await tx.bike.findMany({ where: { tenantId: tenant.id }, select: { id: true, code: true } })
+
+      const clientCount = this.rint(160, 320)
+      const clientRows = Array.from({ length: clientCount }).map((_, i) => ({
+        tenantId: tenant.id,
+        fullName: this.fakeClientName(),
+        phone: `+7999${String(this.rint(1000000, 9999999))}`,
+        address: `Улица ${this.rint(1, 99)}, д. ${this.rint(1, 40)}`,
+        isActive: true,
+        notes: i % 7 === 0 ? 'Демо заметка' : null,
+      }))
+      await tx.client.createMany({ data: clientRows })
+      const clients = await tx.client.findMany({ where: { tenantId: tenant.id }, select: { id: true } })
+
+      const months = this.monthStarts(from, now)
+      for (const m of months) {
+        const key = m.toISOString().slice(0, 7)
+        const p = pattern[key] || {
+          rentals: this.rint(20, 45),
+          avgRate: this.rint(2000, 3300),
+          expense: this.rint(30000, 90000),
+        }
+
+        const monthStart = new Date(Date.UTC(m.getUTCFullYear(), m.getUTCMonth(), 1))
+        const monthEnd = new Date(Date.UTC(m.getUTCFullYear(), m.getUTCMonth() + 1, 1))
+        const cappedEnd = monthEnd.getTime() > now.getTime() ? now : monthEnd
+        const days = Math.max(1, Math.floor((cappedEnd.getTime() - monthStart.getTime()) / (24 * 60 * 60 * 1000)))
+
+        const rentalsTarget = Math.max(8, Math.round(p.rentals * (0.9 + Math.random() * 0.25)))
+
+        for (let i = 0; i < rentalsTarget; i++) {
+          const startOffset = this.rint(0, Math.max(0, days - 2))
+          const startDate = new Date(monthStart.getTime() + startOffset * 24 * 60 * 60 * 1000)
+          const duration = this.rint(7, 35)
+          const plannedEndDate = new Date(startDate.getTime() + duration * 24 * 60 * 60 * 1000)
+          const stillActive = plannedEndDate.getTime() > now.getTime() && Math.random() < 0.45
+          const status = stillActive ? 'ACTIVE' : 'CLOSED'
+          const actualEndDate = status === 'CLOSED' ? plannedEndDate : null
+          const weeklyRateRub = Math.round(p.avgRate * (0.8 + Math.random() * 0.5))
+
+          const rental = await tx.rental.create({
+            data: {
+              tenantId: tenant.id,
+              bikeId: this.pick(bikes).id,
+              clientId: this.pick(clients).id,
+              startDate,
+              plannedEndDate,
+              actualEndDate,
+              weeklyRateRub,
+              status,
+              createdById: user.id,
+            },
+          })
+
+          const paymentsN = status === 'CLOSED' ? this.rint(1, 4) : this.rint(1, 2)
+          for (let pi = 0; pi < paymentsN; pi++) {
+            const periodStart = new Date(startDate.getTime() + pi * 7 * 24 * 60 * 60 * 1000)
+            const periodEnd = new Date(periodStart.getTime() + 7 * 24 * 60 * 60 * 1000)
+            const dueAt = new Date(periodEnd)
+            if (dueAt.getTime() > now.getTime()) break
+            const paid = Math.random() > 0.08
+
+            await tx.payment.create({
+              data: {
+                tenantId: tenant.id,
+                rentalId: rental.id,
+                amount: Math.round(weeklyRateRub * (0.9 + Math.random() * 0.25)),
+                kind: 'WEEKLY_RENT',
+                status: paid ? 'PAID' : 'PLANNED',
+                dueAt,
+                periodStart,
+                periodEnd,
+                paidAt: paid ? new Date(dueAt.getTime() + this.rint(0, 2) * 24 * 60 * 60 * 1000) : null,
+                markedById: paid ? user.id : null,
+              },
+            })
+          }
+        }
+
+        const expenseRows = Array.from({ length: this.rint(3, 8) }).map(() => ({
+          tenantId: tenant.id,
+          amountRub: Math.round((p.expense / 5) * (0.4 + Math.random() * 1.3)),
+          category: this.pick(['Сервис', 'Логистика', 'Расходники', 'Маркетинг', 'Прочее']),
+          notes: 'Демо-операция',
+          spentAt: new Date(monthStart.getTime() + this.rint(0, Math.max(0, days - 1)) * 24 * 60 * 60 * 1000),
+          scopeType: this.pick(['SINGLE', 'MULTI', 'ALL_BIKES'] as const),
+          isActive: true,
+          createdById: user.id,
+        }))
+        await tx.expense.createMany({ data: expenseRows })
+      }
+
       return { user, tenant }
     })
 
@@ -292,12 +487,17 @@ export class AuthService {
     await this.audit(created.user.id, 'DEMO_ACCESS_ISSUED', 'TENANT', created.tenant.id, {
       tenantId: created.tenant.id,
       userId: created.user.id,
+      rangeFrom: '2025-01-01',
+      rangeTo: new Date().toISOString(),
+      randomized: true,
+      sourcePattern: 'NN franchise aggregates when available',
     })
 
     return {
       accessToken,
       tenantId: created.tenant.id,
       demo: true,
+      dataRange: { from: '2025-01-01', to: new Date().toISOString() },
     }
   }
 }
