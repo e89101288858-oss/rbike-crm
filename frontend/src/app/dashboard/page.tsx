@@ -6,7 +6,7 @@ import { Topbar } from '@/components/topbar'
 import { api, Rental } from '@/lib/api'
 import { getTenantId, getToken, setTenantId } from '@/lib/auth'
 import { diffDays, formatRub } from '@/lib/format'
-import { CrmCard, CrmStat, CrmActionRow, CrmEmpty } from '@/components/crm-ui'
+import { CrmStat, CrmActionRow, CrmEmpty } from '@/components/crm-ui'
 
 type ChartMode = 'month' | 'year'
 
@@ -339,7 +339,7 @@ export default function DashboardPage() {
 
           <section className="mb-6 grid gap-3 lg:grid-cols-3">
             <div className="rounded-lg border border-white/10 bg-[#1f2126] p-4 shadow-xl lg:col-span-2">
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <CrmActionRow className="mb-3 items-center justify-between">
               <h2 className="text-lg font-semibold text-white">Финансовые показатели парка</h2>
               <div className="flex flex-wrap gap-2">
                 <button className={tabClass(chartMode === 'month')} onClick={() => setChartMode('month')}>Месяц</button>
@@ -350,7 +350,7 @@ export default function DashboardPage() {
                   <button className="px-1 text-orange-400 hover:text-orange-300" onClick={() => shiftPeriod(1)} aria-label="Следующий период">›</button>
                 </div>
               </div>
-            </div>
+            </CrmActionRow>
 
             <div className="relative rounded-md border border-white/10 bg-[#181a1f] p-4">
               <div className="grid h-56 w-full items-end gap-2" style={{ gridTemplateColumns: `repeat(${Math.max(chartRows.length, 1)}, minmax(0, 1fr))` }}>
