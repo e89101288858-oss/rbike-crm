@@ -382,9 +382,15 @@ export default function RentalsPage() {
       <Topbar tenants={tenants} />
       <div className="mb-4 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 whitespace-nowrap">
-          <button className={listTab === 'ACTIVE' ? 'btn-primary' : 'btn'} onClick={() => setListTab('ACTIVE')}>Активные</button>
-          <button className={listTab === 'CLOSED' ? 'btn-primary' : 'btn'} onClick={() => setListTab('CLOSED')}>Завершенные</button>
-          <button type="button" className="btn-primary" onClick={() => setCreateModalOpen(true)}>Создать аренду</button>
+          {selectedRentalId ? (
+            <button className="btn" onClick={() => setSelectedRentalId(null)}>Назад к списку</button>
+          ) : (
+            <>
+              <button className={listTab === 'ACTIVE' ? 'btn-primary' : 'btn'} onClick={() => setListTab('ACTIVE')}>Активные</button>
+              <button className={listTab === 'CLOSED' ? 'btn-primary' : 'btn'} onClick={() => setListTab('CLOSED')}>Завершенные</button>
+              <button type="button" className="btn-primary" onClick={() => setCreateModalOpen(true)}>Создать аренду</button>
+            </>
+          )}
         </div>
       </div>
 
@@ -465,7 +471,6 @@ export default function RentalsPage() {
           <section className={`mt-3 w-full rounded-sm border p-3 shadow-sm text-sm panel ${highlight}`}>
             <div className="mb-2 flex items-center justify-between gap-2">
               <div className="font-medium">{r.client.fullName} — {r.bike.code}</div>
-              <button className="btn" onClick={() => setSelectedRentalId(null)}>Назад к списку</button>
             </div>
 
             <div>Факт завершения: {formatDate(r.actualEndDate)}</div>
