@@ -17,6 +17,7 @@ export default function LoginPage() {
   const [regPhone, setRegPhone] = useState('')
   const [regEmail, setRegEmail] = useState('')
   const [regPassword, setRegPassword] = useState('')
+  const [regPasswordConfirm, setRegPasswordConfirm] = useState('')
   const [regCompanyName, setRegCompanyName] = useState('')
   const [regCity, setRegCity] = useState('')
   const [regTenantName, setRegTenantName] = useState('')
@@ -60,6 +61,8 @@ export default function LoginPage() {
     setSuccess('')
     setLoading(true)
     try {
+      if (regPassword !== regPasswordConfirm) throw new Error('Пароли не совпадают')
+
       const res = await api.registerSaas({
         fullName: regFullName.trim(),
         phone: regPhone.trim() || undefined,
@@ -80,6 +83,7 @@ export default function LoginPage() {
       setRegPhone('')
       setRegEmail('')
       setRegPassword('')
+      setRegPasswordConfirm('')
       setRegCompanyName('')
       setRegCity('')
       setRegTenantName('')
@@ -123,6 +127,7 @@ export default function LoginPage() {
           <input className="input w-full" placeholder="Название точки (опционально)" value={regTenantName} onChange={(e) => setRegTenantName(e.target.value)} />
           <input className="input w-full" placeholder="Email" value={regEmail} onChange={(e) => setRegEmail(e.target.value)} required />
           <input className="input w-full" placeholder="Пароль (мин. 6)" type="password" value={regPassword} onChange={(e) => setRegPassword(e.target.value)} required minLength={6} />
+          <input className="input w-full" placeholder="Повторите пароль" type="password" value={regPasswordConfirm} onChange={(e) => setRegPasswordConfirm(e.target.value)} required minLength={6} />
           <button disabled={loading} className="btn-primary w-full">{loading ? 'Создаём аккаунт…' : 'Создать аккаунт'}</button>
           {error && <p className="alert">{error}</p>}
           {success && <p className="alert-success">{success}</p>}

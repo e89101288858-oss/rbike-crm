@@ -23,7 +23,7 @@ export default function TenantSettingsPage() {
     tenantName: '',
     address: '',
   })
-  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '' })
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmNewPassword: '' })
 
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -133,10 +133,11 @@ export default function TenantSettingsPage() {
     try {
       if (passwordForm.currentPassword.length < 6) throw new Error('Текущий пароль некорректный')
       if (passwordForm.newPassword.length < 6) throw new Error('Новый пароль минимум 6 символов')
+      if (passwordForm.newPassword !== passwordForm.confirmNewPassword) throw new Error('Новый пароль и повтор не совпадают')
       if (passwordForm.currentPassword === passwordForm.newPassword) throw new Error('Новый пароль должен отличаться от текущего')
 
       await api.changeMyPassword(passwordForm.currentPassword, passwordForm.newPassword)
-      setPasswordForm({ currentPassword: '', newPassword: '' })
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmNewPassword: '' })
       setSuccess('Пароль изменен. Выполнен выход со всех устройств.')
       clearToken()
       clearTenantId()
@@ -262,7 +263,7 @@ export default function TenantSettingsPage() {
           Последняя смена пароля: <b>{account?.user?.passwordChangedAt ? new Date(account.user.passwordChangedAt).toLocaleString('ru-RU') : 'ещё не менялся'}</b>
         </div>
 
-        <div className="grid gap-2 md:grid-cols-2">
+        <div className="grid gap-2 md:grid-cols-3">
           <input className="input" type="password" placeholder="Текущий пароль" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm((p) => ({ ...p, currentPassword: e.target.value }))} />
           <div>
             <input className="input w-full" type="password" placeholder="Новый пароль" value={passwordForm.newPassword} onChange={(e) => setPasswordForm((p) => ({ ...p, newPassword: e.target.value }))} />
@@ -272,6 +273,7 @@ export default function TenantSettingsPage() {
               </div>
             ) : null}
           </div>
+          <input className="input" type="password" placeholder="Повторите новый пароль" value={passwordForm.confirmNewPassword} onChange={(e) => setPasswordForm((p) => ({ ...p, confirmNewPassword: e.target.value }))} />
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
