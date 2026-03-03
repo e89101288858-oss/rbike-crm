@@ -494,7 +494,7 @@ export default function RentalsPage() {
 
             {!!r.closeReason && <div className="mb-3 rounded-md border border-red-500/40 bg-red-500/10 p-2 text-xs text-red-200">Причина досрочного завершения: {r.closeReason}</div>}
 
-            <div className="sticky top-2 z-10 mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-white/10 bg-[#181a1f]/95 p-2 backdrop-blur">
+            <div className="crm-action-row sticky top-2 z-10 mb-3 backdrop-blur bg-[#181a1f]/95">
               {r.status === 'ACTIVE' && (
                 <>
                   <input type="number" className="input w-44" min={1} step={10} placeholder="Ставка ₽/сутки" value={dailyRateMap[r.id] ?? Math.round((Number(r.weeklyRateRub || 0) / 7) * 100) / 100} onChange={(e) => setDailyRateMap((prev) => ({ ...prev, [r.id]: e.target.value }))} />
@@ -542,7 +542,7 @@ export default function RentalsPage() {
             )}
 
             <div className="space-y-2">
-              <div className="rounded-lg border border-white/10 bg-[#181a1f] p-3">
+              <div className="crm-card !p-3">
                 <button className="w-full text-left text-sm font-medium" onClick={() => setOpenSection((s) => s === 'payments' ? 'docs' : 'payments')}>История платежей</button>
                 {openSection === 'payments' && (
                   <div className="mt-2">
@@ -588,7 +588,7 @@ export default function RentalsPage() {
               </div>
 
               {!!docsMap[r.id]?.length && (
-                <div className="rounded-lg border border-white/10 bg-[#181a1f] p-3">
+                <div className="crm-card !p-3">
                   <button className="w-full text-left text-sm font-medium" onClick={() => setOpenSection((s) => s === 'docs' ? 'journal' : 'docs')}>Документы по аренде</button>
                   {openSection === 'docs' && (
                     <div className="mt-2 space-y-2">
@@ -614,7 +614,7 @@ export default function RentalsPage() {
               )}
 
               {!!journalMap[r.id]?.length && (
-                <div className="rounded-lg border border-white/10 bg-[#181a1f] p-3">
+                <div className="crm-card !p-3">
                   <button className="w-full text-left text-sm font-medium" onClick={() => setOpenSection((s) => s === 'journal' ? 'payments' : 'journal')}>Журнал операций</button>
                   {openSection === 'journal' && (
                     <div className="mt-2 space-y-1 text-xs">
