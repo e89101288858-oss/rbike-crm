@@ -26,7 +26,15 @@ export default function OwnerSettingsPage() {
 
   const [newUser, setNewUser] = useState({ email: '', password: '', role: 'MANAGER', franchiseeId: '' })
 
-  const activeFranchisees = useMemo(() => franchisees.filter((f) => f.isActive), [franchisees])
+  const franchiseOnly = useMemo(
+    () => franchisees.filter((f) => (f.tenants || []).some((t: any) => t.mode === 'FRANCHISE')),
+    [franchisees],
+  )
+  const activeFranchisees = useMemo(() => franchiseOnly.filter((f) => f.isActive), [franchiseOnly])
+  const franchiseTenants = useMemo(
+    () => tenants.filter((t: any) => t.mode === 'FRANCHISE'),
+    [tenants],
+  )
 
   async function load() {
     setError('')
@@ -48,7 +56,8 @@ export default function OwnerSettingsPage() {
       setUsers(usrs)
       setAuditRows(logs)
 
-      const selected = getTenantId() || myTenants[0]?.id || ''
+      const franchiseTenantsLocal = myTenants.filter((t: any) => t.mode === 'FRANCHISE')
+      const selected = getTenantId() || franchiseTenantsLocal[0]?.id || ''
       if (selected) {
         setTenantId(selected)
         setTemplateTenantId(selected)
@@ -159,7 +168,7 @@ export default function OwnerSettingsPage() {
 
       {tab === 'GENERAL' && (
         <section className="panel grid gap-2 text-sm md:grid-cols-4">
-          <div className="kpi"><div className="text-xs text-gray-500">Франчайзи</div><div className="mt-1 text-2xl font-semibold">{franchisees.length}</div></div>
+          <div className="kpi"><div className="text-xs text-gray-500">Франчайзи</div><div className="mt-1 text-2xl font-semibold">{franchiseOnly.length}</div></div>
           <div className="kpi"><div className="text-xs text-gray-500">Точек доступа OWNER</div><div className="mt-1 text-2xl font-semibold">{tenants.length}</div></div>
           <div className="kpi"><div className="text-xs text-gray-500">Пользователей</div><div className="mt-1 text-2xl font-semibold">{users.length}</div></div>
           <div className="kpi"><div className="text-xs text-gray-500">Заявок PENDING</div><div className="mt-1 text-2xl font-semibold">{requests.filter((r) => r.status === 'PENDING').length}</div></div>
@@ -173,7 +182,7 @@ export default function OwnerSettingsPage() {
             {requests.filter((r) => r.status === 'PENDING').map((r) => {
               const selectedFranchiseeId = approveMap[r.id]?.franchiseeId || ''
               const selectedFranchiseeTenants = selectedFranchiseeId
-                ? (franchisees.find((f) => f.id === selectedFranchiseeId)?.tenants || [])
+                ? (franchisees.find((f) => f.id === selectedFranchiseeId)?.tenants || []).filter((t: any) => t.mode === 'FRANCHISE')
                 : []
 
               return (
@@ -255,7 +264,7 @@ export default function OwnerSettingsPage() {
               setTemplateHtml(tpl.templateHtml || '')
             }}>
               <option value="">Выбери точку</option>
-              {tenants.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              {franchiseTenants.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
           </div>
           <textarea className="input min-h-[300px] w-full font-mono text-xs" value={templateHtml} onChange={(e) => setTemplateHtml(e.target.value)} />
