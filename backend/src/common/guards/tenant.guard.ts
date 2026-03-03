@@ -40,7 +40,7 @@ export class TenantGuard implements CanActivate {
       return true
     }
 
-    if (user.role === 'FRANCHISEE' || user.role === 'SAAS_USER') {
+    if (user.role === 'FRANCHISEE') {
       if (user.franchiseeId === tenant.franchiseeId) {
         request.tenantId = tenantId
         return true
@@ -48,7 +48,7 @@ export class TenantGuard implements CanActivate {
       throw new ForbiddenException('Forbidden')
     }
 
-    if (user.role === 'MANAGER' || user.role === 'MECHANIC') {
+    if (user.role === 'SAAS_USER' || user.role === 'MANAGER' || user.role === 'MECHANIC') {
       const userTenant = await this.prisma.userTenant.findUnique({
         where: {
           userId_tenantId: { userId: user.userId, tenantId },
