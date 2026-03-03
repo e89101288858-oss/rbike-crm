@@ -397,11 +397,13 @@ export default function RentalsPage() {
         </div>
       )}
 
-      <div className="mb-3 flex items-center gap-2">
-        <input className="input min-w-0 flex-1 max-w-[720px]" placeholder="Поиск: курьер / велосипед / даты" value={search} onChange={(e) => setSearch(e.target.value)} />
-      </div>
+      {!selectedRentalId && (
+        <>
+          <div className="mb-3 flex items-center gap-2">
+            <input className="input min-w-0 flex-1 max-w-[720px]" placeholder="Поиск: курьер / велосипед / даты" value={search} onChange={(e) => setSearch(e.target.value)} />
+          </div>
 
-      <div className="table-wrap">
+          <div className="table-wrap">
         <table className="table table-sticky mobile-cards">
           <thead>
             <tr>
@@ -437,7 +439,7 @@ export default function RentalsPage() {
         </table>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm text-gray-400">
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm text-gray-400">
         <span>Показано {pagedRentals.length} из {filteredRentals.length}</span>
         <div className="flex flex-wrap items-center gap-2">
           <label className="text-xs text-gray-500">На странице</label>
@@ -451,6 +453,160 @@ export default function RentalsPage() {
         </div>
       </div>
 
+
+        </>
+      )}
+
+      {selectedRental && (() => {
+        const r = selectedRental
+        const daysLeft = diffDays(new Date().toISOString(), r.plannedEndDate)
+        const highlight = r.status === 'ACTIVE' ? daysHighlightClass(daysLeft) : 'border-[#2f3136] bg-[#1f2126]'
+        return (
+          <section className={`mt-3 w-full rounded-sm border p-3 shadow-sm text-sm panel ${highlight}`}>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="font-medium">{r.client.fullName} — {r.bike.code}</div>
+              <button className="btn" onClick={() => setSelectedRentalId(null)}>Назад к списку</button>
+            </div>
+
+            <div>Факт завершения: {formatDate(r.actualEndDate)}</div>
+            {!!r.closeReason && <div>Причина досрочного завершения: {r.closeReason}</div>}
+            <div>Тариф: {formatRub(Math.round((Number(r.weeklyRateRub || 0) / 7) * 100) / 100)} / сутки</div>
+            {r.status === 'ACTIVE' && (
+              <div>
+                Осталось дней: <b>{Math.max(0, diffDays(new Date().toISOString(), r.plannedEndDate))}</b>
+                {diffDays(new Date().toISOString(), r.plannedEndDate) <= 0 ? ' (просрочено)' : ''}
+              </div>
+            )}
+            <div>АКБ: {r.batteries?.map((x) => x.battery.code).join(', ') || '—'} ({r.batteries?.length || 0}/2)</div>
+
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {r.status === 'ACTIVE' && (
+                <>
+                  <input type="number" className="input w-44" min={1} step={10} placeholder="Ставка ₽/сутки" value={dailyRateMap[r.id] ?? Math.round((Number(r.weeklyRateRub || 0) / 7) * 100) / 100} onChange={(e) => setDailyRateMap((prev) => ({ ...prev, [r.id]: e.target.value }))} />
+                  <button className="btn" onClick={() => setRentalDailyRate(r.id, Number(r.weeklyRateRub || 0))}>Обновить ставку</button>
+                  <button className="btn" onClick={() => { setExtendModalRentalId(r.id); setExtendDays('') }}>Продлить</button>
+                </>
+              )}
+              <button className="btn" onClick={() => generateContract(r.id)}>Сформировать договор</button>
+              {r.status === 'ACTIVE' && <button className="btn border-red-500/60 text-red-300" onClick={() => { setCloseModalRentalId(r.id); setCloseReason('') }}>Завершить досрочно</button>}
+              {r.status === 'CLOSED' && role === 'OWNER' && <button className="btn border-red-500/60 text-red-300" onClick={() => setDeleteModalRentalId(r.id)}>Удалить аренду</button>}
+            </div>
+
+            {r.status === 'ACTIVE' && (
+              <div className="mt-2 grid gap-2 md:grid-cols-2">
+                {(r.batteries?.length || 0) < 2 && (
+                  <div className="rounded border p-2">
+                    <div className="mb-1 text-xs text-gray-600">Довыдача АКБ</div>
+                    <div className="flex gap-2">
+                      <select className="select w-full" value={addBatteryMap[r.id] || ''} onChange={(e) => setAddBatteryMap((p) => ({ ...p, [r.id]: e.target.value }))}>
+                        <option value="">Выбери АКБ</option>
+                        {batteries.filter((b) => b.status === 'AVAILABLE').map((b) => <option key={b.id} value={b.id}>{b.code}</option>)}
+                      </select>
+                      <button className="btn" onClick={() => addBatteryToRental(r.id)}>Выдать</button>
+                    </div>
+                  </div>
+                )}
+
+                {(r.batteries?.length || 0) > 0 && (
+                  <div className="rounded border p-2">
+                    <div className="mb-1 text-xs text-gray-600">Замена АКБ</div>
+                    <div className="grid gap-2 md:grid-cols-3">
+                      <select className="select" value={replaceFromMap[r.id] || ''} onChange={(e) => setReplaceFromMap((p) => ({ ...p, [r.id]: e.target.value }))}>
+                        <option value="">Снять</option>
+                        {(r.batteries || []).map((x) => <option key={x.battery.id} value={x.battery.id}>{x.battery.code}</option>)}
+                      </select>
+                      <select className="select" value={replaceToMap[r.id] || ''} onChange={(e) => setReplaceToMap((p) => ({ ...p, [r.id]: e.target.value }))}>
+                        <option value="">Выдать</option>
+                        {batteries.filter((b) => b.status === 'AVAILABLE').map((b) => <option key={b.id} value={b.id}>{b.code}</option>)}
+                      </select>
+                      <button className="btn" onClick={() => replaceBatteryInRental(r.id)}>Заменить</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="mt-3 rounded border p-2">
+              <div className="mb-2 font-medium">История платежей</div>
+              {!Array.isArray(paymentsMap[r.id]) ? (
+                <div className="text-xs text-gray-500">Загрузка…</div>
+              ) : paymentsMap[r.id].length === 0 ? (
+                <div className="text-xs text-gray-500">По этой аренде пока нет платежей</div>
+              ) : (
+                (() => {
+                  const sorted = paymentsMap[r.id]
+                    .slice()
+                    .sort((a: any, b: any) => String(b.createdAt || b.dueAt || '').localeCompare(String(a.createdAt || a.dueAt || '')))
+                  const pageSize = 10
+                  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
+                  const currentPage = Math.min(paymentsPageMap[r.id] || 1, totalPages)
+                  const start = (currentPage - 1) * pageSize
+                  const items = sorted.slice(start, start + pageSize)
+
+                  return (
+                    <>
+                      <div className="space-y-1 text-xs">
+                        {items.map((p: any) => (
+                          <div key={p.id} className="rounded border border-[#2f3136] bg-[#181a1f] p-2">
+                            <div className="font-medium">{formatRub(Number(p.amount || 0))} · {p.status === 'PAID' ? 'Оплачен' : 'План'}</div>
+                            <div className="text-gray-400">Тип: {p.kind || '—'}</div>
+                            <div className="text-gray-400">Срок: {formatDate(p.dueAt)}</div>
+                            <div className="text-gray-400">Оплачен: {formatDate(p.paidAt)}</div>
+                            <div className="text-gray-500">Период: {formatDate(p.periodStart)} → {formatDate(p.periodEnd)}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {sorted.length > pageSize && (
+                        <div className="mt-2 flex items-center justify-end gap-2 text-xs text-gray-400">
+                          <button className="btn" disabled={currentPage <= 1} onClick={() => setPaymentsPageMap((prev) => ({ ...prev, [r.id]: Math.max(1, currentPage - 1) }))}>Назад</button>
+                          <span>Стр. {currentPage} / {totalPages}</span>
+                          <button className="btn" disabled={currentPage >= totalPages} onClick={() => setPaymentsPageMap((prev) => ({ ...prev, [r.id]: Math.min(totalPages, currentPage + 1) }))}>Вперед</button>
+                        </div>
+                      )}
+                    </>
+                  )
+                })()
+              )}
+            </div>
+
+            {!!docsMap[r.id]?.length && (
+              <div className="mt-3 rounded border p-2">
+                <div className="mb-2 font-medium">Документы по аренде</div>
+                <div className="space-y-2">
+                  {docsMap[r.id].map((d) => (
+                    <div key={d.id} className="rounded border p-2">
+                      <div className="mb-1 text-xs text-gray-600">{d.type} · {formatDateTime(d.createdAt)}</div>
+                      <div className="flex gap-2">
+                        {d.filePath?.endsWith('.docx') ? (
+                          <button className="btn" onClick={() => downloadDocument(d.id)}>Скачать DOCX</button>
+                        ) : (
+                          <>
+                            <button className="btn" onClick={() => openDocument(d.id)}>Показать</button>
+                            <button className="btn" onClick={() => printDocument(d.id)} disabled={!docHtmlMap[d.id]}>Печать / PDF</button>
+                          </>
+                        )}
+                      </div>
+                      {!!docHtmlMap[d.id] && <div className="mt-2 rounded border bg-white p-2" dangerouslySetInnerHTML={{ __html: docHtmlMap[d.id] }} />}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {!!journalMap[r.id]?.length && (
+              <div className="mt-3 rounded border p-2">
+                <div className="mb-2 font-medium">Журнал операций</div>
+                <div className="space-y-1 text-xs">
+                  {journalMap[r.id].map((e: any, idx: number) => (
+                    <div key={idx}>{formatDate(e.at)} {new Date(e.at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} — {e.type}: {e.details}</div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+        )
+      })()}
 
       {extendModalRentalId && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4" onClick={() => setExtendModalRentalId(null)}>
@@ -568,156 +724,6 @@ export default function RentalsPage() {
         </div>
       )}
 
-      {selectedRental && (() => {
-        const r = selectedRental
-        const daysLeft = diffDays(new Date().toISOString(), r.plannedEndDate)
-        const highlight = r.status === 'ACTIVE' ? daysHighlightClass(daysLeft) : 'border-[#2f3136] bg-[#1f2126]'
-        return (
-          <section className={`mt-4 w-full rounded-sm border p-3 shadow-sm text-sm panel ${highlight}`}>
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <div className="font-medium">{r.client.fullName} — {r.bike.code}</div>
-                <button className="btn" onClick={() => setSelectedRentalId(null)}>Закрыть карточку</button>
-              </div>
-
-              <div>Факт завершения: {formatDate(r.actualEndDate)}</div>
-              {!!r.closeReason && <div>Причина досрочного завершения: {r.closeReason}</div>}
-              <div>Тариф: {formatRub(Math.round((Number(r.weeklyRateRub || 0) / 7) * 100) / 100)} / сутки</div>
-              {r.status === 'ACTIVE' && (
-                <div>
-                  Осталось дней: <b>{Math.max(0, diffDays(new Date().toISOString(), r.plannedEndDate))}</b>
-                  {diffDays(new Date().toISOString(), r.plannedEndDate) <= 0 ? ' (просрочено)' : ''}
-                </div>
-              )}
-              <div>АКБ: {r.batteries?.map((x) => x.battery.code).join(', ') || '—'} ({r.batteries?.length || 0}/2)</div>
-
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                {r.status === 'ACTIVE' && (
-                  <>
-                    <input type="number" className="input w-44" min={1} step={10} placeholder="Ставка ₽/сутки" value={dailyRateMap[r.id] ?? Math.round((Number(r.weeklyRateRub || 0) / 7) * 100) / 100} onChange={(e) => setDailyRateMap((prev) => ({ ...prev, [r.id]: e.target.value }))} />
-                    <button className="btn" onClick={() => setRentalDailyRate(r.id, Number(r.weeklyRateRub || 0))}>Обновить ставку</button>
-                    <button className="btn" onClick={() => { setExtendModalRentalId(r.id); setExtendDays('') }}>Продлить</button>
-                  </>
-                )}
-                                <button className="btn" onClick={() => generateContract(r.id)}>Сформировать договор</button>
-                {r.status === 'ACTIVE' && <button className="btn border-red-500/60 text-red-300" onClick={() => { setCloseModalRentalId(r.id); setCloseReason('') }}>Завершить досрочно</button>}
-                {r.status === 'CLOSED' && role === 'OWNER' && <button className="btn border-red-500/60 text-red-300" onClick={() => setDeleteModalRentalId(r.id)}>Удалить аренду</button>}
-              </div>
-
-              {r.status === 'ACTIVE' && (
-                <div className="mt-2 grid gap-2 md:grid-cols-2">
-                  {(r.batteries?.length || 0) < 2 && (
-                    <div className="rounded border p-2">
-                      <div className="mb-1 text-xs text-gray-600">Довыдача АКБ</div>
-                      <div className="flex gap-2">
-                        <select className="select w-full" value={addBatteryMap[r.id] || ''} onChange={(e) => setAddBatteryMap((p) => ({ ...p, [r.id]: e.target.value }))}>
-                          <option value="">Выбери АКБ</option>
-                          {batteries.filter((b) => b.status === 'AVAILABLE').map((b) => <option key={b.id} value={b.id}>{b.code}</option>)}
-                        </select>
-                        <button className="btn" onClick={() => addBatteryToRental(r.id)}>Выдать</button>
-                      </div>
-                    </div>
-                  )}
-
-                  {(r.batteries?.length || 0) > 0 && (
-                    <div className="rounded border p-2">
-                      <div className="mb-1 text-xs text-gray-600">Замена АКБ</div>
-                      <div className="grid gap-2 md:grid-cols-3">
-                        <select className="select" value={replaceFromMap[r.id] || ''} onChange={(e) => setReplaceFromMap((p) => ({ ...p, [r.id]: e.target.value }))}>
-                          <option value="">Снять</option>
-                          {(r.batteries || []).map((x) => <option key={x.battery.id} value={x.battery.id}>{x.battery.code}</option>)}
-                        </select>
-                        <select className="select" value={replaceToMap[r.id] || ''} onChange={(e) => setReplaceToMap((p) => ({ ...p, [r.id]: e.target.value }))}>
-                          <option value="">Выдать</option>
-                          {batteries.filter((b) => b.status === 'AVAILABLE').map((b) => <option key={b.id} value={b.id}>{b.code}</option>)}
-                        </select>
-                        <button className="btn" onClick={() => replaceBatteryInRental(r.id)}>Заменить</button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="mt-3 rounded border p-2">
-                <div className="mb-2 font-medium">История платежей</div>
-                {!Array.isArray(paymentsMap[r.id]) ? (
-                  <div className="text-xs text-gray-500">Загрузка…</div>
-                ) : paymentsMap[r.id].length === 0 ? (
-                  <div className="text-xs text-gray-500">По этой аренде пока нет платежей</div>
-                ) : (
-                  (() => {
-                    const sorted = paymentsMap[r.id]
-                      .slice()
-                      .sort((a: any, b: any) => String(b.createdAt || b.dueAt || '').localeCompare(String(a.createdAt || a.dueAt || '')))
-                    const pageSize = 10
-                    const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
-                    const currentPage = Math.min(paymentsPageMap[r.id] || 1, totalPages)
-                    const start = (currentPage - 1) * pageSize
-                    const items = sorted.slice(start, start + pageSize)
-
-                    return (
-                      <>
-                        <div className="space-y-1 text-xs">
-                          {items.map((p: any) => (
-                            <div key={p.id} className="rounded border border-[#2f3136] bg-[#181a1f] p-2">
-                              <div className="font-medium">{formatRub(Number(p.amount || 0))} · {p.status === 'PAID' ? 'Оплачен' : 'План'}</div>
-                              <div className="text-gray-400">Тип: {p.kind || '—'}</div>
-                              <div className="text-gray-400">Срок: {formatDate(p.dueAt)}</div>
-                              <div className="text-gray-400">Оплачен: {formatDate(p.paidAt)}</div>
-                              <div className="text-gray-500">Период: {formatDate(p.periodStart)} → {formatDate(p.periodEnd)}</div>
-                            </div>
-                          ))}
-                        </div>
-
-                        {sorted.length > pageSize && (
-                          <div className="mt-2 flex items-center justify-end gap-2 text-xs text-gray-400">
-                            <button className="btn" disabled={currentPage <= 1} onClick={() => setPaymentsPageMap((prev) => ({ ...prev, [r.id]: Math.max(1, currentPage - 1) }))}>Назад</button>
-                            <span>Стр. {currentPage} / {totalPages}</span>
-                            <button className="btn" disabled={currentPage >= totalPages} onClick={() => setPaymentsPageMap((prev) => ({ ...prev, [r.id]: Math.min(totalPages, currentPage + 1) }))}>Вперед</button>
-                          </div>
-                        )}
-                      </>
-                    )
-                  })()
-                )}
-              </div>
-
-              {!!docsMap[r.id]?.length && (
-                <div className="mt-3 rounded border p-2">
-                  <div className="mb-2 font-medium">Документы по аренде</div>
-                  <div className="space-y-2">
-                    {docsMap[r.id].map((d) => (
-                      <div key={d.id} className="rounded border p-2">
-                        <div className="mb-1 text-xs text-gray-600">{d.type} · {formatDateTime(d.createdAt)}</div>
-                        <div className="flex gap-2">
-                          {d.filePath?.endsWith('.docx') ? (
-                            <button className="btn" onClick={() => downloadDocument(d.id)}>Скачать DOCX</button>
-                          ) : (
-                            <>
-                              <button className="btn" onClick={() => openDocument(d.id)}>Показать</button>
-                              <button className="btn" onClick={() => printDocument(d.id)} disabled={!docHtmlMap[d.id]}>Печать / PDF</button>
-                            </>
-                          )}
-                        </div>
-                        {!!docHtmlMap[d.id] && <div className="mt-2 rounded border bg-white p-2" dangerouslySetInnerHTML={{ __html: docHtmlMap[d.id] }} />}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {!!journalMap[r.id]?.length && (
-                <div className="mt-3 rounded border p-2">
-                  <div className="mb-2 font-medium">Журнал операций</div>
-                  <div className="space-y-1 text-xs">
-                    {journalMap[r.id].map((e: any, idx: number) => (
-                      <div key={idx}>{formatDate(e.at)} {new Date(e.at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} — {e.type}: {e.details}</div>
-                    ))}
-                  </div>
-                </div>
-              )}
-          </section>
-        )
-      })()}
     </main>
   )
 }
