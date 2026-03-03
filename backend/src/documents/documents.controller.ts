@@ -21,6 +21,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
 import type { JwtUser } from '../common/decorators/current-user.decorator'
 import { TenantGuard } from '../common/guards/tenant.guard'
+import { assertSaasOperationAllowed } from '../common/saas-gating'
 import { PrismaService } from '../prisma/prisma.service'
 import { UpdateContractTemplateDto } from './dto/update-contract-template.dto'
 
@@ -70,6 +71,8 @@ export class DocumentsController {
     @CurrentUser() user: JwtUser,
   ) {
     const tenantId = req.tenantId!
+
+    await assertSaasOperationAllowed(this.prisma, tenantId, 'GENERATE_CONTRACT')
 
     if (user.role === UserRole.MECHANIC) {
       throw new BadRequestException('MECHANIC cannot generate contracts')

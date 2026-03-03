@@ -20,6 +20,7 @@ import type { JwtUser } from '../common/decorators/current-user.decorator'
 import { Roles } from '../common/decorators/roles.decorator'
 import { RolesGuard } from '../common/guards/roles.guard'
 import { TenantGuard } from '../common/guards/tenant.guard'
+import { assertSaasOperationAllowed } from '../common/saas-gating'
 import { PrismaService } from '../prisma/prisma.service'
 import { AddRentalBatteryDto } from './dto/add-rental-battery.dto'
 import { CloseRentalDto } from './dto/close-rental.dto'
@@ -54,6 +55,8 @@ export class RentalsController {
   @Post()
   async create(@Req() req: Request, @CurrentUser() user: JwtUser, @Body() dto: CreateRentalDto) {
     const tenantId = req.tenantId!
+
+    await assertSaasOperationAllowed(this.prisma, tenantId, 'CREATE_RENTAL')
 
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },

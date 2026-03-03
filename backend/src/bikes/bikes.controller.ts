@@ -20,6 +20,7 @@ import type { JwtUser } from '../common/decorators/current-user.decorator'
 import { Roles } from '../common/decorators/roles.decorator'
 import { RolesGuard } from '../common/guards/roles.guard'
 import { TenantGuard } from '../common/guards/tenant.guard'
+import { assertSaasOperationAllowed } from '../common/saas-gating'
 import { PrismaService } from '../prisma/prisma.service'
 import { CreateBikeDto } from './dto/create-bike.dto'
 import { ImportBikesDto } from './dto/import-bikes.dto'
@@ -36,6 +37,9 @@ export class BikesController {
   @Roles('OWNER', 'FRANCHISEE', 'MANAGER')
   async create(@Req() req: Request, @Body() dto: CreateBikeDto) {
     const tenantId = req.tenantId!
+
+    await assertSaasOperationAllowed(this.prisma, tenantId, 'CREATE_BIKE')
+
     return this.prisma.bike.create({
       data: {
         tenantId,
