@@ -62,9 +62,9 @@ export class TenantUsersController {
       throw new NotFoundException('User not found')
     }
 
-    if (user.role !== 'MANAGER' && user.role !== 'MECHANIC') {
+    if (user.role !== 'MANAGER' && user.role !== 'MECHANIC' && user.role !== 'SAAS_USER') {
       throw new BadRequestException(
-        'Only MANAGER or MECHANIC users can be assigned to tenants',
+        'Only SAAS_USER, MANAGER or MECHANIC users can be assigned to tenants',
       )
     }
 

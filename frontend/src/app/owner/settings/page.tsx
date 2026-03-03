@@ -121,7 +121,7 @@ export default function OwnerSettingsPage() {
         email: newUser.email.trim(),
         password: newUser.password,
         role: newUser.role as 'FRANCHISEE' | 'MANAGER' | 'MECHANIC',
-        franchiseeId: newUser.role === 'FRANCHISEE' || newUser.role === 'SAAS_USER' ? newUser.franchiseeId || undefined : undefined,
+        franchiseeId: newUser.role === 'FRANCHISEE' ? newUser.franchiseeId || undefined : undefined,
       })
       setNewUser({ email: '', password: '', role: 'MANAGER', franchiseeId: '' })
       setSuccess('Пользователь создан')
@@ -237,7 +237,7 @@ export default function OwnerSettingsPage() {
               <option value="FRANCHISEE">FRANCHISEE</option>
               <option value="SAAS_USER">SAAS_USER</option>
             </select>
-            <select className="select" value={newUser.franchiseeId} onChange={(e) => setNewUser((p) => ({ ...p, franchiseeId: e.target.value }))} disabled={newUser.role !== 'FRANCHISEE' && newUser.role !== 'SAAS_USER'}>
+            <select className="select" value={newUser.franchiseeId} onChange={(e) => setNewUser((p) => ({ ...p, franchiseeId: e.target.value }))} disabled={newUser.role !== 'FRANCHISEE'}>
               <option value="">Франчайзи</option>
               {activeFranchisees.map((f: any) => <option key={f.id} value={f.id}>{f.name}</option>)}
             </select>
@@ -256,7 +256,7 @@ export default function OwnerSettingsPage() {
                     <option value="MANAGER">MANAGER</option>
                     <option value="MECHANIC">MECHANIC</option>
                   </select>
-                  <select className="select" value={u.franchiseeId || ''} onChange={(e) => setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, franchiseeId: e.target.value } : x))} disabled={(u.role !== 'FRANCHISEE' && u.role !== 'SAAS_USER') || u.role === 'OWNER'}>
+                  <select className="select" value={u.franchiseeId || ''} onChange={(e) => setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, franchiseeId: e.target.value } : x))} disabled={u.role !== 'FRANCHISEE' || u.role === 'OWNER'}>
                     <option value="">Франчайзи</option>
                     {activeFranchisees.map((f: any) => <option key={f.id} value={f.id}>{f.name}</option>)}
                   </select>

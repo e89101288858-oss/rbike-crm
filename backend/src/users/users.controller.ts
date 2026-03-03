@@ -39,9 +39,9 @@ export class UsersController {
       throw new BadRequestException('Invalid role')
     }
 
-    if (dto.role === 'FRANCHISEE' || dto.role === 'SAAS_USER') {
+    if (dto.role === 'FRANCHISEE') {
       if (!dto.franchiseeId) {
-        throw new BadRequestException('franchiseeId is required for FRANCHISEE/SAAS_USER')
+        throw new BadRequestException('franchiseeId is required for FRANCHISEE')
       }
       const franchisee = await this.prisma.franchisee.findUnique({
         where: { id: dto.franchiseeId },
@@ -64,22 +64,9 @@ export class UsersController {
         email: dto.email,
         passwordHash,
         role: dto.role as UserRole,
-        franchiseeId: dto.role === 'FRANCHISEE' || dto.role === 'SAAS_USER' ? dto.franchiseeId! : null,
+        franchiseeId: dto.role === 'FRANCHISEE' ? dto.franchiseeId! : null,
       },
     })
-
-    if (dto.role === 'SAAS_USER' && dto.franchiseeId) {
-      const saasTenants = await this.prisma.tenant.findMany({
-        where: { franchiseeId: dto.franchiseeId, mode: 'SAAS', isActive: true },
-        select: { id: true },
-      })
-      if (saasTenants.length) {
-        await this.prisma.userTenant.createMany({
-          data: saasTenants.map((t) => ({ userId: user.id, tenantId: t.id })),
-          skipDuplicates: true,
-        })
-      }
-    }
 
     const { passwordHash: _, ...rest } = user
     return rest
@@ -143,17 +130,17 @@ export class UsersController {
       throw new BadRequestException('Invalid role')
     }
 
-    if (targetRole === 'FRANCHISEE' || targetRole === 'SAAS_USER') {
+    if (targetRole === 'FRANCHISEE') {
       const franchiseeId = dto.franchiseeId ?? user.franchiseeId
       if (!franchiseeId) {
-        throw new BadRequestException('franchiseeId is required for FRANCHISEE/SAAS_USER')
+        throw new BadRequestException('franchiseeId is required for FRANCHISEE')
       }
       const franchisee = await this.prisma.franchisee.findUnique({ where: { id: franchiseeId } })
       if (!franchisee) throw new BadRequestException('Franchisee not found')
       data.franchiseeId = franchiseeId
     } else {
       if (dto.franchiseeId) {
-        throw new BadRequestException('franchiseeId can be set only for FRANCHISEE/SAAS_USER')
+        throw new BadRequestException('franchiseeId can be set only for FRANCHISEE')
       }
       data.franchiseeId = null
     }
@@ -182,22 +169,6 @@ export class UsersController {
         createdAt: true,
       },
     })
-
-    if (targetRole === 'SAAS_USER' && updated.franchiseeId) {
-      const saasTenants = await this.prisma.tenant.findMany({
-        where: { franchiseeId: updated.franchiseeId, mode: 'SAAS', isActive: true },
-        select: { id: true },
-      })
-      await this.prisma.$transaction(async (tx) => {
-        await tx.userTenant.deleteMany({ where: { userId: updated.id } })
-        if (saasTenants.length) {
-          await tx.userTenant.createMany({
-            data: saasTenants.map((t) => ({ userId: updated.id, tenantId: t.id })),
-            skipDuplicates: true,
-          })
-        }
-      })
-    }
 
     return updated
   }
