@@ -6,6 +6,7 @@ import { AuthController } from './auth.controller'
 import { AuthService } from './auth.service'
 import { JwtStrategy } from './jwt.strategy'
 import { MeController } from './me.controller'
+import { MyTenantSettingsController } from './my-tenant-settings.controller'
 
 @Module({
   imports: [
@@ -18,7 +19,7 @@ import { MeController } from './me.controller'
       }),
     }),
   ],
-  controllers: [AuthController, MeController],
+  controllers: [AuthController, MeController, MyTenantSettingsController],
   providers: [AuthService, JwtStrategy],
   exports: [AuthService],
 })

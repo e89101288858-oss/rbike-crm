@@ -32,6 +32,7 @@ export class MeController {
           dailyRateRub: true,
           minRentalDays: true,
           royaltyPercent: true,
+          mode: true,
         },
       })
     }
@@ -48,6 +49,7 @@ export class MeController {
           dailyRateRub: true,
           minRentalDays: true,
           royaltyPercent: true,
+          mode: true,
         },
       })
     }
@@ -65,7 +67,8 @@ export class MeController {
             dailyRateRub: true,
             minRentalDays: true,
             royaltyPercent: true,
-          },
+            mode: true,
+          }
         },
       },
     }).then((rows) => rows.map((r) => r.tenant))

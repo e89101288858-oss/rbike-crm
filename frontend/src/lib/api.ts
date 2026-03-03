@@ -132,7 +132,24 @@ export const api = {
       dailyRateRub?: number
       minRentalDays?: number
       royaltyPercent?: number
+      mode?: 'FRANCHISE' | 'SAAS'
     }>>('/my/tenants'),
+
+  myTenantSettings: () =>
+    request<{
+      id: string
+      name: string
+      mode: 'FRANCHISE' | 'SAAS'
+      dailyRateRub: number
+      minRentalDays: number
+      royaltyPercent: number
+    }>('/my/tenant-settings', undefined, true),
+
+  updateMyTenantSettings: (payload: { dailyRateRub?: number; minRentalDays?: number; royaltyPercent?: number }) =>
+    request<any>('/my/tenant-settings', {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }, true),
 
   clients: (query = '') => request<Client[]>(`/clients${query ? `?${query}` : ''}`, undefined, true),
 
