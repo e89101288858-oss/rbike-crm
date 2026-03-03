@@ -134,6 +134,7 @@ export default function RentalsPage() {
       if (!Number.isInteger(days) || days <= 0) throw new Error('Введите дни продления (целое > 0)')
       await api.extendRental(rentalId, days)
       await loadAll()
+      await loadJournal(rentalId)
       setExtendModalRentalId(null)
       setExtendDays('')
       setSuccess(`Аренда продлена на ${days} дн.`)
@@ -150,6 +151,7 @@ export default function RentalsPage() {
       if (!trimmedReason) throw new Error('Причина досрочного завершения обязательна')
       await api.closeRental(rentalId, trimmedReason)
       await loadAll()
+      await loadJournal(rentalId)
       setCloseModalRentalId(null)
       setCloseReason('')
       setSuccess('Аренда завершена досрочно')
@@ -178,6 +180,7 @@ export default function RentalsPage() {
       await api.addRentalBattery(rentalId, batteryId)
       setAddBatteryMap((p) => ({ ...p, [rentalId]: '' }))
       await loadAll()
+      await loadJournal(rentalId)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка добавления АКБ в аренду')
     }
@@ -193,6 +196,7 @@ export default function RentalsPage() {
       setReplaceFromMap((p) => ({ ...p, [rentalId]: '' }))
       setReplaceToMap((p) => ({ ...p, [rentalId]: '' }))
       await loadAll()
+      await loadJournal(rentalId)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка замены АКБ в аренде')
     }
@@ -322,6 +326,12 @@ export default function RentalsPage() {
     if (paymentsMap[selectedRentalId]) return
     void loadRentalPayments(selectedRentalId)
   }, [selectedRentalId, paymentsMap])
+  useEffect(() => {
+    if (!selectedRentalId) return
+    if (journalMap[selectedRentalId]) return
+    void loadJournal(selectedRentalId)
+  }, [selectedRentalId, journalMap])
+
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -378,10 +388,14 @@ export default function RentalsPage() {
         </div>
       </div>
 
-      <div className="toast-stack">
-        {error && <div className="alert">{error}</div>}
-        {success && <div className="alert-success">{success}</div>}
-      </div>
+      {(error || success) && (
+        <div className="fixed inset-x-0 top-6 z-[90] flex justify-center px-4 pointer-events-none">
+          <div className="w-full max-w-md pointer-events-auto">
+            {error && <div className="alert">{error}</div>}
+            {success && <div className="alert-success">{success}</div>}
+          </div>
+        </div>
+      )}
 
       <div className="mb-3 flex items-center gap-2">
         <input className="input min-w-0 flex-1 max-w-[720px]" placeholder="Поиск: курьер / велосипед / даты" value={search} onChange={(e) => setSearch(e.target.value)} />
@@ -568,6 +582,12 @@ export default function RentalsPage() {
               <div>Факт завершения: {formatDate(r.actualEndDate)}</div>
               {!!r.closeReason && <div>Причина досрочного завершения: {r.closeReason}</div>}
               <div>Тариф: {formatRub(Math.round((Number(r.weeklyRateRub || 0) / 7) * 100) / 100)} / сутки</div>
+              {r.status === 'ACTIVE' && (
+                <div>
+                  Осталось дней: <b>{Math.max(0, diffDays(new Date().toISOString(), r.plannedEndDate))}</b>
+                  {diffDays(new Date().toISOString(), r.plannedEndDate) <= 0 ? ' (просрочено)' : ''}
+                </div>
+              )}
               <div>АКБ: {r.batteries?.map((x) => x.battery.code).join(', ') || '—'} ({r.batteries?.length || 0}/2)</div>
 
               <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -578,8 +598,7 @@ export default function RentalsPage() {
                     <button className="btn" onClick={() => { setExtendModalRentalId(r.id); setExtendDays('') }}>Продлить</button>
                   </>
                 )}
-                <button className="btn" onClick={() => loadJournal(r.id)}>Журнал</button>
-                <button className="btn" onClick={() => generateContract(r.id)}>Сформировать договор</button>
+                                <button className="btn" onClick={() => generateContract(r.id)}>Сформировать договор</button>
                 {r.status === 'ACTIVE' && <button className="btn border-red-500/60 text-red-300" onClick={() => { setCloseModalRentalId(r.id); setCloseReason('') }}>Завершить досрочно</button>}
                 {r.status === 'CLOSED' && role === 'OWNER' && <button className="btn border-red-500/60 text-red-300" onClick={() => setDeleteModalRentalId(r.id)}>Удалить аренду</button>}
               </div>
