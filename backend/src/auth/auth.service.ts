@@ -77,6 +77,8 @@ export class AuthService {
       const user = await tx.user.create({
         data: {
           email: dto.email,
+          fullName: dto.fullName,
+          phone: dto.phone ?? null,
           passwordHash,
           role: 'FRANCHISEE',
           franchiseeId: franchisee.id,

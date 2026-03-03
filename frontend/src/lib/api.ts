@@ -151,6 +151,29 @@ export const api = {
       body: JSON.stringify(payload),
     }, true),
 
+  myAccountSettings: () =>
+    request<any>('/my/account-settings', undefined, true),
+
+  updateMyAccountSettings: (payload: {
+    email?: string
+    fullName?: string
+    phone?: string
+    companyName?: string
+    city?: string
+    tenantName?: string
+    address?: string
+  }) =>
+    request<any>('/my/account-settings', {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }, true),
+
+  changeMyPassword: (currentPassword: string, newPassword: string) =>
+    request<any>('/my/change-password', {
+      method: 'PATCH',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    }, true),
+
   clients: (query = '') => request<Client[]>(`/clients${query ? `?${query}` : ''}`, undefined, true),
 
   createClient: (payload: {

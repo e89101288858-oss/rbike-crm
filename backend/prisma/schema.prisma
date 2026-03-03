@@ -90,6 +90,8 @@ enum SaaSSubscriptionStatus {
 model User {
   id           String       @id @default(uuid())
   email        String       @unique
+  fullName     String?
+  phone        String?
   passwordHash String
   role         UserRole
   franchiseeId String?
