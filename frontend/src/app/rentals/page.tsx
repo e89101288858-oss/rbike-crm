@@ -468,23 +468,21 @@ export default function RentalsPage() {
         const daysLeft = diffDays(new Date().toISOString(), r.plannedEndDate)
         const highlight = r.status === 'ACTIVE' ? daysHighlightClass(daysLeft) : 'border-[#2f3136] bg-[#1f2126]'
         return (
-          <section className={`mt-3 w-full rounded-sm border p-3 shadow-sm text-sm panel ${highlight}`}>
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <div className="font-medium">{r.client.fullName} — {r.bike.code}</div>
+          <section className={`mt-3 w-full rounded-xl border border-white/10 bg-[#1f2126] p-4 shadow-xl text-sm ${highlight}`}>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <div className="font-semibold text-base text-white">{r.client.fullName} — {r.bike.code}</div>
+              <span className={`badge ${r.status === 'ACTIVE' ? 'badge-warn' : 'badge-ok'}`}>{r.status === 'ACTIVE' ? 'Активна' : 'Завершена'}</span>
             </div>
 
-            <div>Факт завершения: {formatDate(r.actualEndDate)}</div>
-            {!!r.closeReason && <div>Причина досрочного завершения: {r.closeReason}</div>}
-            <div>Тариф: {formatRub(Math.round((Number(r.weeklyRateRub || 0) / 7) * 100) / 100)} / сутки</div>
-            {r.status === 'ACTIVE' && (
-              <div>
-                Осталось дней: <b>{Math.max(0, diffDays(new Date().toISOString(), r.plannedEndDate))}</b>
-                {diffDays(new Date().toISOString(), r.plannedEndDate) <= 0 ? ' (просрочено)' : ''}
-              </div>
-            )}
-            <div>АКБ: {r.batteries?.map((x) => x.battery.code).join(', ') || '—'} ({r.batteries?.length || 0}/2)</div>
+            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4 mb-3">
+              <div className="rounded-md border border-white/10 bg-white/5 p-2">Тариф: <b>{formatRub(Math.round((Number(r.weeklyRateRub || 0) / 7) * 100) / 100)}</b> / сутки</div>
+              <div className="rounded-md border border-white/10 bg-white/5 p-2">Период: <b>{formatDate(r.startDate)} → {formatDate(r.plannedEndDate)}</b></div>
+              <div className="rounded-md border border-white/10 bg-white/5 p-2">Осталось дней: <b>{r.status === 'ACTIVE' ? Math.max(0, diffDays(new Date().toISOString(), r.plannedEndDate)) : '—'}</b></div>
+              <div className="rounded-md border border-white/10 bg-white/5 p-2">АКБ: <b>{r.batteries?.map((x) => x.battery.code).join(', ') || '—'}</b></div>
+            </div>
+            {!!r.closeReason && <div className="mb-3 rounded-md border border-red-500/30 bg-red-500/10 p-2 text-red-200">Причина досрочного завершения: {r.closeReason}</div>}
 
-            <div className="mt-2 flex flex-wrap items-center gap-2">
+            <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-white/10 bg-[#181a1f] p-2">
               {r.status === 'ACTIVE' && (
                 <>
                   <input type="number" className="input w-44" min={1} step={10} placeholder="Ставка ₽/сутки" value={dailyRateMap[r.id] ?? Math.round((Number(r.weeklyRateRub || 0) / 7) * 100) / 100} onChange={(e) => setDailyRateMap((prev) => ({ ...prev, [r.id]: e.target.value }))} />
@@ -500,7 +498,7 @@ export default function RentalsPage() {
             {r.status === 'ACTIVE' && (
               <div className="mt-2 grid gap-2 md:grid-cols-2">
                 {(r.batteries?.length || 0) < 2 && (
-                  <div className="rounded border p-2">
+                  <div className="rounded-lg border border-white/10 bg-[#181a1f] p-3">
                     <div className="mb-1 text-xs text-gray-600">Довыдача АКБ</div>
                     <div className="flex gap-2">
                       <select className="select w-full" value={addBatteryMap[r.id] || ''} onChange={(e) => setAddBatteryMap((p) => ({ ...p, [r.id]: e.target.value }))}>
@@ -513,7 +511,7 @@ export default function RentalsPage() {
                 )}
 
                 {(r.batteries?.length || 0) > 0 && (
-                  <div className="rounded border p-2">
+                  <div className="rounded-lg border border-white/10 bg-[#181a1f] p-3">
                     <div className="mb-1 text-xs text-gray-600">Замена АКБ</div>
                     <div className="grid gap-2 md:grid-cols-3">
                       <select className="select" value={replaceFromMap[r.id] || ''} onChange={(e) => setReplaceFromMap((p) => ({ ...p, [r.id]: e.target.value }))}>
@@ -531,7 +529,7 @@ export default function RentalsPage() {
               </div>
             )}
 
-            <div className="mt-3 rounded border p-2">
+            <div className="mt-3 rounded-lg border border-white/10 bg-[#181a1f] p-3">
               <div className="mb-2 font-medium">История платежей</div>
               {!Array.isArray(paymentsMap[r.id]) ? (
                 <div className="text-xs text-gray-500">Загрузка…</div>
@@ -576,11 +574,11 @@ export default function RentalsPage() {
             </div>
 
             {!!docsMap[r.id]?.length && (
-              <div className="mt-3 rounded border p-2">
+              <div className="mt-3 rounded-lg border border-white/10 bg-[#181a1f] p-3">
                 <div className="mb-2 font-medium">Документы по аренде</div>
                 <div className="space-y-2">
                   {docsMap[r.id].map((d) => (
-                    <div key={d.id} className="rounded border p-2">
+                    <div key={d.id} className="rounded-lg border border-white/10 bg-[#181a1f] p-3">
                       <div className="mb-1 text-xs text-gray-600">{d.type} · {formatDateTime(d.createdAt)}</div>
                       <div className="flex gap-2">
                         {d.filePath?.endsWith('.docx') ? (
@@ -600,7 +598,7 @@ export default function RentalsPage() {
             )}
 
             {!!journalMap[r.id]?.length && (
-              <div className="mt-3 rounded border p-2">
+              <div className="mt-3 rounded-lg border border-white/10 bg-[#181a1f] p-3">
                 <div className="mb-2 font-medium">Журнал операций</div>
                 <div className="space-y-1 text-xs">
                   {journalMap[r.id].map((e: any, idx: number) => (
