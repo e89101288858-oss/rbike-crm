@@ -15,6 +15,9 @@ export default function OwnerDashboardPage() {
   const [tenantMap, setTenantMap] = useState<Record<string, any[]>>({})
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7))
   const [billing, setBilling] = useState<any>(null)
+  const [saasSummary, setSaasSummary] = useState<any>(null)
+  const [saasTenants, setSaasTenants] = useState<any[]>([])
+  const [section, setSection] = useState<'FRANCHISE' | 'SAAS'>('FRANCHISE')
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -22,14 +25,18 @@ export default function OwnerDashboardPage() {
 
     ;(async () => {
       try {
-        const [me, myTenants, frs] = await Promise.all([
+        const [me, myTenants, frs, saasSummaryResp, saasTenantsResp] = await Promise.all([
           api.me(),
           api.myTenants(),
           api.adminFranchisees(),
+          api.adminSaasSummary(),
+          api.adminSaasTenants(),
         ])
         setRole(me.role || '')
         setTenants(myTenants)
         setFranchisees(frs)
+        setSaasSummary(saasSummaryResp)
+        setSaasTenants(saasTenantsResp)
 
         if (!getTenantId() && myTenants.length > 0) setTenantId(myTenants[0].id)
 
@@ -78,6 +85,23 @@ export default function OwnerDashboardPage() {
 
       {error && <div className="alert">{error}</div>}
 
+      <section className="mb-4 flex flex-wrap gap-2">
+        <button
+          className={`btn ${section === 'FRANCHISE' ? 'btn-primary' : ''}`}
+          onClick={() => setSection('FRANCHISE')}
+        >
+          Франшиза
+        </button>
+        <button
+          className={`btn ${section === 'SAAS' ? 'btn-primary' : ''}`}
+          onClick={() => setSection('SAAS')}
+        >
+          SaaS
+        </button>
+      </section>
+
+      {section === 'FRANCHISE' && (
+        <>
       <section className="mb-4 grid gap-2 md:grid-cols-4">
         <div className="kpi"><div className="text-xs text-gray-500">Франчайзи всего</div><div className="mt-1 text-2xl font-semibold">{franchiseesTotal}</div></div>
         <div className="kpi"><div className="text-xs text-gray-500">Франчайзи активных</div><div className="mt-1 text-2xl font-semibold">{franchiseesActive}</div></div>
@@ -200,6 +224,61 @@ export default function OwnerDashboardPage() {
           </table>
         </div>
       </section>
+        </>
+      )}
+
+      {section === 'SAAS' && (
+        <>
+          <section className="mb-4 grid gap-2 md:grid-cols-4">
+            <div className="kpi"><div className="text-xs text-gray-500">SaaS tenant’ов</div><div className="mt-1 text-2xl font-semibold">{Number(saasSummary?.totalSaasTenants || 0)}</div></div>
+            <div className="kpi"><div className="text-xs text-gray-500">Trial</div><div className="mt-1 text-2xl font-semibold">{Number(saasSummary?.subscriptions?.trial || 0)}</div></div>
+            <div className="kpi"><div className="text-xs text-gray-500">Active</div><div className="mt-1 text-2xl font-semibold">{Number(saasSummary?.subscriptions?.active || 0)}</div></div>
+            <div className="kpi"><div className="text-xs text-gray-500">Trial скоро истекает</div><div className="mt-1 text-2xl font-semibold">{Number(saasSummary?.trialExpiringSoon || 0)}</div></div>
+          </section>
+
+          <section className="panel mb-4 text-sm">
+            <h2 className="mb-2 text-base font-semibold">Планы SaaS</h2>
+            <div className="grid gap-2 md:grid-cols-3">
+              <div className="kpi"><div className="text-xs text-gray-500">STARTER</div><div className="mt-1 text-2xl font-semibold">{Number(saasSummary?.plans?.starter || 0)}</div></div>
+              <div className="kpi"><div className="text-xs text-gray-500">PRO</div><div className="mt-1 text-2xl font-semibold">{Number(saasSummary?.plans?.pro || 0)}</div></div>
+              <div className="kpi"><div className="text-xs text-gray-500">ENTERPRISE</div><div className="mt-1 text-2xl font-semibold">{Number(saasSummary?.plans?.enterprise || 0)}</div></div>
+            </div>
+          </section>
+
+          <section className="panel text-sm">
+            <h2 className="mb-2 text-base font-semibold">SaaS tenant’ы</h2>
+            <div className="table-wrap">
+              <table className="table table-sticky mobile-cards">
+                <thead>
+                  <tr>
+                    <th>Точка</th>
+                    <th>Франчайзи</th>
+                    <th>План</th>
+                    <th>Статус подписки</th>
+                    <th>Trial до</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {saasTenants.map((t: any) => (
+                    <tr key={t.id}>
+                      <td data-label="Точка" className="font-medium">{t.name}</td>
+                      <td data-label="Франчайзи">{t.franchisee?.name || '—'}</td>
+                      <td data-label="План">{t.saasPlan || '—'}</td>
+                      <td data-label="Статус подписки">{t.saasSubscriptionStatus || '—'}</td>
+                      <td data-label="Trial до">{t.saasTrialEndsAt ? new Date(t.saasTrialEndsAt).toLocaleDateString('ru-RU') : '—'}</td>
+                    </tr>
+                  ))}
+                  {!saasTenants.length && (
+                    <tr>
+                      <td colSpan={5} className="text-center text-gray-500">SaaS tenant’ов пока нет</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </>
+      )}
     </main>
   )
 }

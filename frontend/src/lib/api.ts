@@ -403,7 +403,25 @@ export const api = {
 
   adminDeleteFranchisee: (id: string) => request<any>(`/franchisees/${id}`, { method: 'DELETE' }),
 
-  adminTenantsByFranchisee: (franchiseeId: string) => request<any[]>(`/franchisees/${franchiseeId}/tenants`),
+  adminTenantsByFranchisee: (franchiseeId: string, mode?: 'FRANCHISE' | 'SAAS') =>
+    request<any[]>(`/franchisees/${franchiseeId}/tenants${mode ? `?mode=${mode}` : ''}`),
+
+  adminSaasTenants: () => request<any[]>('/admin/saas/tenants'),
+  adminSaasSummary: () =>
+    request<{
+      totalSaasTenants: number
+      subscriptions: { trial: number; active: number; pastDue: number; canceled: number }
+      plans: { starter: number; pro: number; enterprise: number }
+      trialExpiringSoon: number
+    }>('/admin/saas/summary'),
+  adminUpdateSaasSubscription: (
+    tenantId: string,
+    payload: { saasPlan?: 'STARTER' | 'PRO' | 'ENTERPRISE'; saasSubscriptionStatus?: 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED'; saasTrialEndsAt?: string | null },
+  ) =>
+    request<any>(`/admin/saas/tenants/${tenantId}/subscription`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
 
   adminCreateTenant: (
     franchiseeId: string,
