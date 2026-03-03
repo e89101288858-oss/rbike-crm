@@ -12,6 +12,19 @@ export class AuthService {
     private readonly jwt: JwtService,
   ) {}
 
+  private async clearExpiredResetTokens() {
+    await this.prisma.user.updateMany({
+      where: {
+        passwordResetExpiresAt: { lte: new Date() },
+        passwordResetTokenHash: { not: null },
+      },
+      data: {
+        passwordResetTokenHash: null,
+        passwordResetExpiresAt: null,
+      },
+    })
+  }
+
   private async audit(userId: string | undefined, action: string, targetType: string, targetId?: string, details?: any) {
     await this.prisma.auditLog.create({
       data: {
@@ -168,6 +181,8 @@ export class AuthService {
   }
 
   async requestPasswordReset(email: string) {
+    await this.clearExpiredResetTokens()
+
     const user = await this.prisma.user.findUnique({ where: { email } })
     if (!user || !user.isActive) return { ok: true }
 
