@@ -106,6 +106,20 @@ export const api = {
       body: JSON.stringify(payload),
     }),
 
+  registerSaas: (payload: {
+    email: string
+    password: string
+    fullName: string
+    phone?: string
+    companyName: string
+    city?: string
+    tenantName?: string
+  }) =>
+    request<{ accessToken: string; tenantId: string }>('/auth/register-saas', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
   me: () => request<{ userId: string; role: string; franchiseeId: string | null }>('/me'),
 
   myTenants: () =>

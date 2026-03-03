@@ -16,6 +16,9 @@ export default function LoginPage() {
   const [regPhone, setRegPhone] = useState('')
   const [regEmail, setRegEmail] = useState('')
   const [regPassword, setRegPassword] = useState('')
+  const [regCompanyName, setRegCompanyName] = useState('')
+  const [regCity, setRegCity] = useState('')
+  const [regTenantName, setRegTenantName] = useState('')
 
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -47,20 +50,30 @@ export default function LoginPage() {
     setSuccess('')
     setLoading(true)
     try {
-      await api.registerRequest({
-        fullName: regFullName.trim() || undefined,
+      const res = await api.registerSaas({
+        fullName: regFullName.trim(),
         phone: regPhone.trim() || undefined,
         email: regEmail.trim(),
         password: regPassword,
+        companyName: regCompanyName.trim(),
+        city: regCity.trim() || undefined,
+        tenantName: regTenantName.trim() || undefined,
       })
-      setSuccess('Заявка отправлена. Ожидайте одобрения владельца.')
+
+      setToken(res.accessToken)
+      setTenantId(res.tenantId)
+
       setRegFullName('')
       setRegPhone('')
       setRegEmail('')
       setRegPassword('')
-      setTab('login')
+      setRegCompanyName('')
+      setRegCity('')
+      setRegTenantName('')
+
+      router.push('/dashboard')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка отправки заявки')
+      setError(err instanceof Error ? err.message : 'Ошибка регистрации')
     } finally {
       setLoading(false)
     }
@@ -73,7 +86,7 @@ export default function LoginPage() {
 
       <div className="mb-3 flex gap-2">
         <button className={tab === 'login' ? 'btn-primary' : 'btn'} onClick={() => setTab('login')}>Вход</button>
-        <button className={tab === 'register' ? 'btn-primary' : 'btn'} onClick={() => setTab('register')}>Регистрация</button>
+        <button className={tab === 'register' ? 'btn-primary' : 'btn'} onClick={() => setTab('register')}>SaaS регистрация</button>
       </div>
 
       {tab === 'login' ? (
@@ -86,11 +99,14 @@ export default function LoginPage() {
         </form>
       ) : (
         <form onSubmit={onSubmitRegister} className="panel space-y-3">
-          <input className="input w-full" placeholder="ФИО" value={regFullName} onChange={(e) => setRegFullName(e.target.value)} />
+          <input className="input w-full" placeholder="ФИО" value={regFullName} onChange={(e) => setRegFullName(e.target.value)} required minLength={2} />
           <input className="input w-full" placeholder="Телефон" value={regPhone} onChange={(e) => setRegPhone(e.target.value)} />
+          <input className="input w-full" placeholder="Компания" value={regCompanyName} onChange={(e) => setRegCompanyName(e.target.value)} required minLength={2} />
+          <input className="input w-full" placeholder="Город" value={regCity} onChange={(e) => setRegCity(e.target.value)} />
+          <input className="input w-full" placeholder="Название точки (опционально)" value={regTenantName} onChange={(e) => setRegTenantName(e.target.value)} />
           <input className="input w-full" placeholder="Email" value={regEmail} onChange={(e) => setRegEmail(e.target.value)} required />
           <input className="input w-full" placeholder="Пароль (мин. 6)" type="password" value={regPassword} onChange={(e) => setRegPassword(e.target.value)} required minLength={6} />
-          <button disabled={loading} className="btn-primary w-full">{loading ? 'Отправляем…' : 'Отправить заявку'}</button>
+          <button disabled={loading} className="btn-primary w-full">{loading ? 'Создаём аккаунт…' : 'Создать SaaS аккаунт'}</button>
           {error && <p className="alert">{error}</p>}
           {success && <p className="alert-success">{success}</p>}
         </form>
