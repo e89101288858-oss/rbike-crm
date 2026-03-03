@@ -74,6 +74,19 @@ enum TenantMode {
   SAAS
 }
 
+enum SaaSPlan {
+  STARTER
+  PRO
+  ENTERPRISE
+}
+
+enum SaaSSubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
 model User {
   id           String       @id @default(uuid())
   email        String       @unique
@@ -118,8 +131,11 @@ model Tenant {
   franchisee     Franchisee @relation(fields: [franchiseeId], references: [id])
   dailyRateRub   Float      @default(500)
   minRentalDays  Int        @default(7)
-  royaltyPercent Float      @default(5)
-  mode         TenantMode   @default(FRANCHISE)
+  royaltyPercent          Float                  @default(5)
+  mode                    TenantMode             @default(FRANCHISE)
+  saasPlan                SaaSPlan?
+  saasSubscriptionStatus  SaaSSubscriptionStatus?
+  saasTrialEndsAt         DateTime?
 
   userTenants UserTenant[]
 

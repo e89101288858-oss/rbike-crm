@@ -22,6 +22,7 @@ import { CreateFranchiseeDto } from './dto/create-franchisee.dto'
 import { UpdateFranchiseeDto } from './dto/update-franchisee.dto'
 import { CreateTenantDto } from './dto/create-tenant.dto'
 import { UpdateTenantDto } from './dto/update-tenant.dto'
+import { UpdateSaasSubscriptionDto } from './dto/update-saas-subscription.dto'
 
 @Controller()
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -237,6 +238,7 @@ export class AdminController {
     if (!franchisee) {
       throw new NotFoundException('Franchisee not found')
     }
+    const tenantMode = dto.mode ?? 'FRANCHISE'
     const created = await this.prisma.tenant.create({
       data: {
         franchiseeId,
@@ -246,12 +248,20 @@ export class AdminController {
         dailyRateRub: dto.dailyRateRub ?? 500,
         minRentalDays: dto.minRentalDays ?? 7,
         royaltyPercent: dto.royaltyPercent ?? 5,
-        mode: dto.mode ?? 'FRANCHISE',
+        mode: tenantMode,
+        ...(tenantMode === 'SAAS' && {
+          saasPlan: 'STARTER',
+          saasSubscriptionStatus: 'TRIAL',
+          saasTrialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+        }),
       },
     })
     await this.audit(user.userId, 'CREATE_TENANT', 'TENANT', created.id, {
       name: created.name,
       franchiseeId,
+      mode: created.mode,
+      saasPlan: created.saasPlan,
+      saasSubscriptionStatus: created.saasSubscriptionStatus,
       dailyRateRub: created.dailyRateRub,
       minRentalDays: created.minRentalDays,
       royaltyPercent: created.royaltyPercent,
@@ -287,6 +297,47 @@ export class AdminController {
         },
       },
     })
+  }
+
+  @Patch('admin/saas/tenants/:id/subscription')
+  async updateSaasSubscription(
+    @Param('id') id: string,
+    @Body() dto: UpdateSaasSubscriptionDto,
+    @CurrentUser() user: JwtUser,
+  ) {
+    const tenant = await this.prisma.tenant.findUnique({ where: { id } })
+    if (!tenant) throw new NotFoundException('Tenant not found')
+    if (tenant.mode !== 'SAAS') {
+      throw new BadRequestException('Tenant is not in SAAS mode')
+    }
+
+    const updated = await this.prisma.tenant.update({
+      where: { id },
+      data: {
+        ...(dto.saasPlan !== undefined && { saasPlan: dto.saasPlan }),
+        ...(dto.saasSubscriptionStatus !== undefined && {
+          saasSubscriptionStatus: dto.saasSubscriptionStatus,
+        }),
+        ...(dto.saasTrialEndsAt !== undefined && {
+          saasTrialEndsAt: dto.saasTrialEndsAt,
+        }),
+      },
+    })
+
+    await this.audit(user.userId, 'UPDATE_SAAS_SUBSCRIPTION', 'TENANT', id, {
+      from: {
+        saasPlan: tenant.saasPlan,
+        saasSubscriptionStatus: tenant.saasSubscriptionStatus,
+        saasTrialEndsAt: tenant.saasTrialEndsAt,
+      },
+      to: {
+        saasPlan: updated.saasPlan,
+        saasSubscriptionStatus: updated.saasSubscriptionStatus,
+        saasTrialEndsAt: updated.saasTrialEndsAt,
+      },
+    })
+
+    return updated
   }
 
   @Delete('tenants/:id')
