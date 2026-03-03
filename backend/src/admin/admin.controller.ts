@@ -361,7 +361,7 @@ export class AdminController {
     const tenant = await this.prisma.tenant.findUnique({ where: { id } })
     if (!tenant) throw new NotFoundException('Tenant not found')
     if (tenant.mode !== 'SAAS') {
-      throw new BadRequestException('Tenant is not in SAAS mode')
+      throw new BadRequestException('Точка не в режиме подписки')
     }
 
     const updated = await this.prisma.tenant.update({

@@ -44,11 +44,11 @@ export async function assertSaasOperationAllowed(
   }
 
   if (!tenant.saasSubscriptionStatus) {
-    throw new ForbiddenException('SaaS subscription is not configured')
+    throw new ForbiddenException('Подписка не настроена')
   }
 
   if (tenant.saasSubscriptionStatus === 'PAST_DUE' || tenant.saasSubscriptionStatus === 'CANCELED') {
-    throw new ForbiddenException(`Operation ${operation} is blocked: SaaS subscription is ${tenant.saasSubscriptionStatus}`)
+    throw new ForbiddenException(`Операция недоступна: статус подписки ${tenant.saasSubscriptionStatus}`)
   }
 
   if (
@@ -56,7 +56,7 @@ export async function assertSaasOperationAllowed(
     tenant.saasTrialEndsAt &&
     tenant.saasTrialEndsAt.getTime() < Date.now()
   ) {
-    throw new ForbiddenException(`Operation ${operation} is blocked: SaaS trial expired`)
+    throw new ForbiddenException('Операция недоступна: пробный период завершен')
   }
 
   const plan = tenant.saasPlan ?? 'STARTER'
@@ -74,7 +74,7 @@ export async function assertSaasOperationAllowed(
 
     if (bikesCount >= maxBikes) {
       throw new ForbiddenException(
-        `Bike limit reached for ${plan}: ${maxBikes}. Contact owner or upgrade plan to add more bikes.`,
+        `Достигнут лимит велосипедов для плана ${plan}: ${maxBikes}. Обратитесь к владельцу для изменения лимита.`,
       )
     }
   }
@@ -89,7 +89,7 @@ export async function assertSaasOperationAllowed(
 
     if (activeRentalsCount >= maxActiveRentals) {
       throw new ForbiddenException(
-        `Active rentals limit reached for ${plan}: ${maxActiveRentals}. Contact owner or upgrade plan to create more rentals.`,
+        `Достигнут лимит активных аренд для плана ${plan}: ${maxActiveRentals}. Обратитесь к владельцу для изменения лимита.`,
       )
     }
   }
