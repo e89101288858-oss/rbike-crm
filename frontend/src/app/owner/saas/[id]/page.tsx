@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'
 import { getToken } from '@/lib/auth'
+import { formatRub } from '@/lib/format'
 
 export default function OwnerSaasDetailsPage() {
   const router = useRouter()
@@ -12,6 +13,8 @@ export default function OwnerSaasDetailsPage() {
   const [tenant, setTenant] = useState<any>(null)
   const [edit, setEdit] = useState<any>(null)
   const [error, setError] = useState('')
+  const [tenantBilling, setTenantBilling] = useState<any>(null)
+  const [saasRank, setSaasRank] = useState<number | null>(null)
 
   const toDateInput = (value?: string | null) => (value ? new Date(value).toISOString().slice(0, 10) : '')
 
@@ -24,10 +27,22 @@ export default function OwnerSaasDetailsPage() {
         const me = await api.me()
         if (me.role !== 'OWNER') return router.replace('/dashboard')
 
-        const rows = await api.adminSaasTenants()
+        const [rows, ownerBilling] = await Promise.all([
+          api.adminSaasTenants(),
+          api.franchiseOwnerMonthly(new Date().toISOString().slice(0, 7)),
+        ])
         const found = rows.find((x: any) => x.id === params.id)
         if (!found) return router.replace('/owner/saas')
 
+        const tenantLine = (ownerBilling?.tenants || []).find((x: any) => x.tenantId === found.id) || null
+        const saasTenantIds = new Set(rows.map((x: any) => x.id))
+        const saasBillingSorted = (ownerBilling?.tenants || [])
+          .filter((x: any) => saasTenantIds.has(x.tenantId))
+          .sort((a: any, b: any) => Number(b.revenueRub || 0) - Number(a.revenueRub || 0))
+        const rank = tenantLine ? saasBillingSorted.findIndex((x: any) => x.tenantId === tenantLine.tenantId) + 1 : null
+
+        setTenantBilling(tenantLine)
+        setSaasRank(rank && rank > 0 ? rank : null)
         setTenant(found)
         setEdit({
           saasPlan: found.saasPlan || 'STARTER',
@@ -66,8 +81,16 @@ export default function OwnerSaasDetailsPage() {
       <h1 className="mb-4 text-2xl font-bold">SaaS tenant: {tenant?.name || '—'}</h1>
       {error && <div className="alert">{error}</div>}
 
+      <section className="mb-4 grid gap-2 md:grid-cols-4">
+        <div className="kpi"><div className="text-xs text-gray-500">План</div><div className="mt-1 text-2xl font-semibold">{tenant?.saasPlan || '—'}</div></div>
+        <div className="kpi"><div className="text-xs text-gray-500">Статус</div><div className="mt-1 text-2xl font-semibold">{tenant?.saasSubscriptionStatus || '—'}</div></div>
+        <div className="kpi"><div className="text-xs text-gray-500">Выручка (месяц)</div><div className="mt-1 text-2xl font-semibold">{formatRub(Number(tenantBilling?.revenueRub || 0))}</div></div>
+        <div className="kpi"><div className="text-xs text-gray-500">Ранг среди SaaS</div><div className="mt-1 text-2xl font-semibold">{saasRank ? `#${saasRank}` : '—'}</div></div>
+      </section>
+
       <section className="panel text-sm">
         <div className="mb-2 text-xs text-gray-500">Текущий trial до: {trialLabel}</div>
+        <div className="mb-2 text-xs text-gray-500">Платежей (PAID, месяц): {tenantBilling?.paidPaymentsCount ?? 0} · Роялти (месяц): {formatRub(Number(tenantBilling?.royaltyDueRub || 0))}</div>
         {edit && (
           <div className="grid gap-2 md:grid-cols-2">
             <select className="select" value={edit.saasPlan} onChange={(e) => setEdit((p: any) => ({ ...p, saasPlan: e.target.value }))}>
