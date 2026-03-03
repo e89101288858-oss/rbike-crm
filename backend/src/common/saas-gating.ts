@@ -1,10 +1,27 @@
 import { ForbiddenException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 
+type SaasOperation = 'CREATE_BIKE' | 'CREATE_RENTAL' | 'GENERATE_CONTRACT'
+
+const SAAS_PLAN_LIMITS: Record<string, { maxBikes: number; maxActiveRentals: number }> = {
+  STARTER: {
+    maxBikes: 25,
+    maxActiveRentals: 20,
+  },
+  PRO: {
+    maxBikes: 120,
+    maxActiveRentals: 100,
+  },
+  ENTERPRISE: {
+    maxBikes: Number.POSITIVE_INFINITY,
+    maxActiveRentals: Number.POSITIVE_INFINITY,
+  },
+}
+
 export async function assertSaasOperationAllowed(
   prisma: PrismaService,
   tenantId: string,
-  operation: 'CREATE_BIKE' | 'CREATE_RENTAL' | 'GENERATE_CONTRACT',
+  operation: SaasOperation,
 ) {
   const tenant = await prisma.tenant.findUnique({
     where: { id: tenantId },
@@ -38,5 +55,38 @@ export async function assertSaasOperationAllowed(
     tenant.saasTrialEndsAt.getTime() < Date.now()
   ) {
     throw new ForbiddenException(`Operation ${operation} is blocked: SaaS trial expired`)
+  }
+
+  const plan = tenant.saasPlan ?? 'STARTER'
+  const limits = SAAS_PLAN_LIMITS[plan] ?? SAAS_PLAN_LIMITS.STARTER
+
+  if (operation === 'CREATE_BIKE' && Number.isFinite(limits.maxBikes)) {
+    const bikesCount = await prisma.bike.count({
+      where: {
+        tenantId,
+        isActive: true,
+      },
+    })
+
+    if (bikesCount >= limits.maxBikes) {
+      throw new ForbiddenException(
+        `Bike limit reached for ${plan}: ${limits.maxBikes}. Upgrade plan to add more bikes.`,
+      )
+    }
+  }
+
+  if (operation === 'CREATE_RENTAL' && Number.isFinite(limits.maxActiveRentals)) {
+    const activeRentalsCount = await prisma.rental.count({
+      where: {
+        tenantId,
+        status: 'ACTIVE',
+      },
+    })
+
+    if (activeRentalsCount >= limits.maxActiveRentals) {
+      throw new ForbiddenException(
+        `Active rentals limit reached for ${plan}: ${limits.maxActiveRentals}. Upgrade plan to create more rentals.`,
+      )
+    }
   }
 }
