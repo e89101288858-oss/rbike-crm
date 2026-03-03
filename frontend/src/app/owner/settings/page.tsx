@@ -155,6 +155,7 @@ export default function OwnerSettingsPage() {
       <Topbar />
 
       {error && <div className="alert">{error}</div>}
+
       {success && <div className="alert-success">{success}</div>}
 
       <section className="mb-4 flex flex-wrap gap-2">

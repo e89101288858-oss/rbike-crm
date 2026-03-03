@@ -6,6 +6,7 @@ import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'
 import { getToken } from '@/lib/auth'
 import { formatRub } from '@/lib/format'
+import { PageSkeleton, StatsSkeleton, TableSkeleton } from '@/components/skeleton'
 
 export default function OwnerFranchiseesPage() {
   const router = useRouter()
@@ -13,6 +14,7 @@ export default function OwnerFranchiseesPage() {
   const [tenantMap, setTenantMap] = useState<Record<string, any[]>>({})
   const [billing, setBilling] = useState<any>(null)
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
 
   const month = useMemo(() => new Date().toISOString().slice(0, 7), [])
 
@@ -20,6 +22,7 @@ export default function OwnerFranchiseesPage() {
     if (!getToken()) return router.replace('/login')
 
     ;(async () => {
+      setLoading(true)
       try {
         const me = await api.me()
         if (me.role !== 'OWNER') return router.replace('/dashboard')
@@ -37,6 +40,8 @@ export default function OwnerFranchiseesPage() {
         setTenantMap(Object.fromEntries(entries))
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Ошибка загрузки раздела франчайзи')
+      } finally {
+        setLoading(false)
       }
     })()
   }, [router, month])
@@ -50,6 +55,15 @@ export default function OwnerFranchiseesPage() {
       <Topbar />
       {error && <div className="alert">{error}</div>}
 
+      {loading && (
+        <div className="space-y-3">
+          <StatsSkeleton />
+          <PageSkeleton><TableSkeleton /></PageSkeleton>
+        </div>
+      )}
+
+      {!loading && (
+        <>
       <section className="mb-4 grid gap-2 md:grid-cols-4">
         <div className="crm-stat"><div className="text-xs text-gray-500">Всего франчайзи</div><div className="mt-1 text-2xl font-semibold">{total}</div></div>
         <div className="crm-stat"><div className="text-xs text-gray-500">Активные франчайзи</div><div className="mt-1 text-2xl font-semibold">{active}</div></div>
@@ -91,6 +105,8 @@ export default function OwnerFranchiseesPage() {
           </table>
         </div>
       </section>
+        </>
+      )}
     </main>
   )
 }

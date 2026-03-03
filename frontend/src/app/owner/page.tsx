@@ -6,6 +6,7 @@ import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'
 import { getToken } from '@/lib/auth'
 import { formatRub } from '@/lib/format'
+import { PageSkeleton, StatsSkeleton, TableSkeleton } from '@/components/skeleton'
 
 export default function OwnerHomePage() {
   const router = useRouter()
@@ -17,6 +18,7 @@ export default function OwnerHomePage() {
   const [quarter, setQuarter] = useState(`${new Date().getUTCFullYear()}-Q${Math.floor(new Date().getUTCMonth() / 3) + 1}`)
   const [year, setYear] = useState(String(new Date().getUTCFullYear()))
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
 
   const quarterOptions = Array.from({ length: 8 }).map((_, i) => {
     const d = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() - i * 3, 1))
@@ -59,6 +61,7 @@ export default function OwnerHomePage() {
     if (!getToken()) return router.replace('/login')
 
     ;(async () => {
+      setLoading(true)
       try {
         const me = await api.me()
         if (me.role !== 'OWNER') return router.replace('/dashboard')
@@ -105,6 +108,8 @@ export default function OwnerHomePage() {
         setFranchisees(frs)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Ошибка загрузки OWNER дашборда')
+      } finally {
+        setLoading(false)
       }
     })()
   }, [router, month, period, quarter, year])
@@ -161,6 +166,15 @@ export default function OwnerHomePage() {
       </div>
       {error && <div className="alert">{error}</div>}
 
+      {loading && (
+        <div className="space-y-3">
+          <StatsSkeleton />
+          <PageSkeleton><TableSkeleton /></PageSkeleton>
+        </div>
+      )}
+
+      {!loading && (
+        <>
       <section className="mb-4 grid gap-2 md:grid-cols-4">
         <div className="crm-stat"><div className="text-xs text-gray-500">Франчайзи всего</div><div className="mt-1 text-2xl font-semibold">{franchiseTotal}</div></div>
         <div className="crm-stat"><div className="text-xs text-gray-500">Франчайзи активных</div><div className="mt-1 text-2xl font-semibold">{franchiseActive}</div></div>
@@ -195,6 +209,8 @@ export default function OwnerHomePage() {
           <button className="btn" onClick={() => router.push('/owner/settings')}>Настройки</button>
         </div>
       </section>
+        </>
+      )}
     </main>
   )
 }

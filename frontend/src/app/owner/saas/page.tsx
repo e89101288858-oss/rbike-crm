@@ -5,17 +5,20 @@ import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'
 import { getToken } from '@/lib/auth'
+import { PageSkeleton, StatsSkeleton, TableSkeleton } from '@/components/skeleton'
 
 export default function OwnerSaasPage() {
   const router = useRouter()
   const [summary, setSummary] = useState<any>(null)
   const [tenants, setTenants] = useState<any[]>([])
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!getToken()) return router.replace('/login')
 
     ;(async () => {
+      setLoading(true)
       try {
         const me = await api.me()
         if (me.role !== 'OWNER') return router.replace('/dashboard')
@@ -28,6 +31,8 @@ export default function OwnerSaasPage() {
         setTenants(ts)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Ошибка загрузки раздела SaaS')
+      } finally {
+        setLoading(false)
       }
     })()
   }, [router])
@@ -37,6 +42,15 @@ export default function OwnerSaasPage() {
       <Topbar />
       {error && <div className="alert">{error}</div>}
 
+      {loading && (
+        <div className="space-y-3">
+          <StatsSkeleton />
+          <PageSkeleton><TableSkeleton /></PageSkeleton>
+        </div>
+      )}
+
+      {!loading && (
+        <>
       <section className="mb-4 grid gap-2 md:grid-cols-4">
         <div className="crm-stat"><div className="text-xs text-gray-500">SaaS клиентов</div><div className="mt-1 text-2xl font-semibold">{Number(summary?.totalSaasTenants || 0)}</div></div>
         <div className="crm-stat"><div className="text-xs text-gray-500">Trial</div><div className="mt-1 text-2xl font-semibold">{Number(summary?.subscriptions?.trial || 0)}</div></div>
@@ -73,6 +87,8 @@ export default function OwnerSaasPage() {
           </table>
         </div>
       </section>
+        </>
+      )}
     </main>
   )
 }
