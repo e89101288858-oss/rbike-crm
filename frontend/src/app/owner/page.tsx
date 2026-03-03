@@ -162,32 +162,32 @@ export default function OwnerHomePage() {
       {error && <div className="alert">{error}</div>}
 
       <section className="mb-4 grid gap-2 md:grid-cols-4">
-        <div className="kpi"><div className="text-xs text-gray-500">Франчайзи всего</div><div className="mt-1 text-2xl font-semibold">{franchiseTotal}</div></div>
-        <div className="kpi"><div className="text-xs text-gray-500">Франчайзи активных</div><div className="mt-1 text-2xl font-semibold">{franchiseActive}</div></div>
-        <div className="kpi"><div className="text-xs text-gray-500">SaaS клиентов</div><div className="mt-1 text-2xl font-semibold">{Number(summary?.totalSaasTenants || 0)}</div></div>
-        <div className="kpi"><div className="text-xs text-gray-500">Пробный период истекает</div><div className="mt-1 text-2xl font-semibold">{Number(summary?.trialExpiringSoon || 0)}</div></div>
+        <div className="crm-stat"><div className="text-xs text-gray-500">Франчайзи всего</div><div className="mt-1 text-2xl font-semibold">{franchiseTotal}</div></div>
+        <div className="crm-stat"><div className="text-xs text-gray-500">Франчайзи активных</div><div className="mt-1 text-2xl font-semibold">{franchiseActive}</div></div>
+        <div className="crm-stat"><div className="text-xs text-gray-500">SaaS клиентов</div><div className="mt-1 text-2xl font-semibold">{Number(summary?.totalSaasTenants || 0)}</div></div>
+        <div className="crm-stat"><div className="text-xs text-gray-500">Пробный период истекает</div><div className="mt-1 text-2xl font-semibold">{Number(summary?.trialExpiringSoon || 0)}</div></div>
       </section>
 
       <section className="mb-4 grid gap-2 md:grid-cols-3">
-        <div className="kpi"><div className="text-xs text-gray-500">Выручка сети</div><div className="mt-1 text-2xl font-semibold">{formatRub(Number(billing?.summary?.totalRevenueRub || 0))}</div></div>
-        <div className="kpi"><div className="text-xs text-gray-500">Роялти к оплате</div><div className="mt-1 text-2xl font-semibold">{formatRub(Number(billing?.summary?.totalRoyaltyDueRub || 0))}</div></div>
-        <div className="kpi"><div className="text-xs text-gray-500">SaaS active</div><div className="mt-1 text-2xl font-semibold">{Number(summary?.subscriptions?.active || 0)}</div></div>
+        <div className="crm-stat"><div className="text-xs text-gray-500">Выручка сети</div><div className="mt-1 text-2xl font-semibold">{formatRub(Number(billing?.summary?.totalRevenueRub || 0))}</div></div>
+        <div className="crm-stat"><div className="text-xs text-gray-500">Роялти к оплате</div><div className="mt-1 text-2xl font-semibold">{formatRub(Number(billing?.summary?.totalRoyaltyDueRub || 0))}</div></div>
+        <div className="crm-stat"><div className="text-xs text-gray-500">SaaS active</div><div className="mt-1 text-2xl font-semibold">{Number(summary?.subscriptions?.active || 0)}</div></div>
       </section>
 
       <section className="mb-4 grid gap-2 md:grid-cols-2">
-        <div className="kpi"><div className="text-xs text-gray-500">Выручка Франшиза</div><div className="mt-1 text-2xl font-semibold">{formatRub(franchiseRevenue)}</div></div>
-        <div className="kpi"><div className="text-xs text-gray-500">Выручка SaaS</div><div className="mt-1 text-2xl font-semibold">{formatRub(saasRevenue)}</div></div>
+        <div className="crm-stat"><div className="text-xs text-gray-500">Выручка Франшиза</div><div className="mt-1 text-2xl font-semibold">{formatRub(franchiseRevenue)}</div></div>
+        <div className="crm-stat"><div className="text-xs text-gray-500">Выручка SaaS</div><div className="mt-1 text-2xl font-semibold">{formatRub(saasRevenue)}</div></div>
       </section>
 
-      <section className="panel mb-4 text-sm">
+      <section className="crm-card mb-4 text-sm">
         <h2 className="mb-2 text-base font-semibold">Лидеры периода</h2>
         <div className="grid gap-2 md:grid-cols-2">
-          <div className="kpi"><div className="text-xs text-gray-500">Топ франчайзи</div><div className="mt-1 text-base font-semibold">{topFranchisee?.franchiseeName || '—'}</div><div className="text-xs text-gray-500">{topFranchisee ? formatRub(Number(topFranchisee.revenueRub || 0)) : '—'}</div></div>
-          <div className="kpi"><div className="text-xs text-gray-500">Топ SaaS клиент</div><div className="mt-1 text-base font-semibold">{topSaasTenant?.tenantName || '—'}</div><div className="text-xs text-gray-500">{topSaasTenant ? formatRub(Number(topSaasTenant.revenueRub || 0)) : '—'}</div></div>
+          <div className="crm-stat"><div className="text-xs text-gray-500">Топ франчайзи</div><div className="mt-1 text-base font-semibold">{topFranchisee?.franchiseeName || '—'}</div><div className="text-xs text-gray-500">{topFranchisee ? formatRub(Number(topFranchisee.revenueRub || 0)) : '—'}</div></div>
+          <div className="crm-stat"><div className="text-xs text-gray-500">Топ SaaS клиент</div><div className="mt-1 text-base font-semibold">{topSaasTenant?.tenantName || '—'}</div><div className="text-xs text-gray-500">{topSaasTenant ? formatRub(Number(topSaasTenant.revenueRub || 0)) : '—'}</div></div>
         </div>
       </section>
 
-      <section className="panel text-sm">
+      <section className="crm-card text-sm">
         <h2 className="mb-2 text-base font-semibold">Быстрые переходы</h2>
         <div className="flex flex-wrap gap-2">
           <button className="btn" onClick={() => router.push('/owner/franchisees')}>Франчайзи</button>

@@ -148,13 +148,13 @@ export default function OwnerSaasDetailsPage() {
       {error && <div className="alert">{error}</div>}
 
       <section className="mb-4 grid gap-2 md:grid-cols-4">
-        <div className="kpi"><div className="text-xs text-gray-500">План</div><div className="mt-1 text-2xl font-semibold">{tenant?.saasPlan || '—'}</div></div>
-        <div className="kpi"><div className="text-xs text-gray-500">Статус</div><div className="mt-1 text-2xl font-semibold">{tenant?.saasSubscriptionStatus || '—'}</div></div>
-        <div className="kpi"><div className="text-xs text-gray-500">Выручка (месяц)</div><div className="mt-1 text-2xl font-semibold">{formatRub(Number(tenantBilling?.revenueRub || 0))}</div></div>
-        <div className="kpi"><div className="text-xs text-gray-500">Ранг в SaaS</div><div className="mt-1 text-2xl font-semibold">{saasRank ? `#${saasRank}` : '—'}</div></div>
+        <div className="crm-stat"><div className="text-xs text-gray-500">План</div><div className="mt-1 text-2xl font-semibold">{tenant?.saasPlan || '—'}</div></div>
+        <div className="crm-stat"><div className="text-xs text-gray-500">Статус</div><div className="mt-1 text-2xl font-semibold">{tenant?.saasSubscriptionStatus || '—'}</div></div>
+        <div className="crm-stat"><div className="text-xs text-gray-500">Выручка (месяц)</div><div className="mt-1 text-2xl font-semibold">{formatRub(Number(tenantBilling?.revenueRub || 0))}</div></div>
+        <div className="crm-stat"><div className="text-xs text-gray-500">Ранг в SaaS</div><div className="mt-1 text-2xl font-semibold">{saasRank ? `#${saasRank}` : '—'}</div></div>
       </section>
 
-      <section className="panel text-sm">
+      <section className="crm-card text-sm">
         <div className="mb-2 text-xs text-gray-500">Текущий trial до: {trialLabel}</div>
         <div className="mb-2 text-xs text-gray-500">Платежей (PAID, месяц): {tenantBilling?.paidPaymentsCount ?? 0} · Роялти (месяц): {formatRub(Number(tenantBilling?.royaltyDueRub || 0))}</div>
         {edit && (

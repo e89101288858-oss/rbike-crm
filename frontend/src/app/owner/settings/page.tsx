@@ -166,16 +166,16 @@ export default function OwnerSettingsPage() {
       </section>
 
       {tab === 'GENERAL' && (
-        <section className="panel grid gap-2 text-sm md:grid-cols-4">
-          <div className="kpi"><div className="text-xs text-gray-500">Франчайзи</div><div className="mt-1 text-2xl font-semibold">{franchiseOnly.length}</div></div>
-          <div className="kpi"><div className="text-xs text-gray-500">Точек доступа OWNER</div><div className="mt-1 text-2xl font-semibold">{tenants.length}</div></div>
-          <div className="kpi"><div className="text-xs text-gray-500">Пользователей</div><div className="mt-1 text-2xl font-semibold">{users.length}</div></div>
-          <div className="kpi"><div className="text-xs text-gray-500">Заявок PENDING</div><div className="mt-1 text-2xl font-semibold">{requests.filter((r) => r.status === 'PENDING').length}</div></div>
+        <section className="crm-card grid gap-2 text-sm md:grid-cols-4">
+          <div className="crm-stat"><div className="text-xs text-gray-500">Франчайзи</div><div className="mt-1 text-2xl font-semibold">{franchiseOnly.length}</div></div>
+          <div className="crm-stat"><div className="text-xs text-gray-500">Точек доступа OWNER</div><div className="mt-1 text-2xl font-semibold">{tenants.length}</div></div>
+          <div className="crm-stat"><div className="text-xs text-gray-500">Пользователей</div><div className="mt-1 text-2xl font-semibold">{users.length}</div></div>
+          <div className="crm-stat"><div className="text-xs text-gray-500">Заявок PENDING</div><div className="mt-1 text-2xl font-semibold">{requests.filter((r) => r.status === 'PENDING').length}</div></div>
         </section>
       )}
 
       {tab === 'REQUESTS' && (
-        <section className="panel text-sm">
+        <section className="crm-card text-sm">
           <h2 className="mb-2 text-base font-semibold">Заявки на регистрацию</h2>
           <div className="space-y-2">
             {requests.filter((r) => r.status === 'PENDING').map((r) => {
@@ -209,7 +209,7 @@ export default function OwnerSettingsPage() {
       )}
 
       {tab === 'USERS' && (
-        <section className="panel text-sm">
+        <section className="crm-card text-sm">
           <h2 className="mb-2 text-base font-semibold">Пользователи</h2>
 
           <form onSubmit={createUser} className="mb-3 grid gap-2 md:grid-cols-5">
@@ -252,7 +252,7 @@ export default function OwnerSettingsPage() {
       )}
 
       {tab === 'TEMPLATE' && (
-        <section className="panel text-sm">
+        <section className="crm-card text-sm">
           <h2 className="mb-2 text-base font-semibold">Шаблон договора</h2>
           <div className="mb-2 max-w-md">
             <select className="select" value={templateTenantId} onChange={async (e) => {
@@ -272,7 +272,7 @@ export default function OwnerSettingsPage() {
       )}
 
       {tab === 'AUDIT' && (
-        <section className="panel text-sm">
+        <section className="crm-card text-sm">
           <h2 className="mb-2 text-base font-semibold">Аудит</h2>
           <div className="space-y-1">
             {auditRows.map((a: any) => (

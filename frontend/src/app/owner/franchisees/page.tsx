@@ -51,13 +51,13 @@ export default function OwnerFranchiseesPage() {
       {error && <div className="alert">{error}</div>}
 
       <section className="mb-4 grid gap-2 md:grid-cols-4">
-        <div className="kpi"><div className="text-xs text-gray-500">Всего франчайзи</div><div className="mt-1 text-2xl font-semibold">{total}</div></div>
-        <div className="kpi"><div className="text-xs text-gray-500">Активные франчайзи</div><div className="mt-1 text-2xl font-semibold">{active}</div></div>
-        <div className="kpi"><div className="text-xs text-gray-500">Выручка сети (месяц)</div><div className="mt-1 text-2xl font-semibold">{formatRub(Number(billing?.summary?.totalRevenueRub || 0))}</div></div>
-        <div className="kpi"><div className="text-xs text-gray-500">Роялти (месяц)</div><div className="mt-1 text-2xl font-semibold">{formatRub(Number(billing?.summary?.totalRoyaltyDueRub || 0))}</div></div>
+        <div className="crm-stat"><div className="text-xs text-gray-500">Всего франчайзи</div><div className="mt-1 text-2xl font-semibold">{total}</div></div>
+        <div className="crm-stat"><div className="text-xs text-gray-500">Активные франчайзи</div><div className="mt-1 text-2xl font-semibold">{active}</div></div>
+        <div className="crm-stat"><div className="text-xs text-gray-500">Выручка сети (месяц)</div><div className="mt-1 text-2xl font-semibold">{formatRub(Number(billing?.summary?.totalRevenueRub || 0))}</div></div>
+        <div className="crm-stat"><div className="text-xs text-gray-500">Роялти (месяц)</div><div className="mt-1 text-2xl font-semibold">{formatRub(Number(billing?.summary?.totalRoyaltyDueRub || 0))}</div></div>
       </section>
 
-      <section className="panel text-sm">
+      <section className="crm-card text-sm">
         <h2 className="mb-2 text-base font-semibold">Список франчайзи</h2>
         <div className="table-wrap">
           <table className="table table-sticky mobile-cards">

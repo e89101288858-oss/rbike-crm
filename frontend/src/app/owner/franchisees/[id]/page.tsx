@@ -141,19 +141,19 @@ export default function OwnerFranchiseeDetailsPage() {
       {error && <div className="alert">{error}</div>}
 
       <section className="mb-4 grid gap-2 md:grid-cols-4">
-        <div className="kpi"><div className="text-xs text-gray-500">Точек</div><div className="mt-1 text-2xl font-semibold">{tenants.length}</div></div>
-        <div className="kpi"><div className="text-xs text-gray-500">Активных точек</div><div className="mt-1 text-2xl font-semibold">{tenants.filter((t) => t.isActive).length}</div></div>
-        <div className="kpi"><div className="text-xs text-gray-500">Выручка (месяц)</div><div className="mt-1 text-2xl font-semibold">{formatRub(Number(billing?.revenueRub || 0))}</div></div>
-        <div className="kpi"><div className="text-xs text-gray-500">Роялти (месяц)</div><div className="mt-1 text-2xl font-semibold">{formatRub(Number(billing?.royaltyDueRub || 0))}</div></div>
+        <div className="crm-stat"><div className="text-xs text-gray-500">Точек</div><div className="mt-1 text-2xl font-semibold">{tenants.length}</div></div>
+        <div className="crm-stat"><div className="text-xs text-gray-500">Активных точек</div><div className="mt-1 text-2xl font-semibold">{tenants.filter((t) => t.isActive).length}</div></div>
+        <div className="crm-stat"><div className="text-xs text-gray-500">Выручка (месяц)</div><div className="mt-1 text-2xl font-semibold">{formatRub(Number(billing?.revenueRub || 0))}</div></div>
+        <div className="crm-stat"><div className="text-xs text-gray-500">Роялти (месяц)</div><div className="mt-1 text-2xl font-semibold">{formatRub(Number(billing?.royaltyDueRub || 0))}</div></div>
       </section>
 
       <section className="mb-4 grid gap-2 md:grid-cols-3">
-        <div className="kpi"><div className="text-xs text-gray-500">Средняя выручка на точку</div><div className="mt-1 text-2xl font-semibold">{formatRub(avgRevenuePerPoint)}</div></div>
-        <div className="kpi"><div className="text-xs text-gray-500">Средний роялти на точку</div><div className="mt-1 text-2xl font-semibold">{formatRub(avgRoyaltyPerPoint)}</div></div>
-        <div className="kpi"><div className="text-xs text-gray-500">Топ точка (месяц)</div><div className="mt-1 text-base font-semibold">{topTenant?.tenantName || '—'}</div><div className="text-xs text-gray-500">{topTenant ? formatRub(Number(topTenant.revenueRub || 0)) : '—'}</div></div>
+        <div className="crm-stat"><div className="text-xs text-gray-500">Средняя выручка на точку</div><div className="mt-1 text-2xl font-semibold">{formatRub(avgRevenuePerPoint)}</div></div>
+        <div className="crm-stat"><div className="text-xs text-gray-500">Средний роялти на точку</div><div className="mt-1 text-2xl font-semibold">{formatRub(avgRoyaltyPerPoint)}</div></div>
+        <div className="crm-stat"><div className="text-xs text-gray-500">Топ точка (месяц)</div><div className="mt-1 text-base font-semibold">{topTenant?.tenantName || '—'}</div><div className="text-xs text-gray-500">{topTenant ? formatRub(Number(topTenant.revenueRub || 0)) : '—'}</div></div>
       </section>
 
-      <section className="panel mb-4 text-sm">
+      <section className="crm-card mb-4 text-sm">
         <h2 className="mb-2 text-base font-semibold">Финансы по точкам (месяц)</h2>
         <div className="table-wrap">
           <table className="table table-sticky mobile-cards">
@@ -182,7 +182,7 @@ export default function OwnerFranchiseeDetailsPage() {
         </div>
       </section>
 
-      <section className="panel text-sm">
+      <section className="crm-card text-sm">
         <h2 className="mb-2 text-base font-semibold">Точки франчайзи</h2>
         <div className="table-wrap">
           <table className="table table-sticky mobile-cards">

@@ -38,13 +38,13 @@ export default function OwnerSaasPage() {
       {error && <div className="alert">{error}</div>}
 
       <section className="mb-4 grid gap-2 md:grid-cols-4">
-        <div className="kpi"><div className="text-xs text-gray-500">SaaS клиентов</div><div className="mt-1 text-2xl font-semibold">{Number(summary?.totalSaasTenants || 0)}</div></div>
-        <div className="kpi"><div className="text-xs text-gray-500">Trial</div><div className="mt-1 text-2xl font-semibold">{Number(summary?.subscriptions?.trial || 0)}</div></div>
-        <div className="kpi"><div className="text-xs text-gray-500">Active</div><div className="mt-1 text-2xl font-semibold">{Number(summary?.subscriptions?.active || 0)}</div></div>
-        <div className="kpi"><div className="text-xs text-gray-500">Trial ≤ 7 дней</div><div className="mt-1 text-2xl font-semibold">{Number(summary?.trialExpiringSoon || 0)}</div></div>
+        <div className="crm-stat"><div className="text-xs text-gray-500">SaaS клиентов</div><div className="mt-1 text-2xl font-semibold">{Number(summary?.totalSaasTenants || 0)}</div></div>
+        <div className="crm-stat"><div className="text-xs text-gray-500">Trial</div><div className="mt-1 text-2xl font-semibold">{Number(summary?.subscriptions?.trial || 0)}</div></div>
+        <div className="crm-stat"><div className="text-xs text-gray-500">Active</div><div className="mt-1 text-2xl font-semibold">{Number(summary?.subscriptions?.active || 0)}</div></div>
+        <div className="crm-stat"><div className="text-xs text-gray-500">Trial ≤ 7 дней</div><div className="mt-1 text-2xl font-semibold">{Number(summary?.trialExpiringSoon || 0)}</div></div>
       </section>
 
-      <section className="panel text-sm">
+      <section className="crm-card text-sm">
         <h2 className="mb-2 text-base font-semibold">Список SaaS клиентов</h2>
         <div className="table-wrap">
           <table className="table table-sticky mobile-cards">

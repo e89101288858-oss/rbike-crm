@@ -176,7 +176,7 @@ export default function TenantSettingsPage() {
       {error && <div className="alert">{error}</div>}
       {success && <div className="alert-success">{success}</div>}
 
-      <section className="panel mb-4 text-sm">
+      <section className="crm-card mb-4 text-sm">
         <div className="mb-3 text-xs text-gray-500">Точка: <b>{settings?.name || '—'}</b></div>
         <h2 className="mb-2 text-base font-semibold">Условия аренды</h2>
 
@@ -211,7 +211,7 @@ export default function TenantSettingsPage() {
         </div>
       </section>
 
-      <section className="panel mb-4 text-sm">
+      <section className="crm-card mb-4 text-sm">
         <h2 className="mb-2 text-base font-semibold">Данные аккаунта</h2>
         <div className="grid gap-2 md:grid-cols-2">
           <input className="input" placeholder="Email" value={accountForm.email} onChange={(e) => setAccountForm((p) => ({ ...p, email: e.target.value }))} />
@@ -225,25 +225,25 @@ export default function TenantSettingsPage() {
         <div className="mt-4"><button className="btn-primary" onClick={saveAccountSettings}>Сохранить данные аккаунта</button></div>
       </section>
 
-      <section className="panel mb-4 text-sm">
+      <section className="crm-card mb-4 text-sm">
         <h2 className="mb-2 text-base font-semibold">Тариф и лимиты</h2>
         {account?.tenant?.mode === 'SAAS' ? (
           <div className="grid gap-2 md:grid-cols-2">
-            <div className="kpi">
+            <div className="crm-stat">
               <div className="text-xs text-gray-500">План</div>
               <div className="mt-1 text-base font-semibold">{account?.billing?.plan || 'STARTER'}</div>
             </div>
-            <div className="kpi">
+            <div className="crm-stat">
               <div className="text-xs text-gray-500">Статус</div>
               <div className="mt-1 text-base font-semibold">{account?.billing?.status || 'TRIAL'}</div>
             </div>
-            <div className="kpi">
+            <div className="crm-stat">
               <div className="text-xs text-gray-500">Велосипеды</div>
               <div className="mt-1 text-base font-semibold">
                 {Number(account?.billing?.usage?.bikes || 0)} / {account?.billing?.limits?.maxBikes ?? '∞'}
               </div>
             </div>
-            <div className="kpi">
+            <div className="crm-stat">
               <div className="text-xs text-gray-500">Активные аренды</div>
               <div className="mt-1 text-base font-semibold">
                 {Number(account?.billing?.usage?.activeRentals || 0)} / {account?.billing?.limits?.maxActiveRentals ?? '∞'}
@@ -255,7 +255,7 @@ export default function TenantSettingsPage() {
         )}
       </section>
 
-      <section className="panel text-sm">
+      <section className="crm-card text-sm">
         <h2 className="mb-2 text-base font-semibold">Безопасность</h2>
         <div className="mb-2 text-xs text-gray-500">
           Последняя смена пароля: <b>{account?.user?.passwordChangedAt ? new Date(account.user.passwordChangedAt).toLocaleString('ru-RU') : 'ещё не менялся'}</b>
