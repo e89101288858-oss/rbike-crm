@@ -361,10 +361,10 @@ export default function OwnerSettingsPage() {
               <button className="btn" onClick={assignUserToSelectedTenant}>Назначить</button>
             </div>
             <div className="mt-2 space-y-1">
-              {tenantAssignedUsers.map((u: any) => (
-                <div key={u.id} className="flex items-center justify-between rounded border border-white/10 px-2 py-1 text-sm">
-                  <span>{u.email}</span>
-                  <button className="btn border-red-300 text-red-700" onClick={() => removeUserFromSelectedTenant(u.id)}>Убрать</button>
+              {tenantAssignedUsers.map((row: any) => (
+                <div key={row.user?.id || row.userId} className="flex items-center justify-between rounded border border-white/10 px-2 py-1 text-sm">
+                  <span>{row.user?.email || row.userId}</span>
+                  <button className="btn border-red-300 text-red-700" onClick={() => removeUserFromSelectedTenant(row.user?.id || row.userId)}>Убрать</button>
                 </div>
               ))}
               {!tenantAssignedUsers.length && <div className="text-xs text-gray-500">Для выбранного tenant назначений пока нет</div>}
@@ -375,7 +375,7 @@ export default function OwnerSettingsPage() {
             {users.map((u: any) => (
               <div key={u.id} className="soft-card">
                 <div className="mb-2 font-medium">{u.email}</div>
-                <div className="grid gap-2 md:grid-cols-5">
+                <div className="grid gap-2 md:grid-cols-6">
                   <select className="select" value={u.role} onChange={(e) => setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, role: e.target.value } : x))} disabled={u.role === 'OWNER'}>
                     <option value="OWNER">OWNER</option>
                     <option value="FRANCHISEE">FRANCHISEE</option>
@@ -383,12 +383,17 @@ export default function OwnerSettingsPage() {
                     <option value="MANAGER">MANAGER</option>
                     <option value="MECHANIC">MECHANIC</option>
                   </select>
-                  <select className="select" value={u.franchiseeId || ''} onChange={(e) => setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, franchiseeId: e.target.value } : x))} disabled={u.role !== 'FRANCHISEE' || u.role === 'OWNER'}>
-                    <option value="">Франчайзи</option>
-                    {activeFranchisees.map((f: any) => <option key={f.id} value={f.id}>{f.name}</option>)}
-                  </select>
+                  {u.role === 'FRANCHISEE' ? (
+                    <select className="select" value={u.franchiseeId || ''} onChange={(e) => setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, franchiseeId: e.target.value } : x))} disabled={u.role === 'OWNER'}>
+                      <option value="">Франчайзи</option>
+                      {activeFranchisees.map((f: any) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                    </select>
+                  ) : (
+                    <div className="text-xs text-gray-500 flex items-center px-2">{u.role === 'SAAS_USER' ? 'Привязка только через tenant assignments' : 'Без franchise привязки'}</div>
+                  )}
                   <label className="flex items-center gap-2 px-2"><input type="checkbox" checked={!!u.isActive} onChange={(e) => setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, isActive: e.target.checked } : x))} disabled={u.role === 'OWNER'} />Активен</label>
                   <div className="text-xs text-gray-500 flex items-center">{u.role === 'SAAS_USER' ? 'Tenant scope' : u.role === 'FRANCHISEE' ? 'Franchise scope' : 'Local scope'}</div>
+                  <button className="btn" onClick={() => router.push(`/owner/users/${u.id}`)}>Карточка</button>
                   <button className="btn" onClick={() => saveUser(u)} disabled={u.role === 'OWNER'}>Сохранить</button>
                 </div>
               </div>

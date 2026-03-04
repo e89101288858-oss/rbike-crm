@@ -536,7 +536,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
-  adminUpdateUser: (id: string, payload: { role?: 'FRANCHISEE' | 'MANAGER' | 'MECHANIC'; isActive?: boolean; password?: string; franchiseeId?: string }) =>
+  adminUpdateUser: (id: string, payload: { role?: 'FRANCHISEE' | 'SAAS_USER' | 'MANAGER' | 'MECHANIC'; isActive?: boolean; password?: string; franchiseeId?: string }) =>
     request<any>(`/admin/users/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(payload),
