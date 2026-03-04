@@ -28,6 +28,7 @@ export default function OwnerSettingsPage() {
   const [templateHtml, setTemplateHtml] = useState('')
 
   const [newUser, setNewUser] = useState({ email: '', password: '', role: 'MANAGER', franchiseeId: '' })
+  const [newSaasTenantIds, setNewSaasTenantIds] = useState<string[]>([])
 
   const franchiseOnly = useMemo(
     () => franchisees.filter((f) => (f.tenants || []).some((t: any) => t.mode === 'FRANCHISE')),
@@ -36,6 +37,10 @@ export default function OwnerSettingsPage() {
   const activeFranchisees = useMemo(() => franchiseOnly.filter((f) => f.isActive), [franchiseOnly])
   const franchiseTenants = useMemo(
     () => tenants.filter((t: any) => t.mode === 'FRANCHISE'),
+    [tenants],
+  )
+  const saasTenants = useMemo(
+    () => tenants.filter((t: any) => t.mode === 'SAAS'),
     [tenants],
   )
 
@@ -115,16 +120,28 @@ export default function OwnerSettingsPage() {
     }
   }
 
+
+  function toggleNewSaasTenant(tenantId: string) {
+    setNewSaasTenantIds((prev) => prev.includes(tenantId) ? prev.filter((x) => x !== tenantId) : [...prev, tenantId])
+  }
+
   async function createUser(e: FormEvent) {
     e.preventDefault()
     try {
-      await api.adminCreateUser({
+      const created = await api.adminCreateUser({
         email: newUser.email.trim(),
         password: newUser.password,
-        role: newUser.role as 'FRANCHISEE' | 'MANAGER' | 'MECHANIC',
+        role: newUser.role as 'FRANCHISEE' | 'SAAS_USER' | 'MANAGER' | 'MECHANIC',
         franchiseeId: newUser.role === 'FRANCHISEE' ? newUser.franchiseeId || undefined : undefined,
       })
+
+      if (newUser.role === 'SAAS_USER') {
+        if (!newSaasTenantIds.length) throw new Error('Для SAAS_USER выбери хотя бы один SaaS tenant')
+        await Promise.all(newSaasTenantIds.map((tenantId) => api.assignUserToTenant(tenantId, created.id)))
+      }
+
       setNewUser({ email: '', password: '', role: 'MANAGER', franchiseeId: '' })
+      setNewSaasTenantIds([])
       setSuccess('Пользователь создан')
       await load()
     } catch (err) {
@@ -260,9 +277,24 @@ export default function OwnerSettingsPage() {
               <option value="">Франчайзи (только для FRANCHISEE)</option>
               {activeFranchisees.map((f: any) => <option key={f.id} value={f.id}>{f.name}</option>)}
             </select>
-            <div className="text-xs text-gray-500 flex items-center">{newUser.role === 'SAAS_USER' ? 'После создания назначь tenant в разделе Tenant Users.' : ' '}</div>
+            <div className="text-xs text-gray-500 flex items-center">{newUser.role === 'SAAS_USER' ? 'Выбери tenant(ы) ниже и создадим пользователя сразу с назначениями.' : ' '}</div>
             <button className="btn-primary">Создать</button>
           </form>
+
+          {newUser.role === 'SAAS_USER' && (
+            <div className="mb-3 rounded-lg border border-white/10 bg-[#181a1f] p-3">
+              <div className="mb-2 text-xs text-gray-400">Назначение tenant для SAAS_USER (wizard step)</div>
+              <div className="grid gap-2 md:grid-cols-2">
+                {saasTenants.map((t: any) => (
+                  <label key={t.id} className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={newSaasTenantIds.includes(t.id)} onChange={() => toggleNewSaasTenant(t.id)} />
+                    {t.name}
+                  </label>
+                ))}
+                {!saasTenants.length && <div className="text-xs text-gray-500">Нет активных SaaS tenant для назначения</div>}
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             {users.map((u: any) => (
@@ -272,7 +304,7 @@ export default function OwnerSettingsPage() {
                   <select className="select" value={u.role} onChange={(e) => setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, role: e.target.value } : x))} disabled={u.role === 'OWNER'}>
                     <option value="OWNER">OWNER</option>
                     <option value="FRANCHISEE">FRANCHISEE</option>
-              <option value="SAAS_USER">SAAS_USER</option>
+                    <option value="SAAS_USER">SAAS_USER</option>
                     <option value="MANAGER">MANAGER</option>
                     <option value="MECHANIC">MECHANIC</option>
                   </select>
