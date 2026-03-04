@@ -236,7 +236,18 @@ export default function OwnerSettingsPage() {
         <section className="crm-card text-sm">
           <h2 className="mb-2 text-base font-semibold">Пользователи</h2>
 
-          <form onSubmit={createUser} className="mb-3 grid gap-2 md:grid-cols-5">
+          <div className="mb-3 grid gap-2 md:grid-cols-2">
+            <div className="crm-stat">
+              <div className="text-xs text-gray-500">FRANCHISEE scope</div>
+              <div className="mt-1 text-sm">Доступ на уровне франчайзи (его точки FRANCHISE).</div>
+            </div>
+            <div className="crm-stat">
+              <div className="text-xs text-gray-500">SAAS_USER scope</div>
+              <div className="mt-1 text-sm">Только tenant-scoped доступ через назначения в tenant users.</div>
+            </div>
+          </div>
+
+          <form onSubmit={createUser} className="mb-3 grid gap-2 md:grid-cols-6">
             <input className="input" placeholder="Email" value={newUser.email} onChange={(e) => setNewUser((p) => ({ ...p, email: e.target.value }))} required />
             <input className="input" type="password" placeholder="Пароль" value={newUser.password} onChange={(e) => setNewUser((p) => ({ ...p, password: e.target.value }))} required minLength={6} />
             <select className="select" value={newUser.role} onChange={(e) => setNewUser((p) => ({ ...p, role: e.target.value }))}>
@@ -246,9 +257,10 @@ export default function OwnerSettingsPage() {
               <option value="SAAS_USER">SAAS_USER</option>
             </select>
             <select className="select" value={newUser.franchiseeId} onChange={(e) => setNewUser((p) => ({ ...p, franchiseeId: e.target.value }))} disabled={newUser.role !== 'FRANCHISEE'}>
-              <option value="">Франчайзи</option>
+              <option value="">Франчайзи (только для FRANCHISEE)</option>
               {activeFranchisees.map((f: any) => <option key={f.id} value={f.id}>{f.name}</option>)}
             </select>
+            <div className="text-xs text-gray-500 flex items-center">{newUser.role === 'SAAS_USER' ? 'После создания назначь tenant в разделе Tenant Users.' : ' '}</div>
             <button className="btn-primary">Создать</button>
           </form>
 
@@ -256,7 +268,7 @@ export default function OwnerSettingsPage() {
             {users.map((u: any) => (
               <div key={u.id} className="soft-card">
                 <div className="mb-2 font-medium">{u.email}</div>
-                <div className="grid gap-2 md:grid-cols-4">
+                <div className="grid gap-2 md:grid-cols-5">
                   <select className="select" value={u.role} onChange={(e) => setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, role: e.target.value } : x))} disabled={u.role === 'OWNER'}>
                     <option value="OWNER">OWNER</option>
                     <option value="FRANCHISEE">FRANCHISEE</option>
@@ -269,6 +281,7 @@ export default function OwnerSettingsPage() {
                     {activeFranchisees.map((f: any) => <option key={f.id} value={f.id}>{f.name}</option>)}
                   </select>
                   <label className="flex items-center gap-2 px-2"><input type="checkbox" checked={!!u.isActive} onChange={(e) => setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, isActive: e.target.checked } : x))} disabled={u.role === 'OWNER'} />Активен</label>
+                  <div className="text-xs text-gray-500 flex items-center">{u.role === 'SAAS_USER' ? 'Tenant scope' : u.role === 'FRANCHISEE' ? 'Franchise scope' : 'Local scope'}</div>
                   <button className="btn" onClick={() => saveUser(u)} disabled={u.role === 'OWNER'}>Сохранить</button>
                 </div>
               </div>
