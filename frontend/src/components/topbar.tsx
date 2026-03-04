@@ -19,11 +19,7 @@ const ownerNav: NavGroup[] = [
   {
     title: 'OWNER',
     items: [
-      { href: '/owner', label: 'Обзор', roles: ['OWNER'] },
-      { href: '/owner/franchise', label: 'Франшиза', roles: ['OWNER'] },
-      { href: '/owner/saas', label: 'SaaS', roles: ['OWNER'] },
-      { href: '/owner/users', label: 'Пользователи', roles: ['OWNER'] },
-      { href: '/owner/system', label: 'Система', roles: ['OWNER'] },
+      { href: '/owner', label: 'Админка (reset)', roles: ['OWNER'] },
     ],
   },
 ]

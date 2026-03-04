@@ -5,9 +5,8 @@ import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'
 import { getToken } from '@/lib/auth'
-import { CrmCard } from '@/components/crm-ui'
 
-export default function OwnerSystemDomainPage() {
+export default function Page() {
   const router = useRouter()
 
   useEffect(() => {
@@ -25,23 +24,9 @@ export default function OwnerSystemDomainPage() {
   return (
     <main className="page with-sidebar">
       <Topbar />
-
-      <section className="grid gap-3 md:grid-cols-3">
-        <CrmCard>
-          <div className="text-lg font-semibold">Пользователи и роли</div>
-          <div className="mt-2 text-sm text-gray-400">Управление OWNER/FRANCHISEE/SAAS_USER/MANAGER/MECHANIC.</div>
-          <button className="btn-primary mt-4" onClick={() => router.push('/owner/settings')}>Открыть</button>
-        </CrmCard>
-        <CrmCard>
-          <div className="text-lg font-semibold">Заявки и аудит</div>
-          <div className="mt-2 text-sm text-gray-400">Регистрации, одобрение, журнал действий.</div>
-          <button className="btn-primary mt-4" onClick={() => router.push('/owner/settings')}>Открыть</button>
-        </CrmCard>
-        <CrmCard>
-          <div className="text-lg font-semibold">Шаблоны и системные настройки</div>
-          <div className="mt-2 text-sm text-gray-400">Контрактные шаблоны и OWNER-конфигурация.</div>
-          <button className="btn-primary mt-4" onClick={() => router.push('/owner/settings')}>Открыть</button>
-        </CrmCard>
+      <section className="crm-card text-sm">
+        <div className="text-base font-semibold">OWNER / Система</div>
+        <div className="mt-2 text-gray-400">Раздел очищен. Пересобираем админ-панель с нуля.</div>
       </section>
     </main>
   )
