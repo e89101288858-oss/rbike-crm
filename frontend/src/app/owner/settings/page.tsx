@@ -29,6 +29,9 @@ export default function OwnerSettingsPage() {
 
   const [newUser, setNewUser] = useState({ email: '', password: '', role: 'MANAGER', franchiseeId: '' })
   const [newSaasTenantIds, setNewSaasTenantIds] = useState<string[]>([])
+  const [selectedSaasTenantId, setSelectedSaasTenantId] = useState('')
+  const [tenantAssignedUsers, setTenantAssignedUsers] = useState<any[]>([])
+  const [assignUserId, setAssignUserId] = useState('')
 
   const franchiseOnly = useMemo(
     () => franchisees.filter((f) => (f.tenants || []).some((t: any) => t.mode === 'FRANCHISE')),
@@ -42,6 +45,10 @@ export default function OwnerSettingsPage() {
   const saasTenants = useMemo(
     () => tenants.filter((t: any) => t.mode === 'SAAS'),
     [tenants],
+  )
+  const saasUsers = useMemo(
+    () => users.filter((u: any) => u.role === 'SAAS_USER' && u.isActive),
+    [users],
   )
 
   async function load() {
@@ -72,6 +79,11 @@ export default function OwnerSettingsPage() {
         const tpl = await api.getContractTemplate()
         setTemplateHtml(tpl.templateHtml || '')
       }
+
+      const saasTenantsLocal = myTenants.filter((t: any) => t.mode === 'SAAS')
+      if (!selectedSaasTenantId && saasTenantsLocal[0]?.id) {
+        setSelectedSaasTenantId(saasTenantsLocal[0].id)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки настроек OWNER')
     }
@@ -94,6 +106,12 @@ export default function OwnerSettingsPage() {
     }, 2500)
     return () => clearTimeout(t)
   }, [error, success])
+
+  useEffect(() => {
+    if (tab !== 'USERS') return
+    if (!selectedSaasTenantId) return
+    loadTenantAssignments(selectedSaasTenantId).catch(() => {})
+  }, [tab, selectedSaasTenantId])
 
   async function approveRequest(r: any) {
     try {
@@ -123,6 +141,39 @@ export default function OwnerSettingsPage() {
 
   function toggleNewSaasTenant(tenantId: string) {
     setNewSaasTenantIds((prev) => prev.includes(tenantId) ? prev.filter((x) => x !== tenantId) : [...prev, tenantId])
+  }
+
+  async function loadTenantAssignments(tenantId: string) {
+    if (!tenantId) {
+      setTenantAssignedUsers([])
+      return
+    }
+    const rows = await api.tenantUsers(tenantId)
+    setTenantAssignedUsers(rows)
+  }
+
+  async function assignUserToSelectedTenant() {
+    try {
+      if (!selectedSaasTenantId) throw new Error('Выбери SaaS tenant')
+      if (!assignUserId) throw new Error('Выбери SAAS_USER')
+      await api.assignUserToTenant(selectedSaasTenantId, assignUserId)
+      setSuccess('Пользователь назначен на tenant')
+      setAssignUserId('')
+      await loadTenantAssignments(selectedSaasTenantId)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка назначения на tenant')
+    }
+  }
+
+  async function removeUserFromSelectedTenant(userId: string) {
+    try {
+      if (!selectedSaasTenantId) throw new Error('Выбери SaaS tenant')
+      await api.removeUserFromTenant(selectedSaasTenantId, userId)
+      setSuccess('Назначение удалено')
+      await loadTenantAssignments(selectedSaasTenantId)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка удаления назначения')
+    }
   }
 
   async function createUser(e: FormEvent) {
@@ -295,6 +346,30 @@ export default function OwnerSettingsPage() {
               </div>
             </div>
           )}
+
+          <div className="mb-3 rounded-lg border border-white/10 bg-[#181a1f] p-3">
+            <div className="mb-2 text-xs text-gray-400">Tenant assignments (оперативное управление SAAS_USER)</div>
+            <div className="grid gap-2 md:grid-cols-3">
+              <select className="select" value={selectedSaasTenantId} onChange={(e) => setSelectedSaasTenantId(e.target.value)}>
+                <option value="">Выбери SaaS tenant</option>
+                {saasTenants.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+              <select className="select" value={assignUserId} onChange={(e) => setAssignUserId(e.target.value)}>
+                <option value="">Выбери SAAS_USER</option>
+                {saasUsers.map((u: any) => <option key={u.id} value={u.id}>{u.email}</option>)}
+              </select>
+              <button className="btn" onClick={assignUserToSelectedTenant}>Назначить</button>
+            </div>
+            <div className="mt-2 space-y-1">
+              {tenantAssignedUsers.map((u: any) => (
+                <div key={u.id} className="flex items-center justify-between rounded border border-white/10 px-2 py-1 text-sm">
+                  <span>{u.email}</span>
+                  <button className="btn border-red-300 text-red-700" onClick={() => removeUserFromSelectedTenant(u.id)}>Убрать</button>
+                </div>
+              ))}
+              {!tenantAssignedUsers.length && <div className="text-xs text-gray-500">Для выбранного tenant назначений пока нет</div>}
+            </div>
+          </div>
 
           <div className="space-y-2">
             {users.map((u: any) => (

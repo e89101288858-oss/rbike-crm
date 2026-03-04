@@ -91,9 +91,10 @@ export default function OwnerFranchiseeDetailsPage() {
           { revenueRub: 0, royaltyDueRub: 0, tenants: 0 },
         )
 
+        const franchiseTenantIds = new Set(franchiseTenants.map((t: any) => t.id))
         const perTenantMap = new Map<string, any>()
         for (const report of reports) {
-          for (const row of (report?.tenants || []).filter((x: any) => x.franchiseeId === params.id)) {
+          for (const row of (report?.tenants || []).filter((x: any) => franchiseTenantIds.has(x.tenantId))) {
             const cur = perTenantMap.get(row.tenantId) || { ...row, revenueRub: 0, royaltyDueRub: 0, paidPaymentsCount: 0 }
             cur.revenueRub += Number(row.revenueRub || 0)
             cur.royaltyDueRub += Number(row.royaltyDueRub || 0)
@@ -157,8 +158,8 @@ export default function OwnerFranchiseeDetailsPage() {
       <section className="mb-4 grid gap-2 md:grid-cols-4">
         <div className="crm-stat"><div className="text-xs text-gray-500">Точек</div><div className="mt-1 text-2xl font-semibold">{tenants.length}</div></div>
         <div className="crm-stat"><div className="text-xs text-gray-500">Активных точек</div><div className="mt-1 text-2xl font-semibold">{tenants.filter((t) => t.isActive).length}</div></div>
-        <div className="crm-stat"><div className="text-xs text-gray-500">Выручка (месяц)</div><div className="mt-1 text-2xl font-semibold">{formatRub(Number(billing?.revenueRub || 0))}</div></div>
-        <div className="crm-stat"><div className="text-xs text-gray-500">Роялти (месяц)</div><div className="mt-1 text-2xl font-semibold">{formatRub(Number(billing?.royaltyDueRub || 0))}</div></div>
+        <div className="crm-stat"><div className="text-xs text-gray-500">Выручка (период)</div><div className="mt-1 text-2xl font-semibold">{formatRub(Number(billing?.revenueRub || 0))}</div></div>
+        <div className="crm-stat"><div className="text-xs text-gray-500">Роялти (период)</div><div className="mt-1 text-2xl font-semibold">{formatRub(Number(billing?.royaltyDueRub || 0))}</div></div>
       </section>
 
       <section className="mb-4 grid gap-2 md:grid-cols-3">
@@ -168,7 +169,7 @@ export default function OwnerFranchiseeDetailsPage() {
       </section>
 
       <section className="crm-card mb-4 text-sm">
-        <h2 className="mb-2 text-base font-semibold">Финансы по точкам (месяц)</h2>
+        <h2 className="mb-2 text-base font-semibold">Финансы по точкам (период)</h2>
         <div className="table-wrap">
           <table className="table table-sticky mobile-cards">
             <thead>
