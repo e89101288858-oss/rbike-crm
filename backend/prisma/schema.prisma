@@ -88,6 +88,13 @@ enum SaaSSubscriptionStatus {
   CANCELED
 }
 
+enum SaaSInvoiceStatus {
+  PENDING
+  PAID
+  CANCELED
+  FAILED
+}
+
 model User {
   id           String       @id @default(uuid())
   email        String       @unique
@@ -118,6 +125,7 @@ model User {
   reviewedRegistrationRequests RegistrationRequest[] @relation("RegistrationReviewedBy")
   updatedContractTemplates ContractTemplate[]
   createdExpenses Expense[] @relation("ExpenseCreatedBy")
+  createdSaaSInvoices SaaSInvoice[] @relation("SaaSInvoiceCreatedBy")
 }
 
 model Franchisee {
@@ -163,6 +171,7 @@ model Tenant {
   expenses      Expense[]
   expenseBikes  ExpenseBike[]
   contractTemplate ContractTemplate?
+  saasInvoices      SaaSInvoice[]
 
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
@@ -457,4 +466,25 @@ model ContractTemplate {
   updatedBy   User?   @relation(fields: [updatedById], references: [id])
   updatedAt   DateTime @updatedAt
   createdAt   DateTime @default(now())
+}
+
+model SaaSInvoice {
+  id                String            @id @default(uuid())
+  tenantId           String
+  tenant             Tenant            @relation(fields: [tenantId], references: [id])
+  createdById        String?
+  createdBy          User?             @relation("SaaSInvoiceCreatedBy", fields: [createdById], references: [id])
+  plan               SaaSPlan
+  amountRub          Int
+  currency           String            @default("RUB")
+  status             SaaSInvoiceStatus @default(PENDING)
+  providerPaymentId  String?           @unique
+  checkoutUrl        String?
+  providerResponse   Json?
+  paidAt             DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  @@index([tenantId, createdAt])
+  @@index([status, createdAt])
 }

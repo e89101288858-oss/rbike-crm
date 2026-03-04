@@ -12,6 +12,8 @@ export default function TenantSettingsPage() {
   const [role, setRole] = useState('')
   const [settings, setSettings] = useState<any>(null)
   const [account, setAccount] = useState<any>(null)
+  const [billing, setBilling] = useState<any>(null)
+  const [billingBusy, setBillingBusy] = useState(false)
 
   const [tenantForm, setTenantForm] = useState({ dailyRateRub: 500, minRentalDays: 7 })
   const [accountForm, setAccountForm] = useState({
@@ -49,13 +51,15 @@ export default function TenantSettingsPage() {
 
       if (!getTenantId() && myTenants.length > 0) setTenantId(myTenants[0].id)
 
-      const [s, acc] = await Promise.all([
+      const [s, acc, bill] = await Promise.all([
         api.myTenantSettings(),
         api.myAccountSettings(),
+        api.mySaasBilling().catch(() => null),
       ])
 
       setSettings(s)
       setAccount(acc)
+      setBilling(bill)
 
       setTenantForm({
         dailyRateRub: Number(s.dailyRateRub || 500),
@@ -144,6 +148,19 @@ export default function TenantSettingsPage() {
       router.replace('/login?passwordChanged=1')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка смены пароля')
+    }
+  }
+
+  async function startCheckout(plan: 'STARTER' | 'PRO' | 'ENTERPRISE') {
+    try {
+      setBillingBusy(true)
+      const checkout = await api.createSaasCheckout(plan)
+      if (!checkout?.checkoutUrl) throw new Error('Платежная ссылка не получена')
+      window.location.href = checkout.checkoutUrl
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка запуска оплаты')
+    } finally {
+      setBillingBusy(false)
     }
   }
 
@@ -252,6 +269,30 @@ export default function TenantSettingsPage() {
           </div>
         ) : (
           <div className="text-xs text-gray-500">Тарифные лимиты доступны только для точек в режиме подписки.</div>
+        )}
+      </section>
+
+      <section className="crm-card mb-4 text-sm">
+        <h2 className="mb-2 text-base font-semibold">Биллинг и оплата</h2>
+        {account?.tenant?.mode === 'SAAS' ? (
+          <>
+            <div className="mb-3 text-xs text-gray-500">
+              Текущий план: <b>{billing?.tenant?.saasPlan || account?.billing?.plan || 'STARTER'}</b> · Статус: <b>{billing?.tenant?.saasSubscriptionStatus || account?.billing?.status || 'TRIAL'}</b>
+            </div>
+            <div className="mb-3 flex flex-wrap gap-2">
+              <button className="btn" disabled={billingBusy} onClick={() => startCheckout('STARTER')}>Оплатить STARTER ({billing?.prices?.STARTER ?? 1990} ₽)</button>
+              <button className="btn" disabled={billingBusy} onClick={() => startCheckout('PRO')}>Оплатить PRO ({billing?.prices?.PRO ?? 4990} ₽)</button>
+              <button className="btn" disabled={billingBusy} onClick={() => startCheckout('ENTERPRISE')}>Оплатить ENTERPRISE ({billing?.prices?.ENTERPRISE ?? 14990} ₽)</button>
+            </div>
+            <div className="space-y-1 text-xs">
+              {(billing?.invoices || []).slice(0, 5).map((inv: any) => (
+                <div key={inv.id}>{new Date(inv.createdAt).toLocaleString('ru-RU')} — {inv.plan} — {inv.amountRub} ₽ — {inv.status}</div>
+              ))}
+              {!(billing?.invoices || []).length && <div className="text-gray-500">Пока нет счетов</div>}
+            </div>
+          </>
+        ) : (
+          <div className="text-xs text-gray-500">Оплата доступна только для подписочных точек.</div>
         )}
       </section>
 

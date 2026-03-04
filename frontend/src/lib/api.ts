@@ -201,6 +201,13 @@ export const api = {
       method: 'PATCH',
     }, true),
 
+  mySaasBilling: () => request<any>('/my/saas-billing', undefined, true),
+  createSaasCheckout: (plan?: 'STARTER' | 'PRO' | 'ENTERPRISE') =>
+    request<any>('/my/saas-billing/checkout', {
+      method: 'POST',
+      body: JSON.stringify({ plan }),
+    }, true),
+
   clients: (query = '') => request<Client[]>(`/clients${query ? `?${query}` : ''}`, undefined, true),
 
   createClient: (payload: {

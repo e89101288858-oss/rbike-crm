@@ -13,6 +13,7 @@ import { ClientsModule } from './clients/clients.module'
 import { PaymentsModule } from './payments/payments.module'
 import { DocumentsModule } from './documents/documents.module'
 import { ExpensesModule } from './expenses/expenses.module'
+import { SaasBillingModule } from './saas-billing/saas-billing.module'
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { ExpensesModule } from './expenses/expenses.module'
     PaymentsModule,
     DocumentsModule,
     ExpensesModule,
+    SaasBillingModule,
   ],
 })
 export class AppModule {}

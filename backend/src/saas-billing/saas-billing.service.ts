@@ -1,0 +1,172 @@
+import { BadRequestException, Injectable } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
+import { PrismaService } from '../prisma/prisma.service'
+
+const PLAN_PRICES_RUB: Record<string, number> = {
+  STARTER: 1990,
+  PRO: 4990,
+  ENTERPRISE: 14990,
+}
+
+@Injectable()
+export class SaasBillingService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly config: ConfigService,
+  ) {}
+
+  private getYooAuthHeader() {
+    const shopId = this.config.get<string>('YOOKASSA_SHOP_ID')
+    const secretKey = this.config.get<string>('YOOKASSA_SECRET_KEY')
+    if (!shopId || !secretKey) throw new BadRequestException('YooKassa не настроена')
+    return `Basic ${Buffer.from(`${shopId}:${secretKey}`).toString('base64')}`
+  }
+
+  async createCheckout(tenantId: string, userId: string, plan?: 'STARTER' | 'PRO' | 'ENTERPRISE') {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { id: true, name: true, mode: true, saasPlan: true },
+    })
+    if (!tenant) throw new BadRequestException('Tenant не найден')
+    if (tenant.mode !== 'SAAS') throw new BadRequestException('Оплата доступна только для SaaS tenant')
+
+    const targetPlan = plan || (tenant.saasPlan || 'STARTER')
+    const amountRub = PLAN_PRICES_RUB[targetPlan]
+    if (!amountRub) throw new BadRequestException('Неизвестный план')
+
+    const returnUrl = this.config.get<string>('YOOKASSA_RETURN_URL') || 'https://app.rbcrm.ru/settings'
+
+    const invoice = await this.prisma.saaSInvoice.create({
+      data: {
+        tenantId,
+        createdById: userId,
+        plan: targetPlan as any,
+        amountRub,
+        currency: 'RUB',
+        status: 'PENDING',
+      },
+    })
+
+    const payload = {
+      amount: { value: amountRub.toFixed(2), currency: 'RUB' },
+      capture: true,
+      description: `rbCRM SaaS ${targetPlan} for ${tenant.name}`,
+      confirmation: {
+        type: 'redirect',
+        return_url: returnUrl,
+      },
+      metadata: {
+        invoiceId: invoice.id,
+        tenantId,
+        plan: targetPlan,
+      },
+    }
+
+    const response = await fetch('https://api.yookassa.ru/v3/payments', {
+      method: 'POST',
+      headers: {
+        Authorization: this.getYooAuthHeader(),
+        'Content-Type': 'application/json',
+        'Idempotence-Key': invoice.id,
+      },
+      body: JSON.stringify(payload),
+    })
+
+    const body = await response.json()
+    if (!response.ok) {
+      await this.prisma.saaSInvoice.update({
+        where: { id: invoice.id },
+        data: { status: 'FAILED', providerResponse: body as any },
+      })
+      throw new BadRequestException(body?.description || 'Ошибка создания платежа YooKassa')
+    }
+
+    await this.prisma.saaSInvoice.update({
+      where: { id: invoice.id },
+      data: {
+        providerPaymentId: body.id,
+        providerResponse: body as any,
+        checkoutUrl: body?.confirmation?.confirmation_url || null,
+      },
+    })
+
+    return {
+      invoiceId: invoice.id,
+      checkoutUrl: body?.confirmation?.confirmation_url || null,
+      status: body?.status || 'pending',
+      amountRub,
+      plan: targetPlan,
+    }
+  }
+
+  async getMyBilling(tenantId: string) {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { id: true, mode: true, saasPlan: true, saasSubscriptionStatus: true, saasTrialEndsAt: true },
+    })
+    if (!tenant) throw new BadRequestException('Tenant не найден')
+
+    const invoices = await this.prisma.saaSInvoice.findMany({
+      where: { tenantId },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+      select: {
+        id: true,
+        plan: true,
+        amountRub: true,
+        currency: true,
+        status: true,
+        createdAt: true,
+        paidAt: true,
+      },
+    })
+
+    return {
+      tenant,
+      invoices,
+      prices: PLAN_PRICES_RUB,
+    }
+  }
+
+  async handleWebhook(payload: any) {
+    const event = payload?.event
+    const obj = payload?.object
+    if (!event || !obj?.id) return { ok: true }
+
+    const invoiceId = obj?.metadata?.invoiceId
+    const byPayment = await this.prisma.saaSInvoice.findFirst({ where: { providerPaymentId: obj.id } })
+    const invoice = byPayment || (invoiceId ? await this.prisma.saaSInvoice.findUnique({ where: { id: invoiceId } }) : null)
+    if (!invoice) return { ok: true }
+
+    if (event === 'payment.succeeded') {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.saaSInvoice.update({
+          where: { id: invoice.id },
+          data: {
+            status: 'PAID',
+            paidAt: new Date(),
+            providerResponse: payload,
+          },
+        })
+
+        await tx.tenant.update({
+          where: { id: invoice.tenantId },
+          data: {
+            saasSubscriptionStatus: 'ACTIVE',
+            saasPlan: invoice.plan,
+          },
+        })
+      })
+    } else if (event === 'payment.canceled' || event === 'payment.waiting_for_capture') {
+      await this.prisma.saaSInvoice.update({
+        where: { id: invoice.id },
+        data: {
+          status: event === 'payment.canceled' ? 'CANCELED' : 'PENDING',
+          providerResponse: payload,
+        },
+      })
+    }
+
+    return { ok: true }
+  }
+}
