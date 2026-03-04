@@ -6,6 +6,7 @@ import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'
 import { getTenantId, getToken, setTenantId } from '@/lib/auth'
 import { PageSkeleton, StatsSkeleton, TableSkeleton } from '@/components/skeleton'
+import { CrmActionRow, CrmStat } from '@/components/crm-ui'
 
 type Tab = 'GENERAL' | 'REQUESTS' | 'USERS' | 'TEMPLATE' | 'AUDIT'
 
@@ -173,12 +174,19 @@ export default function OwnerSettingsPage() {
 
       {!loading && (
         <>
-      <section className="mb-4 flex flex-wrap gap-2">
-        <button className={`btn ${tab === 'GENERAL' ? 'btn-primary' : ''}`} onClick={() => setTab('GENERAL')}>Общие</button>
+      <CrmActionRow className="mb-3">
+        <button className={`btn ${tab === 'GENERAL' ? 'btn-primary' : ''}`} onClick={() => setTab('GENERAL')}>Обзор системы</button>
         <button className={`btn ${tab === 'REQUESTS' ? 'btn-primary' : ''}`} onClick={() => setTab('REQUESTS')}>Заявки</button>
-        <button className={`btn ${tab === 'USERS' ? 'btn-primary' : ''}`} onClick={() => setTab('USERS')}>Пользователи</button>
-        <button className={`btn ${tab === 'TEMPLATE' ? 'btn-primary' : ''}`} onClick={() => setTab('TEMPLATE')}>Шаблон договора</button>
+        <button className={`btn ${tab === 'USERS' ? 'btn-primary' : ''}`} onClick={() => setTab('USERS')}>Пользователи и роли</button>
+        <button className={`btn ${tab === 'TEMPLATE' ? 'btn-primary' : ''}`} onClick={() => setTab('TEMPLATE')}>Шаблоны</button>
         <button className={`btn ${tab === 'AUDIT' ? 'btn-primary' : ''}`} onClick={() => setTab('AUDIT')}>Аудит</button>
+      </CrmActionRow>
+
+      <section className="mb-4 grid gap-2 md:grid-cols-4">
+        <CrmStat label="Франчайзи" value={franchiseOnly.length} />
+        <CrmStat label="Пользователей" value={users.length} />
+        <CrmStat label="PENDING заявок" value={requests.filter((r) => r.status === 'PENDING').length} />
+        <CrmStat label="Событий аудита" value={auditRows.length} />
       </section>
 
       {tab === 'GENERAL' && (
