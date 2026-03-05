@@ -32,6 +32,7 @@ export async function assertSaasOperationAllowed(
       saasTrialEndsAt: true,
       saasMaxBikes: true,
       saasMaxActiveRentals: true,
+      saasPaidUntil: true,
     },
   })
 
@@ -48,7 +49,7 @@ export async function assertSaasOperationAllowed(
   }
 
   if (tenant.saasSubscriptionStatus === 'PAST_DUE' || tenant.saasSubscriptionStatus === 'CANCELED') {
-    throw new ForbiddenException(`Операция недоступна: статус подписки ${tenant.saasSubscriptionStatus}`)
+    throw new ForbiddenException('Подписка неактивна. Продлите подписку для возобновления работы.')
   }
 
   if (
@@ -56,7 +57,15 @@ export async function assertSaasOperationAllowed(
     tenant.saasTrialEndsAt &&
     tenant.saasTrialEndsAt.getTime() < Date.now()
   ) {
-    throw new ForbiddenException('Операция недоступна: пробный период завершен')
+    throw new ForbiddenException('Пробный период завершен. Продлите подписку, чтобы продолжить работу.')
+  }
+
+  if (
+    tenant.saasSubscriptionStatus === 'ACTIVE' &&
+    tenant.saasPaidUntil &&
+    tenant.saasPaidUntil.getTime() < Date.now()
+  ) {
+    throw new ForbiddenException('Срок подписки истек. Продлите подписку для восстановления доступа.')
   }
 
   const plan = tenant.saasPlan ?? 'STARTER'

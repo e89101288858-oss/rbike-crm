@@ -96,6 +96,7 @@ export class MyTenantSettingsController {
           saasSubscriptionStatus: true,
           saasMaxBikes: true,
           saasMaxActiveRentals: true,
+          saasPaidUntil: true,
           franchiseeId: true,
           franchisee: {
             select: {
@@ -154,6 +155,7 @@ export class MyTenantSettingsController {
       billing: {
         plan: tenant?.saasPlan ?? null,
         status: tenant?.saasSubscriptionStatus ?? null,
+        paidUntil: tenant?.saasPaidUntil ?? null,
         limits,
         usage,
       },

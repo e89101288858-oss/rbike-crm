@@ -154,6 +154,7 @@ model Tenant {
   saasPlan                SaaSPlan?
   saasSubscriptionStatus  SaaSSubscriptionStatus?
   saasTrialEndsAt         DateTime?
+  saasPaidUntil           DateTime?
   saasMaxBikes            Int?
   saasMaxActiveRentals    Int?
 

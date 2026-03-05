@@ -21,7 +21,14 @@ export class TenantGuard implements CanActivate {
 
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
-      select: { id: true, franchiseeId: true },
+      select: {
+        id: true,
+        franchiseeId: true,
+        mode: true,
+        saasSubscriptionStatus: true,
+        saasTrialEndsAt: true,
+        saasPaidUntil: true,
+      },
     })
 
     if (!tenant) {
@@ -35,32 +42,50 @@ export class TenantGuard implements CanActivate {
       throw new ForbiddenException('Forbidden')
     }
 
+    let accessGranted = false
+
     if (user.role === 'OWNER') {
-      request.tenantId = tenantId
-      return true
-    }
-
-    if (user.role === 'FRANCHISEE') {
-      if (user.franchiseeId === tenant.franchiseeId) {
-        request.tenantId = tenantId
-        return true
-      }
-      throw new ForbiddenException('Forbidden')
-    }
-
-    if (user.role === 'SAAS_USER' || user.role === 'MANAGER' || user.role === 'MECHANIC') {
+      accessGranted = true
+    } else if (user.role === 'FRANCHISEE') {
+      accessGranted = user.franchiseeId === tenant.franchiseeId
+    } else if (user.role === 'SAAS_USER' || user.role === 'MANAGER' || user.role === 'MECHANIC') {
       const userTenant = await this.prisma.userTenant.findUnique({
         where: {
           userId_tenantId: { userId: user.userId, tenantId },
         },
       })
-      if (userTenant) {
-        request.tenantId = tenantId
-        return true
-      }
-      throw new ForbiddenException('Forbidden')
+      accessGranted = !!userTenant
     }
 
-    throw new ForbiddenException('Forbidden')
+    if (!accessGranted) throw new ForbiddenException('Forbidden')
+
+    if (tenant.mode === 'SAAS') {
+      const path: string = String(request.path || request.originalUrl || '')
+      const allowedWhenExpired =
+        path.startsWith('/my/saas-billing') ||
+        path.startsWith('/my/account-settings') ||
+        path.startsWith('/my/change-password') ||
+        path.startsWith('/my/logout-all-sessions') ||
+        path.startsWith('/my/tenant-settings')
+
+      const trialExpired =
+        tenant.saasSubscriptionStatus === 'TRIAL' &&
+        tenant.saasTrialEndsAt &&
+        tenant.saasTrialEndsAt.getTime() < Date.now()
+
+      const paidExpired =
+        tenant.saasSubscriptionStatus === 'ACTIVE' &&
+        tenant.saasPaidUntil &&
+        tenant.saasPaidUntil.getTime() < Date.now()
+
+      const hardBlocked = tenant.saasSubscriptionStatus === 'PAST_DUE' || tenant.saasSubscriptionStatus === 'CANCELED'
+
+      if (!allowedWhenExpired && (trialExpired || paidExpired || hardBlocked)) {
+        throw new ForbiddenException('Подписка истекла или неактивна. Продлите подписку в разделе «Биллинг и оплата».')
+      }
+    }
+
+    request.tenantId = tenantId
+    return true
   }
 }

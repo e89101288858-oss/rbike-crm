@@ -278,7 +278,15 @@ export default function TenantSettingsPage() {
           <>
             <div className="mb-3 text-xs text-gray-500">
               Текущий план: <b>{billing?.tenant?.saasPlan || account?.billing?.plan || 'STARTER'}</b> · Статус: <b>{billing?.tenant?.saasSubscriptionStatus || account?.billing?.status || 'TRIAL'}</b>
+              {' '}· Оплачено до: <b>{account?.billing?.paidUntil ? new Date(account.billing.paidUntil).toLocaleDateString('ru-RU') : '—'}</b>
             </div>
+            {((billing?.tenant?.saasSubscriptionStatus || account?.billing?.status) === 'PAST_DUE' ||
+              (billing?.tenant?.saasSubscriptionStatus || account?.billing?.status) === 'CANCELED' ||
+              (account?.billing?.paidUntil && new Date(account.billing.paidUntil).getTime() < Date.now())) && (
+              <div className="mb-3 rounded border border-red-400/40 bg-red-900/20 p-2 text-xs text-red-300">
+                Подписка неактивна или истекла. Доступ к рабочему функционалу ограничен до продления.
+              </div>
+            )}
             <div className="mb-3 flex flex-wrap gap-2">
               <button className="btn" disabled={billingBusy} onClick={() => startCheckout('STARTER')}>Оплатить STARTER ({billing?.prices?.STARTER ?? 1990} ₽)</button>
               <button className="btn" disabled={billingBusy} onClick={() => startCheckout('PRO')}>Оплатить PRO ({billing?.prices?.PRO ?? 4990} ₽)</button>

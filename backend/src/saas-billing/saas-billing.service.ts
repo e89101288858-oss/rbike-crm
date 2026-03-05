@@ -127,7 +127,7 @@ export class SaasBillingService {
   async getMyBilling(tenantId: string) {
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
-      select: { id: true, mode: true, saasPlan: true, saasSubscriptionStatus: true, saasTrialEndsAt: true },
+      select: { id: true, mode: true, saasPlan: true, saasSubscriptionStatus: true, saasTrialEndsAt: true, saasPaidUntil: true },
     })
     if (!tenant) throw new BadRequestException('Tenant не найден')
 
@@ -174,11 +174,20 @@ export class SaasBillingService {
           },
         })
 
+        const currentTenant = await tx.tenant.findUnique({
+          where: { id: invoice.tenantId },
+          select: { saasPaidUntil: true },
+        })
+        const now = new Date()
+        const base = currentTenant?.saasPaidUntil && currentTenant.saasPaidUntil > now ? currentTenant.saasPaidUntil : now
+        const paidUntil = new Date(base.getTime() + 30 * 24 * 60 * 60 * 1000)
+
         await tx.tenant.update({
           where: { id: invoice.tenantId },
           data: {
             saasSubscriptionStatus: 'ACTIVE',
             saasPlan: invoice.plan,
+            saasPaidUntil: paidUntil,
           },
         })
       })
