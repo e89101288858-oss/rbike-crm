@@ -83,7 +83,7 @@ export async function assertSaasOperationAllowed(
 
     if (bikesCount >= maxBikes) {
       throw new ForbiddenException(
-        `Достигнут лимит велосипедов для плана ${plan}: ${maxBikes}. Обратитесь к владельцу для изменения лимита.`,
+        `Достигнут лимит велосипедов для плана ${plan}: ${maxBikes}. Смените тариф для снятия ограничений.`,
       )
     }
   }
@@ -98,7 +98,7 @@ export async function assertSaasOperationAllowed(
 
     if (activeRentalsCount >= maxActiveRentals) {
       throw new ForbiddenException(
-        `Достигнут лимит активных аренд для плана ${plan}: ${maxActiveRentals}. Обратитесь к владельцу для изменения лимита.`,
+        `Достигнут лимит активных аренд для плана ${plan}: ${maxActiveRentals}. Смените тариф для снятия ограничений.`,
       )
     }
   }
