@@ -156,7 +156,10 @@ export default function TenantSettingsPage() {
       setBillingBusy(true)
       const checkout = await api.createSaasCheckout(plan)
       if (!checkout?.checkoutUrl) throw new Error('Платежная ссылка не получена')
-      window.location.href = checkout.checkoutUrl
+      const w = window.open(checkout.checkoutUrl, '_blank', 'noopener,noreferrer')
+      if (!w) {
+        window.location.href = checkout.checkoutUrl
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка запуска оплаты')
     } finally {
