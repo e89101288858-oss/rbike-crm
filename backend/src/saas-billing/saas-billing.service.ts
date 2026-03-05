@@ -23,10 +23,13 @@ export class SaasBillingService {
   }
 
   async createCheckout(tenantId: string, userId: string, plan?: 'STARTER' | 'PRO' | 'ENTERPRISE') {
-    const tenant = await this.prisma.tenant.findUnique({
-      where: { id: tenantId },
-      select: { id: true, name: true, mode: true, saasPlan: true },
-    })
+    const [tenant, user] = await Promise.all([
+      this.prisma.tenant.findUnique({
+        where: { id: tenantId },
+        select: { id: true, name: true, mode: true, saasPlan: true },
+      }),
+      this.prisma.user.findUnique({ where: { id: userId }, select: { id: true, email: true, phone: true } }),
+    ])
     if (!tenant) throw new BadRequestException('Tenant не найден')
     if (tenant.mode !== 'SAAS') throw new BadRequestException('Оплата доступна только для SaaS tenant')
 
@@ -35,6 +38,11 @@ export class SaasBillingService {
     if (!amountRub) throw new BadRequestException('Неизвестный план')
 
     const returnUrl = this.config.get<string>('YOOKASSA_RETURN_URL') || 'https://app.rbcrm.ru/settings'
+    const vatCode = Number(this.config.get<string>('YOOKASSA_VAT_CODE') || '1')
+
+    if (!user?.email && !user?.phone) {
+      throw new BadRequestException('Для оплаты нужен email или телефон пользователя')
+    }
 
     const invoice = await this.prisma.saaSInvoice.create({
       data: {
@@ -54,6 +62,22 @@ export class SaasBillingService {
       confirmation: {
         type: 'redirect',
         return_url: returnUrl,
+      },
+      receipt: {
+        customer: {
+          ...(user?.email ? { email: user.email } : {}),
+          ...(user?.phone ? { phone: user.phone } : {}),
+        },
+        items: [
+          {
+            description: `Подписка rbCRM SaaS (${targetPlan})`,
+            quantity: '1.00',
+            amount: { value: amountRub.toFixed(2), currency: 'RUB' },
+            vat_code: vatCode,
+            payment_mode: 'full_payment',
+            payment_subject: 'service',
+          },
+        ],
       },
       metadata: {
         invoiceId: invoice.id,
@@ -78,7 +102,8 @@ export class SaasBillingService {
         where: { id: invoice.id },
         data: { status: 'FAILED', providerResponse: body as any },
       })
-      throw new BadRequestException(body?.description || 'Ошибка создания платежа YooKassa')
+      const details = [body?.description, body?.parameter].filter(Boolean).join(' | ')
+      throw new BadRequestException(details || 'Ошибка создания платежа YooKassa')
     }
 
     await this.prisma.saaSInvoice.update({
