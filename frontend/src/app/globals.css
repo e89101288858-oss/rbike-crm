@@ -69,11 +69,12 @@ body {
   padding: 14px;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
   z-index: 40;
 }
 
 .sidebar-head { margin-bottom: 12px; }
-.sidebar-nav { flex: 1; overflow: auto; }
+.sidebar-nav { flex: 1; overflow-y: auto; overflow-x: hidden; }
 .sidebar-group {
   margin-bottom: 12px;
   padding-bottom: 8px;
