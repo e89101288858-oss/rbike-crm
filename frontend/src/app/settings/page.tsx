@@ -152,19 +152,19 @@ export default function TenantSettingsPage() {
   }
 
   async function startCheckout(plan: 'STARTER' | 'PRO' | 'ENTERPRISE') {
-    const paymentTab = window.open('', '_blank', 'noopener,noreferrer')
+    const paymentTab = window.open('about:blank', '_blank')
+    if (!paymentTab) {
+      setError('Браузер заблокировал новое окно оплаты. Разрешите pop-up для сайта и повторите.')
+      return
+    }
+
     try {
       setBillingBusy(true)
       const checkout = await api.createSaasCheckout(plan)
       if (!checkout?.checkoutUrl) throw new Error('Платежная ссылка не получена')
-
-      if (paymentTab) {
-        paymentTab.location.href = checkout.checkoutUrl
-      } else {
-        window.location.href = checkout.checkoutUrl
-      }
+      paymentTab.location.href = checkout.checkoutUrl
     } catch (err) {
-      if (paymentTab && !paymentTab.closed) paymentTab.close()
+      if (!paymentTab.closed) paymentTab.close()
       setError(err instanceof Error ? err.message : 'Ошибка запуска оплаты')
     } finally {
       setBillingBusy(false)
