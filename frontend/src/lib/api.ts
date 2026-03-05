@@ -202,10 +202,10 @@ export const api = {
     }, true),
 
   mySaasBilling: () => request<any>('/my/saas-billing', undefined, true),
-  createSaasCheckout: (plan?: 'STARTER' | 'PRO' | 'ENTERPRISE') =>
+  createSaasCheckout: (plan?: 'STARTER' | 'PRO' | 'ENTERPRISE', durationMonths: 1 | 3 | 6 | 12 = 1) =>
     request<any>('/my/saas-billing/checkout', {
       method: 'POST',
-      body: JSON.stringify({ plan }),
+      body: JSON.stringify({ plan, durationMonths }),
     }, true),
 
   clients: (query = '') => request<Client[]>(`/clients${query ? `?${query}` : ''}`, undefined, true),

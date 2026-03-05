@@ -328,35 +328,11 @@ export default function TenantSettingsPage() {
       </section>
 
       <section className="crm-card mb-4 text-sm">
-        <h2 className="mb-2 text-base font-semibold">Биллинг и оплата</h2>
-        {account?.tenant?.mode === 'SAAS' ? (
-          <>
-            <div className="mb-3 text-xs text-gray-500">
-              Текущий план: <b>{billing?.tenant?.saasPlan || account?.billing?.plan || 'STARTER'}</b> · Статус: <b>{billing?.tenant?.saasSubscriptionStatus || account?.billing?.status || 'TRIAL'}</b>
-              {' '}· Оплачено до: <b>{account?.billing?.paidUntil ? new Date(account.billing.paidUntil).toLocaleDateString('ru-RU') : '—'}</b>
-            </div>
-            {((billing?.tenant?.saasSubscriptionStatus || account?.billing?.status) === 'PAST_DUE' ||
-              (billing?.tenant?.saasSubscriptionStatus || account?.billing?.status) === 'CANCELED' ||
-              (account?.billing?.paidUntil && new Date(account.billing.paidUntil).getTime() < Date.now())) && (
-              <div className="mb-3 rounded border border-red-400/40 bg-red-900/20 p-2 text-xs text-red-300">
-                Подписка неактивна или истекла. Доступ к рабочему функционалу ограничен до продления.
-              </div>
-            )}
-            <div className="mb-3 flex flex-wrap gap-2">
-              <button className="btn" disabled={billingBusy} onClick={() => startCheckout('STARTER')}>Оплатить STARTER ({billing?.prices?.STARTER ?? 1990} ₽)</button>
-              <button className="btn" disabled={billingBusy} onClick={() => startCheckout('PRO')}>Оплатить PRO ({billing?.prices?.PRO ?? 4990} ₽)</button>
-              <button className="btn" disabled={billingBusy} onClick={() => startCheckout('ENTERPRISE')}>Оплатить ENTERPRISE ({billing?.prices?.ENTERPRISE ?? 14990} ₽)</button>
-            </div>
-            <div className="space-y-1 text-xs">
-              {(billing?.invoices || []).slice(0, 5).map((inv: any) => (
-                <div key={inv.id}>{new Date(inv.createdAt).toLocaleString('ru-RU')} — {inv.plan} — {inv.amountRub} ₽ — {inv.status}</div>
-              ))}
-              {!(billing?.invoices || []).length && <div className="text-gray-500">Пока нет счетов</div>}
-            </div>
-          </>
-        ) : (
-          <div className="text-xs text-gray-500">Оплата доступна только для подписочных точек.</div>
-        )}
+        <h2 className="mb-2 text-base font-semibold">Биллинг</h2>
+        <div className="text-xs text-gray-500">Управление тарифом и оплатой перенесено на отдельную страницу.</div>
+        <div className="mt-3">
+          <button className="btn" onClick={() => router.push('/billing')}>Открыть биллинг</button>
+        </div>
       </section>
 
       <section className="crm-card text-sm">

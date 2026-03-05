@@ -22,7 +22,7 @@ export class SaasBillingService {
     return `Basic ${Buffer.from(`${shopId}:${secretKey}`).toString('base64')}`
   }
 
-  async createCheckout(tenantId: string, userId: string, plan?: 'STARTER' | 'PRO' | 'ENTERPRISE') {
+  async createCheckout(tenantId: string, userId: string, plan?: 'STARTER' | 'PRO' | 'ENTERPRISE', durationMonths = 1) {
     const [tenant, user] = await Promise.all([
       this.prisma.tenant.findUnique({
         where: { id: tenantId },
@@ -34,8 +34,14 @@ export class SaasBillingService {
     if (tenant.mode !== 'SAAS') throw new BadRequestException('Оплата доступна только для SaaS tenant')
 
     const targetPlan = plan || (tenant.saasPlan || 'STARTER')
-    const amountRub = PLAN_PRICES_RUB[targetPlan]
-    if (!amountRub) throw new BadRequestException('Неизвестный план')
+    const baseAmountRub = PLAN_PRICES_RUB[targetPlan]
+    if (!baseAmountRub) throw new BadRequestException('Неизвестный план')
+
+    if (![1,3,6,12].includes(durationMonths)) {
+      throw new BadRequestException('Допустимые сроки оплаты: 1, 3, 6, 12 месяцев')
+    }
+
+    const amountRub = baseAmountRub * durationMonths
 
     const returnUrlBase = this.config.get<string>('YOOKASSA_RETURN_URL') || 'https://app.rbcrm.ru/settings'
     const returnUrl = `${returnUrlBase}${returnUrlBase.includes('?') ? '&' : '?'}billing_return=1`
@@ -51,6 +57,7 @@ export class SaasBillingService {
         createdById: userId,
         plan: targetPlan as any,
         amountRub,
+        durationMonths,
         currency: 'RUB',
         status: 'PENDING',
       },
@@ -59,7 +66,7 @@ export class SaasBillingService {
     const payload = {
       amount: { value: amountRub.toFixed(2), currency: 'RUB' },
       capture: true,
-      description: `Оплата подписки на rbCRM тариф "${targetPlan}" на 30 дней.`,
+      description: `Оплата подписки на rbCRM тариф "${targetPlan}" на ${durationMonths} мес.`,
       confirmation: {
         type: 'redirect',
         return_url: returnUrl,
@@ -71,7 +78,7 @@ export class SaasBillingService {
         },
         items: [
           {
-            description: `Подписка rbCRM SaaS (${targetPlan})`,
+            description: `Подписка rbCRM SaaS (${targetPlan}, ${durationMonths} мес.)`,
             quantity: '1.00',
             amount: { value: amountRub.toFixed(2), currency: 'RUB' },
             vat_code: vatCode,
@@ -84,6 +91,7 @@ export class SaasBillingService {
         invoiceId: invoice.id,
         tenantId,
         plan: targetPlan,
+        durationMonths,
       },
     }
 
@@ -122,10 +130,11 @@ export class SaasBillingService {
       status: body?.status || 'pending',
       amountRub,
       plan: targetPlan,
+      durationMonths,
     }
   }
 
-  private async markInvoicePaid(invoice: { id: string; tenantId: string; plan: 'STARTER' | 'PRO' | 'ENTERPRISE' }, payload: any) {
+  private async markInvoicePaid(invoice: { id: string; tenantId: string; plan: 'STARTER' | 'PRO' | 'ENTERPRISE'; durationMonths: number }, payload: any) {
     await this.prisma.$transaction(async (tx) => {
       const current = await tx.saaSInvoice.findUnique({ where: { id: invoice.id }, select: { status: true } })
       if (!current || current.status === 'PAID') return
@@ -145,7 +154,8 @@ export class SaasBillingService {
       })
       const now = new Date()
       const base = currentTenant?.saasPaidUntil && currentTenant.saasPaidUntil > now ? currentTenant.saasPaidUntil : now
-      const paidUntil = new Date(base.getTime() + 30 * 24 * 60 * 60 * 1000)
+      const paidUntil = new Date(base)
+      paidUntil.setUTCMonth(paidUntil.getUTCMonth() + Number(invoice.durationMonths || 1))
 
       await tx.tenant.update({
         where: { id: invoice.tenantId },
@@ -163,7 +173,7 @@ export class SaasBillingService {
       where: { tenantId, status: 'PENDING' },
       orderBy: { createdAt: 'desc' },
       take: 30,
-      select: { id: true, tenantId: true, plan: true, providerPaymentId: true, createdAt: true },
+      select: { id: true, tenantId: true, plan: true, durationMonths: true, providerPaymentId: true, createdAt: true },
     })
 
     for (const inv of pending) {
@@ -197,7 +207,7 @@ export class SaasBillingService {
         const status = String(body?.status || '').toLowerCase()
 
         if (status === 'succeeded') {
-          await this.markInvoicePaid({ id: inv.id, tenantId: inv.tenantId, plan: inv.plan as any }, body)
+          await this.markInvoicePaid({ id: inv.id, tenantId: inv.tenantId, plan: inv.plan as any, durationMonths: inv.durationMonths }, body)
         } else if (status === 'canceled') {
           await this.prisma.saaSInvoice.update({
             where: { id: inv.id },
@@ -242,6 +252,7 @@ export class SaasBillingService {
       select: {
         id: true,
         plan: true,
+        durationMonths: true,
         amountRub: true,
         currency: true,
         status: true,
@@ -268,7 +279,7 @@ export class SaasBillingService {
     if (!invoice) return { ok: true }
 
     if (event === 'payment.succeeded') {
-      await this.markInvoicePaid({ id: invoice.id, tenantId: invoice.tenantId, plan: invoice.plan as any }, payload)
+      await this.markInvoicePaid({ id: invoice.id, tenantId: invoice.tenantId, plan: invoice.plan as any, durationMonths: invoice.durationMonths || 1 }, payload)
     } else if (event === 'payment.canceled' || event === 'payment.waiting_for_capture') {
       await this.prisma.saaSInvoice.update({
         where: { id: invoice.id },

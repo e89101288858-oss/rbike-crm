@@ -476,6 +476,7 @@ model SaaSInvoice {
   createdById        String?
   createdBy          User?             @relation("SaaSInvoiceCreatedBy", fields: [createdById], references: [id])
   plan               SaaSPlan
+  durationMonths     Int               @default(1)
   amountRub          Int
   currency           String            @default("RUB")
   status             SaaSInvoiceStatus @default(PENDING)

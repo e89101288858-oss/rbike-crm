@@ -25,9 +25,9 @@ export class SaasBillingController {
   async createCheckout(
     @Req() req: Request,
     @CurrentUser() user: JwtUser,
-    @Body() dto: { plan?: 'STARTER' | 'PRO' | 'ENTERPRISE' },
+    @Body() dto: { plan?: 'STARTER' | 'PRO' | 'ENTERPRISE'; durationMonths?: 1 | 3 | 6 | 12 },
   ) {
-    return this.saasBilling.createCheckout(req.tenantId!, user.userId, dto?.plan)
+    return this.saasBilling.createCheckout(req.tenantId!, user.userId, dto?.plan, dto?.durationMonths ?? 1)
   }
 
   @Post('webhooks/yookassa')
