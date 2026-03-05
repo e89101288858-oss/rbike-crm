@@ -204,10 +204,21 @@ export class SaasBillingService {
             data: { status: 'CANCELED', providerResponse: body },
           })
         } else {
-          await this.prisma.saaSInvoice.update({
-            where: { id: inv.id },
-            data: { providerResponse: body },
-          })
+          const ageMs = Date.now() - new Date(inv.createdAt).getTime()
+          if (status === 'pending' && ageMs > 30 * 60 * 1000) {
+            await this.prisma.saaSInvoice.update({
+              where: { id: inv.id },
+              data: {
+                status: 'FAILED',
+                providerResponse: { ...body, autoClosed: true, reason: 'pending_timeout_30m' } as any,
+              },
+            })
+          } else {
+            await this.prisma.saaSInvoice.update({
+              where: { id: inv.id },
+              data: { providerResponse: body },
+            })
+          }
         }
       } catch {
         // best effort sync
