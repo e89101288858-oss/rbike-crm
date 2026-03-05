@@ -160,19 +160,40 @@ export class SaasBillingService {
 
   private async syncPendingInvoices(tenantId: string) {
     const pending = await this.prisma.saaSInvoice.findMany({
-      where: { tenantId, status: 'PENDING', providerPaymentId: { not: null } },
+      where: { tenantId, status: 'PENDING' },
       orderBy: { createdAt: 'desc' },
-      take: 20,
-      select: { id: true, tenantId: true, plan: true, providerPaymentId: true },
+      take: 30,
+      select: { id: true, tenantId: true, plan: true, providerPaymentId: true, createdAt: true },
     })
 
     for (const inv of pending) {
       try {
+        if (!inv.providerPaymentId) {
+          if (Date.now() - new Date(inv.createdAt).getTime() > 5 * 60 * 1000) {
+            await this.prisma.saaSInvoice.update({
+              where: { id: inv.id },
+              data: {
+                status: 'FAILED',
+                providerResponse: { reason: 'providerPaymentId missing for pending invoice' },
+              },
+            })
+          }
+          continue
+        }
+
         const response = await fetch(`https://api.yookassa.ru/v3/payments/${inv.providerPaymentId}`, {
           headers: { Authorization: this.getYooAuthHeader() },
         })
-        if (!response.ok) continue
-        const body = await response.json()
+
+        const body = await response.json().catch(() => ({}))
+        if (!response.ok) {
+          await this.prisma.saaSInvoice.update({
+            where: { id: inv.id },
+            data: { providerResponse: { syncError: true, status: response.status, body } as any },
+          })
+          continue
+        }
+
         const status = String(body?.status || '').toLowerCase()
 
         if (status === 'succeeded') {
@@ -181,6 +202,11 @@ export class SaasBillingService {
           await this.prisma.saaSInvoice.update({
             where: { id: inv.id },
             data: { status: 'CANCELED', providerResponse: body },
+          })
+        } else {
+          await this.prisma.saaSInvoice.update({
+            where: { id: inv.id },
+            data: { providerResponse: body },
           })
         }
       } catch {
