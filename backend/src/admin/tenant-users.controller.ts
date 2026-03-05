@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   NotFoundException,
   Param,
@@ -23,6 +24,31 @@ import { AssignUserToTenantDto } from './dto/assign-user-to-tenant.dto'
 export class TenantUsersController {
   constructor(private readonly prisma: PrismaService) {}
 
+  private isSaasAccessExpired(tenant: {
+    mode?: 'FRANCHISE' | 'SAAS'
+    saasSubscriptionStatus?: 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | null
+    saasTrialEndsAt?: Date | null
+    saasPaidUntil?: Date | null
+  }) {
+    if (tenant.mode !== 'SAAS') return false
+
+    const trialExpired =
+      tenant.saasSubscriptionStatus === 'TRIAL' &&
+      !!tenant.saasTrialEndsAt &&
+      tenant.saasTrialEndsAt.getTime() < Date.now()
+
+    const paidExpired =
+      tenant.saasSubscriptionStatus === 'ACTIVE' &&
+      !!tenant.saasPaidUntil &&
+      tenant.saasPaidUntil.getTime() < Date.now()
+
+    const hardBlocked =
+      tenant.saasSubscriptionStatus === 'PAST_DUE' ||
+      tenant.saasSubscriptionStatus === 'CANCELED'
+
+    return trialExpired || paidExpired || hardBlocked
+  }
+
   @Post(':tenantId/users')
   async assignUserToTenant(
     @Param('tenantId') tenantId: string,
@@ -31,7 +57,7 @@ export class TenantUsersController {
   ) {
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
-      select: { id: true, franchiseeId: true },
+      select: { id: true, franchiseeId: true, mode: true, saasSubscriptionStatus: true, saasTrialEndsAt: true, saasPaidUntil: true },
     })
 
     if (!tenant) {
@@ -51,6 +77,10 @@ export class TenantUsersController {
       if (!allowed) throw new BadRequestException('SaaS user can manage only assigned tenant')
     } else {
       throw new BadRequestException('Only OWNER, FRANCHISEE or SAAS_USER can manage tenant users')
+    }
+
+    if (currentUser.role !== 'OWNER' && this.isSaasAccessExpired(tenant)) {
+      throw new ForbiddenException('Подписка неактивна или истекла. Управление пользователями доступно после продления.')
     }
 
     const user = await this.prisma.user.findUnique({
@@ -97,7 +127,7 @@ export class TenantUsersController {
   ) {
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
-      select: { id: true, franchiseeId: true },
+      select: { id: true, franchiseeId: true, mode: true, saasSubscriptionStatus: true, saasTrialEndsAt: true, saasPaidUntil: true },
     })
 
     if (!tenant) {
@@ -117,6 +147,10 @@ export class TenantUsersController {
       if (!allowed) throw new BadRequestException('SaaS user can manage only assigned tenant')
     } else {
       throw new BadRequestException('Only OWNER, FRANCHISEE or SAAS_USER can manage tenant users')
+    }
+
+    if (currentUser.role !== 'OWNER' && this.isSaasAccessExpired(tenant)) {
+      throw new ForbiddenException('Подписка неактивна или истекла. Управление пользователями доступно после продления.')
     }
 
     const existing = await this.prisma.userTenant.findUnique({
@@ -151,7 +185,7 @@ export class TenantUsersController {
   ) {
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
-      select: { id: true, franchiseeId: true },
+      select: { id: true, franchiseeId: true, mode: true, saasSubscriptionStatus: true, saasTrialEndsAt: true, saasPaidUntil: true },
     })
 
     if (!tenant) {
@@ -171,6 +205,10 @@ export class TenantUsersController {
       if (!allowed) throw new BadRequestException('SaaS user can view only assigned tenant')
     } else {
       throw new BadRequestException('Only OWNER, FRANCHISEE or SAAS_USER can view tenant users')
+    }
+
+    if (currentUser.role !== 'OWNER' && this.isSaasAccessExpired(tenant)) {
+      throw new ForbiddenException('Подписка неактивна или истекла. Управление пользователями доступно после продления.')
     }
 
     const userTenants = await this.prisma.userTenant.findMany({
