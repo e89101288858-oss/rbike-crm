@@ -134,6 +134,7 @@ export default function BillingPage() {
 
       <section className="crm-card mb-4 text-sm">
         <h2 className="mb-2 text-base font-semibold">Сравнение тарифов</h2>
+        <div className="mb-2 text-xs text-gray-500">Ограничение тарифов применяется только по количеству велосипедов.</div>
         <div className="table-wrap">
           <table className="table table-sticky mobile-cards">
             <thead>
@@ -159,8 +160,8 @@ export default function BillingPage() {
               </tr>
               <tr>
                 <td data-label="Параметр" className="font-medium">Лимит активных аренд</td>
-                <td data-label="STARTER">{billing?.plans?.STARTER?.maxActiveRentals ?? '—'}</td>
-                <td data-label="PRO">{billing?.plans?.PRO?.maxActiveRentals ?? '—'}</td>
+                <td data-label="STARTER">{billing?.plans?.STARTER?.maxActiveRentals ?? 'Без лимита'}</td>
+                <td data-label="PRO">{billing?.plans?.PRO?.maxActiveRentals ?? 'Без лимита'}</td>
                 <td data-label="ENTERPRISE">{billing?.plans?.ENTERPRISE?.maxActiveRentals ?? 'Без лимита'}</td>
               </tr>
               <tr>

@@ -9,8 +9,8 @@ const PLAN_PRICES_RUB: Record<string, number> = {
 }
 
 const PLAN_FEATURES: Record<string, { maxBikes: number | null; maxActiveRentals: number | null; support: string }> = {
-  STARTER: { maxBikes: 25, maxActiveRentals: 20, support: 'Базовая' },
-  PRO: { maxBikes: 120, maxActiveRentals: 100, support: 'Приоритетная' },
+  STARTER: { maxBikes: 15, maxActiveRentals: null, support: 'Базовая' },
+  PRO: { maxBikes: 50, maxActiveRentals: null, support: 'Приоритетная' },
   ENTERPRISE: { maxBikes: null, maxActiveRentals: null, support: 'Выделенная' },
 }
 

@@ -5,12 +5,12 @@ type SaasOperation = 'CREATE_BIKE' | 'CREATE_RENTAL' | 'GENERATE_CONTRACT'
 
 const SAAS_PLAN_LIMITS: Record<string, { maxBikes: number; maxActiveRentals: number }> = {
   STARTER: {
-    maxBikes: 25,
-    maxActiveRentals: 20,
+    maxBikes: 15,
+    maxActiveRentals: Number.POSITIVE_INFINITY,
   },
   PRO: {
-    maxBikes: 120,
-    maxActiveRentals: 100,
+    maxBikes: 50,
+    maxActiveRentals: Number.POSITIVE_INFINITY,
   },
   ENTERPRISE: {
     maxBikes: Number.POSITIVE_INFINITY,

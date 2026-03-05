@@ -125,8 +125,8 @@ export class MyTenantSettingsController {
     ])
 
     const planLimits: Record<string, { maxBikes: number; maxActiveRentals: number }> = {
-      STARTER: { maxBikes: 25, maxActiveRentals: 20 },
-      PRO: { maxBikes: 120, maxActiveRentals: 100 },
+      STARTER: { maxBikes: 15, maxActiveRentals: Number.POSITIVE_INFINITY },
+      PRO: { maxBikes: 50, maxActiveRentals: Number.POSITIVE_INFINITY },
       ENTERPRISE: { maxBikes: Number.POSITIVE_INFINITY, maxActiveRentals: Number.POSITIVE_INFINITY },
     }
 
