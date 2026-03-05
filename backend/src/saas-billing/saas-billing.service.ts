@@ -8,6 +8,12 @@ const PLAN_PRICES_RUB: Record<string, number> = {
   ENTERPRISE: 14990,
 }
 
+const PLAN_FEATURES: Record<string, { maxBikes: number | null; maxActiveRentals: number | null; support: string }> = {
+  STARTER: { maxBikes: 25, maxActiveRentals: 20, support: 'Базовая' },
+  PRO: { maxBikes: 120, maxActiveRentals: 100, support: 'Приоритетная' },
+  ENTERPRISE: { maxBikes: null, maxActiveRentals: null, support: 'Выделенная' },
+}
+
 @Injectable()
 export class SaasBillingService {
   constructor(
@@ -264,6 +270,11 @@ export class SaasBillingService {
     return {
       tenant,
       invoices,
+      plans: {
+        STARTER: { priceRub: PLAN_PRICES_RUB.STARTER, ...PLAN_FEATURES.STARTER },
+        PRO: { priceRub: PLAN_PRICES_RUB.PRO, ...PLAN_FEATURES.PRO },
+        ENTERPRISE: { priceRub: PLAN_PRICES_RUB.ENTERPRISE, ...PLAN_FEATURES.ENTERPRISE },
+      },
       prices: PLAN_PRICES_RUB,
     }
   }

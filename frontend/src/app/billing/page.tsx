@@ -20,7 +20,7 @@ export default function BillingPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
-  const total = useMemo(() => Number(billing?.prices?.[plan] || 0) * duration, [billing, plan, duration])
+  const total = useMemo(() => Number(billing?.plans?.[plan]?.priceRub || 0) * duration, [billing, plan, duration])
 
   async function load() {
     const [me, myTenants, bill] = await Promise.all([api.me(), api.myTenants(), api.mySaasBilling()])
@@ -111,9 +111,9 @@ export default function BillingPage() {
 
         <div className="grid gap-2 md:grid-cols-2 mb-3">
           <select className="select" value={plan} onChange={(e) => setPlan(e.target.value as Plan)}>
-            <option value="STARTER">STARTER ({billing?.prices?.STARTER ?? 0} ₽/мес)</option>
-            <option value="PRO">PRO ({billing?.prices?.PRO ?? 0} ₽/мес)</option>
-            <option value="ENTERPRISE">ENTERPRISE ({billing?.prices?.ENTERPRISE ?? 0} ₽/мес)</option>
+            <option value="STARTER">STARTER ({billing?.plans?.STARTER?.priceRub ?? 0} ₽/мес)</option>
+            <option value="PRO">PRO ({billing?.plans?.PRO?.priceRub ?? 0} ₽/мес)</option>
+            <option value="ENTERPRISE">ENTERPRISE ({billing?.plans?.ENTERPRISE?.priceRub ?? 0} ₽/мес)</option>
           </select>
           <select className="select" value={duration} onChange={(e) => setDuration(Number(e.target.value) as Duration)}>
             <option value={1}>1 месяц</option>
@@ -142,27 +142,27 @@ export default function BillingPage() {
             <tbody>
               <tr>
                 <td data-label="Параметр" className="font-medium">Цена за месяц</td>
-                <td data-label="STARTER">{billing?.prices?.STARTER ?? 0} ₽</td>
-                <td data-label="PRO">{billing?.prices?.PRO ?? 0} ₽</td>
-                <td data-label="ENTERPRISE">{billing?.prices?.ENTERPRISE ?? 0} ₽</td>
+                <td data-label="STARTER">{billing?.plans?.STARTER?.priceRub ?? 0} ₽</td>
+                <td data-label="PRO">{billing?.plans?.PRO?.priceRub ?? 0} ₽</td>
+                <td data-label="ENTERPRISE">{billing?.plans?.ENTERPRISE?.priceRub ?? 0} ₽</td>
               </tr>
               <tr>
                 <td data-label="Параметр" className="font-medium">Лимит велосипедов</td>
-                <td data-label="STARTER">25</td>
-                <td data-label="PRO">120</td>
-                <td data-label="ENTERPRISE">Без лимита</td>
+                <td data-label="STARTER">{billing?.plans?.STARTER?.maxBikes ?? '—'}</td>
+                <td data-label="PRO">{billing?.plans?.PRO?.maxBikes ?? '—'}</td>
+                <td data-label="ENTERPRISE">{billing?.plans?.ENTERPRISE?.maxBikes ?? 'Без лимита'}</td>
               </tr>
               <tr>
                 <td data-label="Параметр" className="font-medium">Лимит активных аренд</td>
-                <td data-label="STARTER">20</td>
-                <td data-label="PRO">100</td>
-                <td data-label="ENTERPRISE">Без лимита</td>
+                <td data-label="STARTER">{billing?.plans?.STARTER?.maxActiveRentals ?? '—'}</td>
+                <td data-label="PRO">{billing?.plans?.PRO?.maxActiveRentals ?? '—'}</td>
+                <td data-label="ENTERPRISE">{billing?.plans?.ENTERPRISE?.maxActiveRentals ?? 'Без лимита'}</td>
               </tr>
               <tr>
                 <td data-label="Параметр" className="font-medium">Поддержка</td>
-                <td data-label="STARTER">Базовая</td>
-                <td data-label="PRO">Приоритетная</td>
-                <td data-label="ENTERPRISE">Выделенная</td>
+                <td data-label="STARTER">{billing?.plans?.STARTER?.support ?? '—'}</td>
+                <td data-label="PRO">{billing?.plans?.PRO?.support ?? '—'}</td>
+                <td data-label="ENTERPRISE">{billing?.plans?.ENTERPRISE?.support ?? '—'}</td>
               </tr>
             </tbody>
           </table>
