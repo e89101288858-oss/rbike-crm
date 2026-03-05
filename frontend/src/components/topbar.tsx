@@ -65,6 +65,7 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
   const [role, setRole] = useState<UserRole>('')
   const [mobileOpen, setMobileOpen] = useState(false)
   const [daysLeft, setDaysLeft] = useState<number | null>(null)
+  const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null)
 
   useEffect(() => {
     ;(async () => {
@@ -83,8 +84,25 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
       try {
         const acc = await api.myAccountSettings()
         const paidUntil = acc?.billing?.paidUntil
+        const trialEnds = acc?.billing?.trialEndsAt
+        const status = acc?.billing?.status
         const mode = acc?.tenant?.mode
-        if (mode !== 'SAAS' || !paidUntil) {
+
+        if (mode !== 'SAAS') {
+          setDaysLeft(null)
+          setTrialEndsAt(null)
+          return
+        }
+
+        if (status === 'TRIAL' && trialEnds) {
+          setTrialEndsAt(trialEnds)
+          const ms = new Date(trialEnds).getTime() - Date.now()
+          setDaysLeft(Math.ceil(ms / (24 * 60 * 60 * 1000)))
+          return
+        }
+
+        setTrialEndsAt(null)
+        if (!paidUntil) {
           setDaysLeft(null)
           return
         }
@@ -94,6 +112,7 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
         setDaysLeft(left)
       } catch {
         setDaysLeft(null)
+        setTrialEndsAt(null)
       }
     })()
   }, [role, tenantId])
@@ -165,7 +184,9 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
 
         {daysLeft !== null && (
           <div className={`mx-3 mb-3 rounded border px-3 py-2 text-xs ${daysLeft < 5 ? 'border-red-500/60 text-red-400' : 'border-white/10 text-gray-300'}`}>
-            До конца подписки осталось: {daysLeft > 0 ? daysLeft : 0} дн.
+            {trialEndsAt
+              ? `Тестовый период: осталось ${daysLeft > 0 ? daysLeft : 0} дн. (до ${new Date(trialEndsAt).toLocaleDateString('ru-RU')})`
+              : `До конца подписки осталось: ${daysLeft > 0 ? daysLeft : 0} дн.`}
           </div>
         )}
 

@@ -94,6 +94,7 @@ export class MyTenantSettingsController {
           mode: true,
           saasPlan: true,
           saasSubscriptionStatus: true,
+          saasTrialEndsAt: true,
           saasMaxBikes: true,
           saasMaxActiveRentals: true,
           saasPaidUntil: true,
@@ -155,6 +156,7 @@ export class MyTenantSettingsController {
       billing: {
         plan: tenant?.saasPlan ?? null,
         status: tenant?.saasSubscriptionStatus ?? null,
+        trialEndsAt: tenant?.saasTrialEndsAt ?? null,
         paidUntil: tenant?.saasPaidUntil ?? null,
         limits,
         usage,

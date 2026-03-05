@@ -102,7 +102,7 @@ export class AuthService {
           royaltyPercent: 0,
           saasPlan: 'STARTER',
           saasSubscriptionStatus: 'TRIAL',
-          saasTrialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+          saasTrialEndsAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
         },
       })
 

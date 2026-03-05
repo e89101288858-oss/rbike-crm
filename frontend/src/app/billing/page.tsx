@@ -108,6 +108,11 @@ export default function BillingPage() {
         <div className="mb-3 text-xs text-gray-500">
           Текущий план: <b>{billing?.tenant?.saasPlan || 'STARTER'}</b> · Статус: <b>{billing?.tenant?.saasSubscriptionStatus || 'TRIAL'}</b>
         </div>
+        {(billing?.tenant?.saasSubscriptionStatus === 'TRIAL') && (
+          <div className="mb-3 rounded border border-yellow-400/40 bg-yellow-900/20 p-2 text-xs text-yellow-300">
+            Сейчас активен тестовый период до <b>{billing?.tenant?.saasTrialEndsAt ? new Date(billing.tenant.saasTrialEndsAt).toLocaleString('ru-RU') : '—'}</b>
+          </div>
+        )}
 
         <div className="grid gap-2 md:grid-cols-2 mb-3">
           <select className="select" value={plan} onChange={(e) => setPlan(e.target.value as Plan)}>
