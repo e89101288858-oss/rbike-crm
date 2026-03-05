@@ -63,6 +63,7 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
   const [tenantId, setTenantIdState] = useState(getTenantId())
   const [role, setRole] = useState<UserRole>('')
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [daysLeft, setDaysLeft] = useState<number | null>(null)
 
   useEffect(() => {
     ;(async () => {
@@ -74,6 +75,27 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
       }
     })()
   }, [])
+
+  useEffect(() => {
+    if (!role || role === 'OWNER') return
+    ;(async () => {
+      try {
+        const acc = await api.myAccountSettings()
+        const paidUntil = acc?.billing?.paidUntil
+        const mode = acc?.tenant?.mode
+        if (mode !== 'SAAS' || !paidUntil) {
+          setDaysLeft(null)
+          return
+        }
+
+        const ms = new Date(paidUntil).getTime() - Date.now()
+        const left = Math.ceil(ms / (24 * 60 * 60 * 1000))
+        setDaysLeft(left)
+      } catch {
+        setDaysLeft(null)
+      }
+    })()
+  }, [role, tenantId])
 
   useEffect(() => {
     const isDemo = typeof window !== 'undefined' && localStorage.getItem('rbike_demo') === '1'
@@ -139,6 +161,12 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
             </div>
           ))}
         </nav>
+
+        {daysLeft !== null && (
+          <div className={`mx-3 mb-3 rounded border px-3 py-2 text-xs ${daysLeft < 5 ? 'border-red-500/60 text-red-400' : 'border-white/10 text-gray-300'}`}>
+            До конца подписки осталось: {daysLeft > 0 ? daysLeft : 0} дн.
+          </div>
+        )}
 
       </aside>
 
