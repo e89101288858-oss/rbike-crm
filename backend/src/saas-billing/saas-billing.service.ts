@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config'
 import { PrismaService } from '../prisma/prisma.service'
 
 const PLAN_PRICES_RUB: Record<string, number> = {
-  STARTER: 1990,
+  STARTER: 1,
   PRO: 4990,
   ENTERPRISE: 14990,
 }
