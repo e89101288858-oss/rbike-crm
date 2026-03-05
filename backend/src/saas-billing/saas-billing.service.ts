@@ -125,7 +125,73 @@ export class SaasBillingService {
     }
   }
 
+  private async markInvoicePaid(invoice: { id: string; tenantId: string; plan: 'STARTER' | 'PRO' | 'ENTERPRISE' }, payload: any) {
+    await this.prisma.$transaction(async (tx) => {
+      const current = await tx.saaSInvoice.findUnique({ where: { id: invoice.id }, select: { status: true } })
+      if (!current || current.status === 'PAID') return
+
+      await tx.saaSInvoice.update({
+        where: { id: invoice.id },
+        data: {
+          status: 'PAID',
+          paidAt: new Date(),
+          providerResponse: payload,
+        },
+      })
+
+      const currentTenant = await tx.tenant.findUnique({
+        where: { id: invoice.tenantId },
+        select: { saasPaidUntil: true },
+      })
+      const now = new Date()
+      const base = currentTenant?.saasPaidUntil && currentTenant.saasPaidUntil > now ? currentTenant.saasPaidUntil : now
+      const paidUntil = new Date(base.getTime() + 30 * 24 * 60 * 60 * 1000)
+
+      await tx.tenant.update({
+        where: { id: invoice.tenantId },
+        data: {
+          saasSubscriptionStatus: 'ACTIVE',
+          saasPlan: invoice.plan,
+          saasPaidUntil: paidUntil,
+        },
+      })
+    })
+  }
+
+  private async syncPendingInvoices(tenantId: string) {
+    const pending = await this.prisma.saaSInvoice.findMany({
+      where: { tenantId, status: 'PENDING', providerPaymentId: { not: null } },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+      select: { id: true, tenantId: true, plan: true, providerPaymentId: true },
+    })
+
+    for (const inv of pending) {
+      try {
+        const response = await fetch(`https://api.yookassa.ru/v3/payments/${inv.providerPaymentId}`, {
+          headers: { Authorization: this.getYooAuthHeader() },
+        })
+        if (!response.ok) continue
+        const body = await response.json()
+        const status = String(body?.status || '').toLowerCase()
+
+        if (status === 'succeeded') {
+          await this.markInvoicePaid({ id: inv.id, tenantId: inv.tenantId, plan: inv.plan as any }, body)
+        } else if (status === 'canceled') {
+          await this.prisma.saaSInvoice.update({
+            where: { id: inv.id },
+            data: { status: 'CANCELED', providerResponse: body },
+          })
+        }
+      } catch {
+        // best effort sync
+      }
+    }
+  }
+
   async getMyBilling(tenantId: string) {
+    await this.syncPendingInvoices(tenantId)
+
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
       select: { id: true, mode: true, saasPlan: true, saasSubscriptionStatus: true, saasTrialEndsAt: true, saasPaidUntil: true },
@@ -165,33 +231,7 @@ export class SaasBillingService {
     if (!invoice) return { ok: true }
 
     if (event === 'payment.succeeded') {
-      await this.prisma.$transaction(async (tx) => {
-        await tx.saaSInvoice.update({
-          where: { id: invoice.id },
-          data: {
-            status: 'PAID',
-            paidAt: new Date(),
-            providerResponse: payload,
-          },
-        })
-
-        const currentTenant = await tx.tenant.findUnique({
-          where: { id: invoice.tenantId },
-          select: { saasPaidUntil: true },
-        })
-        const now = new Date()
-        const base = currentTenant?.saasPaidUntil && currentTenant.saasPaidUntil > now ? currentTenant.saasPaidUntil : now
-        const paidUntil = new Date(base.getTime() + 30 * 24 * 60 * 60 * 1000)
-
-        await tx.tenant.update({
-          where: { id: invoice.tenantId },
-          data: {
-            saasSubscriptionStatus: 'ACTIVE',
-            saasPlan: invoice.plan,
-            saasPaidUntil: paidUntil,
-          },
-        })
-      })
+      await this.markInvoicePaid({ id: invoice.id, tenantId: invoice.tenantId, plan: invoice.plan as any }, payload)
     } else if (event === 'payment.canceled' || event === 'payment.waiting_for_capture') {
       await this.prisma.saaSInvoice.update({
         where: { id: invoice.id },
