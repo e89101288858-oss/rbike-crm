@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'
@@ -8,6 +8,7 @@ import { clearTenantId, clearToken, getTenantId, getToken, setTenantId } from '@
 
 export default function TenantSettingsPage() {
   const router = useRouter()
+  const returnHandledRef = useRef(false)
   const [tenants, setTenants] = useState<any[]>([])
   const [role, setRole] = useState('')
   const [settings, setSettings] = useState<any>(null)
@@ -93,6 +94,53 @@ export default function TenantSettingsPage() {
     }, 2500)
     return () => clearTimeout(t)
   }, [error, success])
+
+  useEffect(() => {
+    if (returnHandledRef.current) return
+    if (typeof window === 'undefined') return
+    const qp = new URLSearchParams(window.location.search)
+    if (qp.get('billing_return') !== '1') return
+
+    returnHandledRef.current = true
+    setSuccess('Проверяем статус оплаты...')
+
+    const startedAt = Date.now()
+    const timer = setInterval(async () => {
+      try {
+        const bill = await api.mySaasBilling()
+        setBilling(bill)
+
+        const latest = (bill?.invoices || [])[0]
+        if (latest?.status === 'PAID') {
+          clearInterval(timer)
+          setSuccess('Оплата подтверждена. Подписка продлена.')
+          await load()
+          router.replace('/settings')
+          return
+        }
+
+        if (latest?.status === 'FAILED' || latest?.status === 'CANCELED') {
+          clearInterval(timer)
+          setError('Оплата не завершена. Попробуйте снова.')
+          router.replace('/settings')
+          return
+        }
+
+        if (Date.now() - startedAt > 60_000) {
+          clearInterval(timer)
+          setSuccess('Платеж создан. Статус обновится автоматически после подтверждения YooKassa.')
+          router.replace('/settings')
+        }
+      } catch {
+        if (Date.now() - startedAt > 60_000) {
+          clearInterval(timer)
+          router.replace('/settings')
+        }
+      }
+    }, 3000)
+
+    return () => clearInterval(timer)
+  }, [router])
 
   async function saveTenantSettings() {
     try {

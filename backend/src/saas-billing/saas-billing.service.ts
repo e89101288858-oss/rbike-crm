@@ -37,7 +37,8 @@ export class SaasBillingService {
     const amountRub = PLAN_PRICES_RUB[targetPlan]
     if (!amountRub) throw new BadRequestException('Неизвестный план')
 
-    const returnUrl = this.config.get<string>('YOOKASSA_RETURN_URL') || 'https://app.rbcrm.ru/settings'
+    const returnUrlBase = this.config.get<string>('YOOKASSA_RETURN_URL') || 'https://app.rbcrm.ru/settings'
+    const returnUrl = `${returnUrlBase}${returnUrlBase.includes('?') ? '&' : '?'}billing_return=1`
     const vatCode = Number(this.config.get<string>('YOOKASSA_VAT_CODE') || '1')
 
     if (!user?.email && !user?.phone) {
