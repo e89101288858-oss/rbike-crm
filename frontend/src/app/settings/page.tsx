@@ -327,14 +327,6 @@ export default function TenantSettingsPage() {
         )}
       </section>
 
-      <section className="crm-card mb-4 text-sm">
-        <h2 className="mb-2 text-base font-semibold">Биллинг</h2>
-        <div className="text-xs text-gray-500">Управление тарифом и оплатой перенесено на отдельную страницу.</div>
-        <div className="mt-3">
-          <button className="btn" onClick={() => router.push('/billing')}>Открыть биллинг</button>
-        </div>
-      </section>
-
       <section className="crm-card text-sm">
         <h2 className="mb-2 text-base font-semibold">Безопасность</h2>
         <div className="mb-2 text-xs text-gray-500">
