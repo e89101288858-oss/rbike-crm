@@ -43,6 +43,15 @@ function statusBadge(status: string) {
   return 'badge-muted'
 }
 
+function normalizeErr(err: unknown, fallback: string) {
+  const raw = err instanceof Error ? err.message : fallback
+  try {
+    const parsed = JSON.parse(raw)
+    if (parsed?.message) return String(parsed.message)
+  } catch {}
+  return raw
+}
+
 export default function BikesPage() {
   const router = useRouter()
   const pathname = usePathname()
@@ -62,6 +71,7 @@ export default function BikesPage() {
   const [selectedBikeId, setSelectedBikeId] = useState<string | null>(null)
   const [modalEdit, setModalEdit] = useState(false)
   const [createModalOpen, setCreateModalOpen] = useState(false)
+  const [createModalError, setCreateModalError] = useState('')
   const [urlReady, setUrlReady] = useState(false)
 
   async function load() {
@@ -78,7 +88,7 @@ export default function BikesPage() {
   }
 
   async function createBike() {
-    setError(''); setSuccess('')
+    setError(''); setSuccess(''); setCreateModalError('')
     try {
       if (!newBike.code.trim()) throw new Error('Укажи код велосипеда')
       await api.createBike({
@@ -93,7 +103,9 @@ export default function BikesPage() {
       } as any)
       setNewBike({ code: '', model: '', frameNumber: '', motorWheelNumber: '', simCardNumber: '', status: 'AVAILABLE', repairReason: '', repairEndDate: '' })
       await load(); setSuccess('Сохранено'); setCreateModalOpen(false)
-    } catch (err) { setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка добавления велосипеда'}`) }
+    } catch (err) {
+      setCreateModalError(normalizeErr(err, 'Ошибка добавления велосипеда'))
+    }
   }
 
   async function saveBike(bikeId: string) {
@@ -243,8 +255,9 @@ export default function BikesPage() {
           <div className="panel w-full max-w-5xl" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex items-center justify-between gap-2">
               <h2 className="text-lg font-semibold">Добавить велосипед</h2>
-              <button type="button" className="btn" onClick={() => setCreateModalOpen(false)}>Закрыть</button>
+              <button type="button" className="btn" onClick={() => { setCreateModalError(''); setCreateModalOpen(false) }}>Закрыть</button>
             </div>
+            {createModalError && <div className="alert mb-3">{createModalError}</div>}
             <div className="grid gap-2 md:grid-cols-4">
               <input className="input" value={newBike.code} placeholder="Код" onChange={(e) => setNewBike((p) => ({ ...p, code: e.target.value }))} />
               <input className="input" value={newBike.model} placeholder="Модель" onChange={(e) => setNewBike((p) => ({ ...p, model: e.target.value }))} />
