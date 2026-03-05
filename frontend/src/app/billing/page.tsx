@@ -127,6 +127,48 @@ export default function BillingPage() {
         <button className="btn-primary" disabled={busy} onClick={pay}>Оплатить</button>
       </section>
 
+      <section className="crm-card mb-4 text-sm">
+        <h2 className="mb-2 text-base font-semibold">Сравнение тарифов</h2>
+        <div className="table-wrap">
+          <table className="table table-sticky mobile-cards">
+            <thead>
+              <tr>
+                <th>Параметр</th>
+                <th>STARTER</th>
+                <th>PRO</th>
+                <th>ENTERPRISE</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td data-label="Параметр" className="font-medium">Цена за месяц</td>
+                <td data-label="STARTER">{billing?.prices?.STARTER ?? 0} ₽</td>
+                <td data-label="PRO">{billing?.prices?.PRO ?? 0} ₽</td>
+                <td data-label="ENTERPRISE">{billing?.prices?.ENTERPRISE ?? 0} ₽</td>
+              </tr>
+              <tr>
+                <td data-label="Параметр" className="font-medium">Лимит велосипедов</td>
+                <td data-label="STARTER">25</td>
+                <td data-label="PRO">120</td>
+                <td data-label="ENTERPRISE">Без лимита</td>
+              </tr>
+              <tr>
+                <td data-label="Параметр" className="font-medium">Лимит активных аренд</td>
+                <td data-label="STARTER">20</td>
+                <td data-label="PRO">100</td>
+                <td data-label="ENTERPRISE">Без лимита</td>
+              </tr>
+              <tr>
+                <td data-label="Параметр" className="font-medium">Поддержка</td>
+                <td data-label="STARTER">Базовая</td>
+                <td data-label="PRO">Приоритетная</td>
+                <td data-label="ENTERPRISE">Выделенная</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <section className="crm-card text-sm">
         <h2 className="mb-2 text-base font-semibold">История счетов</h2>
         <div className="space-y-1 text-xs">
