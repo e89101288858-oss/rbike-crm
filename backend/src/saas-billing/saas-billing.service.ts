@@ -72,7 +72,7 @@ export class SaasBillingService {
     const payload = {
       amount: { value: amountRub.toFixed(2), currency: 'RUB' },
       capture: true,
-      description: `Оплата подписки на rbCRM тариф "${targetPlan}" на ${durationMonths} мес.`,
+      description: `Оплата подписки на rbCRM тариф "${targetPlan}" на ${durationMonths} мес. ID платежа: ${invoice.id}`,
       confirmation: {
         type: 'redirect',
         return_url: returnUrl,
@@ -84,7 +84,7 @@ export class SaasBillingService {
         },
         items: [
           {
-            description: `Подписка rbCRM SaaS (${targetPlan}, ${durationMonths} мес.)`,
+            description: `Подписка rbCRM SaaS (${targetPlan}, ${durationMonths} мес.), ID: ${invoice.id}`,
             quantity: '1.00',
             amount: { value: amountRub.toFixed(2), currency: 'RUB' },
             vat_code: vatCode,

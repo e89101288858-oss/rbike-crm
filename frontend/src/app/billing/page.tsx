@@ -178,7 +178,7 @@ export default function BillingPage() {
         <h2 className="mb-2 text-base font-semibold">История счетов</h2>
         <div className="space-y-1 text-xs">
           {(billing?.invoices || []).map((inv: any) => (
-            <div key={inv.id}>{new Date(inv.createdAt).toLocaleString('ru-RU')} — {inv.plan} · {inv.durationMonths || 1} мес — {inv.amountRub} ₽ — {inv.status}</div>
+            <div key={inv.id}>{new Date(inv.createdAt).toLocaleString('ru-RU')} — ID: {inv.id} — {inv.plan} · {inv.durationMonths || 1} мес — {inv.amountRub} ₽ — {inv.status}</div>
           ))}
           {!(billing?.invoices || []).length && <div className="text-gray-500">Пока нет счетов</div>}
         </div>
