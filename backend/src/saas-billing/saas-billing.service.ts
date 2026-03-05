@@ -58,7 +58,7 @@ export class SaasBillingService {
     const payload = {
       amount: { value: amountRub.toFixed(2), currency: 'RUB' },
       capture: true,
-      description: `rbCRM SaaS ${targetPlan} for ${tenant.name}`,
+      description: `Оплата подписки на rbCRM тариф "${targetPlan}" на 30 дней.`,
       confirmation: {
         type: 'redirect',
         return_url: returnUrl,
