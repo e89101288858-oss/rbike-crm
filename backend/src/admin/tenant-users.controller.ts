@@ -13,14 +13,11 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
 import type { JwtUser } from '../common/decorators/current-user.decorator'
-import { Roles } from '../common/decorators/roles.decorator'
-import { RolesGuard } from '../common/guards/roles.guard'
 import { PrismaService } from '../prisma/prisma.service'
 import { AssignUserToTenantDto } from './dto/assign-user-to-tenant.dto'
 
 @Controller('tenants')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('OWNER', 'FRANCHISEE', 'SAAS_USER')
+@UseGuards(JwtAuthGuard)
 export class TenantUsersController {
   constructor(private readonly prisma: PrismaService) {}
 

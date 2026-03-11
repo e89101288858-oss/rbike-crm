@@ -3,9 +3,7 @@ import type { Request } from 'express'
 import * as bcrypt from 'bcrypt'
 import { PrismaService } from '../prisma/prisma.service'
 import { JwtAuthGuard } from './jwt-auth.guard'
-import { Roles } from '../common/decorators/roles.decorator'
 import { TenantModes } from '../common/decorators/tenant-modes.decorator'
-import { RolesGuard } from '../common/guards/roles.guard'
 import { TenantGuard } from '../common/guards/tenant.guard'
 import { TenantModeGuard } from '../common/guards/tenant-mode.guard'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
@@ -15,12 +13,17 @@ import { UpdateMyAccountSettingsDto } from './dto/update-my-account-settings.dto
 import { ChangeMyPasswordDto } from './dto/change-my-password.dto'
 
 @Controller('my')
-@UseGuards(JwtAuthGuard, RolesGuard, TenantGuard, TenantModeGuard)
-@Roles('OWNER', 'FRANCHISEE', 'SAAS_USER', 'MANAGER')
+@UseGuards(JwtAuthGuard, TenantGuard, TenantModeGuard)
 @TenantModes('FRANCHISE', 'SAAS')
 export class MyTenantSettingsController {
   constructor(private readonly prisma: PrismaService) {}
 
+
+  private ensureAllowedRole(role: string) {
+    if (role !== 'OWNER' && role !== 'FRANCHISEE' && role !== 'SAAS_USER' && role !== 'MANAGER') {
+      throw new BadRequestException('Недостаточно прав для self-service операций')
+    }
+  }
   private async audit(userId: string | undefined, action: string, targetType: string, targetId?: string, details?: any) {
     await this.prisma.auditLog.create({
       data: {
@@ -34,7 +37,8 @@ export class MyTenantSettingsController {
   }
 
   @Get('tenant-settings')
-  async getSettings(@Req() req: Request) {
+  async getSettings(@Req() req: Request, @CurrentUser() user: JwtUser) {
+    this.ensureAllowedRole(user.role)
     const tenantId = req.tenantId!
     return this.prisma.tenant.findUnique({
       where: { id: tenantId },
@@ -51,6 +55,7 @@ export class MyTenantSettingsController {
 
   @Patch('tenant-settings')
   async updateSettings(@Req() req: Request, @CurrentUser() user: JwtUser, @Body() dto: UpdateMyTenantSettingsDto) {
+    this.ensureAllowedRole(user.role)
     const tenantId = req.tenantId!
 
     const tenant = await this.prisma.tenant.findUnique({
@@ -85,6 +90,7 @@ export class MyTenantSettingsController {
 
   @Get('account-settings')
   async getAccountSettings(@Req() req: Request, @CurrentUser() user: JwtUser) {
+    this.ensureAllowedRole(user.role)
     const tenantId = req.tenantId!
 
     const [tenant, me] = await Promise.all([
@@ -173,6 +179,7 @@ export class MyTenantSettingsController {
     @CurrentUser() user: JwtUser,
     @Body() dto: UpdateMyAccountSettingsDto,
   ) {
+    this.ensureAllowedRole(user.role)
     const tenantId = req.tenantId!
 
     const tenant = await this.prisma.tenant.findUnique({
@@ -236,6 +243,7 @@ export class MyTenantSettingsController {
 
   @Patch('change-password')
   async changePassword(@CurrentUser() user: JwtUser, @Body() dto: ChangeMyPasswordDto) {
+    this.ensureAllowedRole(user.role)
     const me = await this.prisma.user.findUnique({ where: { id: user.userId } })
     if (!me) throw new BadRequestException('Пользователь не найден')
 
@@ -258,6 +266,7 @@ export class MyTenantSettingsController {
 
   @Patch('logout-all-sessions')
   async logoutAllSessions(@CurrentUser() user: JwtUser) {
+    this.ensureAllowedRole(user.role)
     await this.prisma.user.update({
       where: { id: user.userId },
       data: { tokenVersion: { increment: 1 } },
@@ -268,6 +277,7 @@ export class MyTenantSettingsController {
 
   @Patch('demo/end')
   async endDemoSession(@Req() req: Request, @CurrentUser() user: JwtUser) {
+    this.ensureAllowedRole(user.role)
     const tenantId = req.tenantId!
 
     const me = await this.prisma.user.findUnique({
