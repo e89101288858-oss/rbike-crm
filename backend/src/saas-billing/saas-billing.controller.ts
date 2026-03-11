@@ -2,8 +2,10 @@ import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common'
 import type { Request } from 'express'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { Roles } from '../common/decorators/roles.decorator'
+import { TenantModes } from '../common/decorators/tenant-modes.decorator'
 import { RolesGuard } from '../common/guards/roles.guard'
 import { TenantGuard } from '../common/guards/tenant.guard'
+import { TenantModeGuard } from '../common/guards/tenant-mode.guard'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
 import type { JwtUser } from '../common/decorators/current-user.decorator'
 import { SaasBillingService } from './saas-billing.service'
@@ -13,15 +15,17 @@ export class SaasBillingController {
   constructor(private readonly saasBilling: SaasBillingService) {}
 
   @Get('my/saas-billing')
-  @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard, TenantModeGuard)
   @Roles('SAAS_USER')
+  @TenantModes('SAAS')
   async myBilling(@Req() req: Request) {
     return this.saasBilling.getMyBilling(req.tenantId!)
   }
 
   @Post('my/saas-billing/checkout')
-  @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard, TenantModeGuard)
   @Roles('SAAS_USER')
+  @TenantModes('SAAS')
   async createCheckout(
     @Req() req: Request,
     @CurrentUser() user: JwtUser,
