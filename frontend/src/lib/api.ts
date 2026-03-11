@@ -741,6 +741,16 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ userId }),
     }),
+  createTenantUser: (tenantId: string, payload: { email: string; password: string; fullName?: string; phone?: string; role: 'MANAGER' | 'MECHANIC' }) =>
+    request<any>(`/tenants/${tenantId}/users/create`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  updateTenantUser: (tenantId: string, userId: string, payload: { role?: 'MANAGER' | 'MECHANIC'; isActive?: boolean; password?: string; fullName?: string; phone?: string }) =>
+    request<any>(`/tenants/${tenantId}/users/${userId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
   removeUserFromTenant: (tenantId: string, userId: string) =>
     request<any>(`/tenants/${tenantId}/users/${userId}`, { method: 'DELETE' }),
 

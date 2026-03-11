@@ -27,6 +27,9 @@ export default function TenantSettingsPage() {
     address: '',
   })
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmNewPassword: '' })
+  const [tenantUsers, setTenantUsers] = useState<any[]>([])
+  const [userForm, setUserForm] = useState({ email: '', password: '', fullName: '', phone: '', role: 'MANAGER' as 'MANAGER' | 'MECHANIC' })
+  const [userPwdMap, setUserPwdMap] = useState<Record<string, string>>({})
 
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -76,6 +79,14 @@ export default function TenantSettingsPage() {
         tenantName: acc?.tenant?.name || '',
         address: acc?.tenant?.address || '',
       })
+
+      const activeTenantId = getTenantId() || myTenants[0]?.id
+      if (activeTenantId) {
+        const rows = await api.tenantUsers(activeTenantId)
+        setTenantUsers(rows)
+      } else {
+        setTenantUsers([])
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки настроек точки')
     }
@@ -180,6 +191,54 @@ export default function TenantSettingsPage() {
       await load()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка сохранения данных профиля')
+    }
+  }
+
+  async function createTenantUser() {
+    try {
+      const tenantId = getTenantId()
+      if (!tenantId) throw new Error('Tenant не выбран')
+      if (!userForm.email.trim()) throw new Error('Email обязателен')
+      if (userForm.password.length < 6) throw new Error('Пароль минимум 6 символов')
+
+      await api.createTenantUser(tenantId, {
+        email: userForm.email.trim(),
+        password: userForm.password,
+        fullName: userForm.fullName.trim() || undefined,
+        phone: userForm.phone.trim() || undefined,
+        role: userForm.role,
+      })
+
+      setUserForm({ email: '', password: '', fullName: '', phone: '', role: 'MANAGER' })
+      setSuccess('Пользователь добавлен')
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка создания пользователя')
+    }
+  }
+
+  async function updateTenantUser(userId: string, patch: { role?: 'MANAGER' | 'MECHANIC'; isActive?: boolean; password?: string }) {
+    try {
+      const tenantId = getTenantId()
+      if (!tenantId) throw new Error('Tenant не выбран')
+      await api.updateTenantUser(tenantId, userId, patch)
+      setSuccess('Права пользователя обновлены')
+      setUserPwdMap((prev) => ({ ...prev, [userId]: '' }))
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка обновления пользователя')
+    }
+  }
+
+  async function removeTenantUser(userId: string) {
+    try {
+      const tenantId = getTenantId()
+      if (!tenantId) throw new Error('Tenant не выбран')
+      await api.removeUserFromTenant(tenantId, userId)
+      setSuccess('Пользователь удален из точки')
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка удаления пользователя')
     }
   }
 
@@ -304,6 +363,63 @@ export default function TenantSettingsPage() {
         </div>
         <div className="mt-4"><button className="btn-primary" onClick={saveAccountSettings}>Сохранить данные аккаунта</button></div>
       </section>
+
+      {(role === 'OWNER' || role === 'FRANCHISEE' || role === 'SAAS_USER') && (
+      <section className="crm-card mb-4 text-sm">
+        <h2 className="mb-2 text-base font-semibold">Пользователи точки</h2>
+
+        <div className="mb-3 grid gap-2 md:grid-cols-5">
+          <input className="input" placeholder="Email" value={userForm.email} onChange={(e) => setUserForm((p) => ({ ...p, email: e.target.value }))} />
+          <input className="input" placeholder="Пароль" type="password" value={userForm.password} onChange={(e) => setUserForm((p) => ({ ...p, password: e.target.value }))} />
+          <input className="input" placeholder="ФИО (опц.)" value={userForm.fullName} onChange={(e) => setUserForm((p) => ({ ...p, fullName: e.target.value }))} />
+          <input className="input" placeholder="Телефон (опц.)" value={userForm.phone} onChange={(e) => setUserForm((p) => ({ ...p, phone: e.target.value }))} />
+          <div className="flex gap-2">
+            <select className="select" value={userForm.role} onChange={(e) => setUserForm((p) => ({ ...p, role: e.target.value as 'MANAGER' | 'MECHANIC' }))}>
+              <option value="MANAGER">Менеджер</option>
+              <option value="MECHANIC">Механик</option>
+            </select>
+            <button className="btn-primary" onClick={createTenantUser}>Добавить</button>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          {tenantUsers.map((row) => (
+            <div key={row.user?.id} className="rounded border border-white/10 p-2">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-gray-400">
+                <span>{row.user?.email}</span>
+                <span>·</span>
+                <span>{row.user?.fullName || 'Без имени'}</span>
+                <span>·</span>
+                <span>{row.user?.phone || 'Без телефона'}</span>
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <select
+                  className="select"
+                  value={row.user?.role}
+                  onChange={(e) => updateTenantUser(row.user.id, { role: e.target.value as 'MANAGER' | 'MECHANIC' })}
+                >
+                  <option value="MANAGER">Менеджер</option>
+                  <option value="MECHANIC">Механик</option>
+                </select>
+                <button className="btn" onClick={() => updateTenantUser(row.user.id, { isActive: !row.user?.isActive })}>
+                  {row.user?.isActive ? 'Деактивировать' : 'Активировать'}
+                </button>
+                <input
+                  className="input"
+                  placeholder="Новый пароль"
+                  type="password"
+                  value={userPwdMap[row.user.id] || ''}
+                  onChange={(e) => setUserPwdMap((prev) => ({ ...prev, [row.user.id]: e.target.value }))}
+                />
+                <button className="btn" onClick={() => updateTenantUser(row.user.id, { password: userPwdMap[row.user.id] || '' })}>Сменить пароль</button>
+                <button className="btn border-red-500/60 text-red-300" onClick={() => removeTenantUser(row.user.id)}>Убрать из точки</button>
+              </div>
+            </div>
+          ))}
+          {!tenantUsers.length && <div className="text-xs text-gray-500">Пользователи точки пока не добавлены.</div>}
+        </div>
+      </section>
+      )}
 
       <section className="crm-card mb-4 text-sm">
         <h2 className="mb-2 text-base font-semibold">Тариф и лимиты</h2>
