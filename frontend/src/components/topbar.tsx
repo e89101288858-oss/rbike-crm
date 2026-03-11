@@ -29,7 +29,7 @@ const franchiseOpsNav: NavGroup[] = [
   {
     title: 'Операции',
     items: [
-      { href: '/dashboard', label: 'Дашборд', roles: ['FRANCHISEE', 'MANAGER', 'MECHANIC'], permission: 'rentals' },
+      { href: '/dashboard', label: 'Дашборд', roles: ['FRANCHISEE', 'MANAGER', 'MECHANIC'] },
       { href: '/rentals', label: 'Аренды', roles: ['FRANCHISEE', 'MANAGER'], permission: 'rentals' },
     ],
   },
@@ -62,7 +62,7 @@ const saasOpsNav: NavGroup[] = [
   {
     title: 'Операции',
     items: [
-      { href: '/dashboard', label: 'Дашборд', roles: ['SAAS_USER', 'MANAGER', 'MECHANIC'], permission: 'rentals' },
+      { href: '/dashboard', label: 'Дашборд', roles: ['SAAS_USER', 'MANAGER', 'MECHANIC'] },
       { href: '/rentals', label: 'Аренды', roles: ['SAAS_USER', 'MANAGER'], permission: 'rentals' },
     ],
   },
