@@ -2,15 +2,18 @@ import { Body, Controller, Get, Post, Query, Req, UseGuards } from '@nestjs/comm
 import type { Request } from 'express'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { Roles } from '../common/decorators/roles.decorator'
+import { TenantModes } from '../common/decorators/tenant-modes.decorator'
 import { RolesGuard } from '../common/guards/roles.guard'
 import { TenantGuard } from '../common/guards/tenant.guard'
+import { TenantModeGuard } from '../common/guards/tenant-mode.guard'
 import { DebtsQueryDto } from './dto/debts-query.dto'
 import { GenerateWeeklyPaymentsDto } from './dto/generate-weekly-payments.dto'
 import { WeeklyPaymentsService } from './weekly-payments.service'
 
 @Controller('weekly-payments')
-@UseGuards(JwtAuthGuard, RolesGuard, TenantGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, TenantGuard, TenantModeGuard)
 @Roles('OWNER', 'FRANCHISEE', 'MANAGER')
+@TenantModes('FRANCHISE')
 export class WeeklyPaymentsController {
   constructor(private readonly weeklyPaymentsService: WeeklyPaymentsService) {}
 

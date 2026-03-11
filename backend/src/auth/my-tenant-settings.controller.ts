@@ -4,8 +4,10 @@ import * as bcrypt from 'bcrypt'
 import { PrismaService } from '../prisma/prisma.service'
 import { JwtAuthGuard } from './jwt-auth.guard'
 import { Roles } from '../common/decorators/roles.decorator'
+import { TenantModes } from '../common/decorators/tenant-modes.decorator'
 import { RolesGuard } from '../common/guards/roles.guard'
 import { TenantGuard } from '../common/guards/tenant.guard'
+import { TenantModeGuard } from '../common/guards/tenant-mode.guard'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
 import type { JwtUser } from '../common/decorators/current-user.decorator'
 import { UpdateMyTenantSettingsDto } from './dto/update-my-tenant-settings.dto'
@@ -13,8 +15,9 @@ import { UpdateMyAccountSettingsDto } from './dto/update-my-account-settings.dto
 import { ChangeMyPasswordDto } from './dto/change-my-password.dto'
 
 @Controller('my')
-@UseGuards(JwtAuthGuard, RolesGuard, TenantGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, TenantGuard, TenantModeGuard)
 @Roles('OWNER', 'FRANCHISEE', 'SAAS_USER', 'MANAGER')
+@TenantModes('FRANCHISE', 'SAAS')
 export class MyTenantSettingsController {
   constructor(private readonly prisma: PrismaService) {}
 

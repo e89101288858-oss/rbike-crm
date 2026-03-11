@@ -18,8 +18,10 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
 import type { JwtUser } from '../common/decorators/current-user.decorator'
 import { Roles } from '../common/decorators/roles.decorator'
+import { TenantModes } from '../common/decorators/tenant-modes.decorator'
 import { RolesGuard } from '../common/guards/roles.guard'
 import { TenantGuard } from '../common/guards/tenant.guard'
+import { TenantModeGuard } from '../common/guards/tenant-mode.guard'
 import { assertSaasOperationAllowed } from '../common/saas-gating'
 import { PrismaService } from '../prisma/prisma.service'
 import { CreateBikeDto } from './dto/create-bike.dto'
@@ -28,8 +30,9 @@ import { ListBikesQueryDto } from './dto/list-bikes.query.dto'
 import { UpdateBikeDto } from './dto/update-bike.dto'
 
 @Controller('bikes')
-@UseGuards(JwtAuthGuard, RolesGuard, TenantGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, TenantGuard, TenantModeGuard)
 @Roles('OWNER', 'FRANCHISEE', 'SAAS_USER', 'MANAGER', 'MECHANIC')
+@TenantModes('FRANCHISE', 'SAAS')
 export class BikesController {
   constructor(private readonly prisma: PrismaService) {}
 

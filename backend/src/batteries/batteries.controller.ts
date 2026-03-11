@@ -3,16 +3,19 @@ import { BatteryStatus } from '@prisma/client'
 import type { Request } from 'express'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { Roles } from '../common/decorators/roles.decorator'
+import { TenantModes } from '../common/decorators/tenant-modes.decorator'
 import { RolesGuard } from '../common/guards/roles.guard'
 import { TenantGuard } from '../common/guards/tenant.guard'
+import { TenantModeGuard } from '../common/guards/tenant-mode.guard'
 import { PrismaService } from '../prisma/prisma.service'
 import { CreateBatteryDto } from './dto/create-battery.dto'
 import { ListBatteriesQueryDto } from './dto/list-batteries.query.dto'
 import { UpdateBatteryDto } from './dto/update-battery.dto'
 
 @Controller('batteries')
-@UseGuards(JwtAuthGuard, RolesGuard, TenantGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, TenantGuard, TenantModeGuard)
 @Roles('OWNER', 'FRANCHISEE', 'SAAS_USER', 'MANAGER', 'MECHANIC')
+@TenantModes('FRANCHISE', 'SAAS')
 export class BatteriesController {
   constructor(private readonly prisma: PrismaService) {}
 

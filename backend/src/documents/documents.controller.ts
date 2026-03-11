@@ -20,13 +20,16 @@ import PizZip from 'pizzip'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
 import type { JwtUser } from '../common/decorators/current-user.decorator'
+import { TenantModes } from '../common/decorators/tenant-modes.decorator'
 import { TenantGuard } from '../common/guards/tenant.guard'
+import { TenantModeGuard } from '../common/guards/tenant-mode.guard'
 import { assertSaasOperationAllowed } from '../common/saas-gating'
 import { PrismaService } from '../prisma/prisma.service'
 import { UpdateContractTemplateDto } from './dto/update-contract-template.dto'
 
 @Controller('documents')
-@UseGuards(JwtAuthGuard, TenantGuard)
+@UseGuards(JwtAuthGuard, TenantGuard, TenantModeGuard)
+@TenantModes('FRANCHISE', 'SAAS')
 export class DocumentsController {
   constructor(private readonly prisma: PrismaService) {}
 

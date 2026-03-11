@@ -4,8 +4,10 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
 import type { JwtUser } from '../common/decorators/current-user.decorator'
 import { Roles } from '../common/decorators/roles.decorator'
+import { TenantModes } from '../common/decorators/tenant-modes.decorator'
 import { RolesGuard } from '../common/guards/roles.guard'
 import { TenantGuard } from '../common/guards/tenant.guard'
+import { TenantModeGuard } from '../common/guards/tenant-mode.guard'
 import { ListPaymentsQueryDto } from './dto/list-payments.query.dto'
 import { RevenueByBikeQueryDto } from './dto/revenue-by-bike.query.dto'
 import { RevenueByDaysQueryDto } from './dto/revenue-by-days.query.dto'
@@ -13,8 +15,9 @@ import { UpdatePaymentDto } from './dto/update-payment.dto'
 import { PaymentsService } from './payments.service'
 
 @Controller('payments')
-@UseGuards(JwtAuthGuard, RolesGuard, TenantGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, TenantGuard, TenantModeGuard)
 @Roles('OWNER', 'FRANCHISEE', 'SAAS_USER', 'MANAGER')
+@TenantModes('FRANCHISE', 'SAAS')
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 

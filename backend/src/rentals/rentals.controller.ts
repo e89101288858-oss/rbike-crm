@@ -18,8 +18,10 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
 import type { JwtUser } from '../common/decorators/current-user.decorator'
 import { Roles } from '../common/decorators/roles.decorator'
+import { TenantModes } from '../common/decorators/tenant-modes.decorator'
 import { RolesGuard } from '../common/guards/roles.guard'
 import { TenantGuard } from '../common/guards/tenant.guard'
+import { TenantModeGuard } from '../common/guards/tenant-mode.guard'
 import { assertSaasOperationAllowed } from '../common/saas-gating'
 import { PrismaService } from '../prisma/prisma.service'
 import { AddRentalBatteryDto } from './dto/add-rental-battery.dto'
@@ -47,8 +49,9 @@ function diffDaysCeil(from: Date, to: Date) {
 }
 
 @Controller('rentals')
-@UseGuards(JwtAuthGuard, RolesGuard, TenantGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, TenantGuard, TenantModeGuard)
 @Roles('OWNER', 'FRANCHISEE', 'SAAS_USER', 'MANAGER')
+@TenantModes('FRANCHISE', 'SAAS')
 export class RentalsController {
   constructor(private readonly prisma: PrismaService) {}
 

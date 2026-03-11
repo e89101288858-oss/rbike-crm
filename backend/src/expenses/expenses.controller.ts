@@ -4,16 +4,19 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
 import type { JwtUser } from '../common/decorators/current-user.decorator'
 import { Roles } from '../common/decorators/roles.decorator'
+import { TenantModes } from '../common/decorators/tenant-modes.decorator'
 import { RolesGuard } from '../common/guards/roles.guard'
 import { TenantGuard } from '../common/guards/tenant.guard'
+import { TenantModeGuard } from '../common/guards/tenant-mode.guard'
 import { CreateExpenseDto } from './dto/create-expense.dto'
 import { ListExpensesQueryDto } from './dto/list-expenses.query.dto'
 import { UpdateExpenseDto } from './dto/update-expense.dto'
 import { ExpensesService } from './expenses.service'
 
 @Controller('expenses')
-@UseGuards(JwtAuthGuard, RolesGuard, TenantGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, TenantGuard, TenantModeGuard)
 @Roles('OWNER', 'FRANCHISEE', 'SAAS_USER', 'MANAGER')
+@TenantModes('FRANCHISE', 'SAAS')
 export class ExpensesController {
   constructor(private readonly expensesService: ExpensesService) {}
 

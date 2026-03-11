@@ -2,8 +2,10 @@ import { Body, Controller, Delete, Get, NotFoundException, Param, Patch, Post, Q
 import type { Request } from 'express'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { Roles } from '../common/decorators/roles.decorator'
+import { TenantModes } from '../common/decorators/tenant-modes.decorator'
 import { RolesGuard } from '../common/guards/roles.guard'
 import { TenantGuard } from '../common/guards/tenant.guard'
+import { TenantModeGuard } from '../common/guards/tenant-mode.guard'
 import { PrismaService } from '../prisma/prisma.service'
 import { CreateClientDto } from './dto/create-client.dto'
 import { ImportClientsDto } from './dto/import-clients.dto'
@@ -11,8 +13,9 @@ import { ListClientsQueryDto } from './dto/list-clients.query.dto'
 import { UpdateClientDto } from './dto/update-client.dto'
 
 @Controller('clients')
-@UseGuards(JwtAuthGuard, RolesGuard, TenantGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, TenantGuard, TenantModeGuard)
 @Roles('OWNER', 'FRANCHISEE', 'SAAS_USER', 'MANAGER')
+@TenantModes('FRANCHISE', 'SAAS')
 export class ClientsController {
   constructor(private readonly prisma: PrismaService) {}
 
