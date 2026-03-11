@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common'
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { PrismaService } from '../prisma/prisma.service'
 
@@ -26,6 +26,38 @@ export class SaasBillingService {
     const secretKey = this.config.get<string>('YOOKASSA_SECRET_KEY')
     if (!shopId || !secretKey) throw new BadRequestException('YooKassa не настроена')
     return `Basic ${Buffer.from(`${shopId}:${secretKey}`).toString('base64')}`
+  }
+
+  private readHeader(headers: Record<string, string | string[] | undefined>, key: string) {
+    const v = headers[key] ?? headers[key.toLowerCase()]
+    return Array.isArray(v) ? v[0] : v
+  }
+
+  private assertWebhookSecret(headers: Record<string, string | string[] | undefined>) {
+    const expected = this.config.get<string>('YOOKASSA_WEBHOOK_SECRET')
+    if (!expected) return
+
+    const actual =
+      this.readHeader(headers, 'x-yookassa-webhook-token') ||
+      this.readHeader(headers, 'x-webhook-secret') ||
+      this.readHeader(headers, 'x-api-key')
+
+    if (!actual || actual !== expected) {
+      throw new UnauthorizedException('Invalid YooKassa webhook secret')
+    }
+  }
+
+  private async fetchPaymentFromYoo(paymentId: string) {
+    const response = await fetch(`https://api.yookassa.ru/v3/payments/${paymentId}`, {
+      headers: { Authorization: this.getYooAuthHeader() },
+    })
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => '')
+      throw new BadRequestException(`YooKassa payment lookup failed: HTTP ${response.status}${body ? ` | ${body}` : ''}`)
+    }
+
+    return response.json()
   }
 
   async createCheckout(tenantId: string, userId: string, plan?: 'STARTER' | 'PRO' | 'ENTERPRISE', durationMonths = 1) {
@@ -197,15 +229,13 @@ export class SaasBillingService {
           continue
         }
 
-        const response = await fetch(`https://api.yookassa.ru/v3/payments/${inv.providerPaymentId}`, {
-          headers: { Authorization: this.getYooAuthHeader() },
-        })
-
-        const body = await response.json().catch(() => ({}))
-        if (!response.ok) {
+        let body: any = {}
+        try {
+          body = await this.fetchPaymentFromYoo(inv.providerPaymentId)
+        } catch (e) {
           await this.prisma.saaSInvoice.update({
             where: { id: inv.id },
-            data: { providerResponse: { syncError: true, status: response.status, body } as any },
+            data: { providerResponse: { syncError: true, message: e instanceof Error ? e.message : 'lookup failed' } as any },
           })
           continue
         }
@@ -279,24 +309,42 @@ export class SaasBillingService {
     }
   }
 
-  async handleWebhook(payload: any) {
+  async handleWebhook(payload: any, headers: Record<string, string | string[] | undefined> = {}) {
+    this.assertWebhookSecret(headers)
+
     const event = payload?.event
     const obj = payload?.object
     if (!event || !obj?.id) return { ok: true }
 
-    const invoiceId = obj?.metadata?.invoiceId
-    const byPayment = await this.prisma.saaSInvoice.findFirst({ where: { providerPaymentId: obj.id } })
-    const invoice = byPayment || (invoiceId ? await this.prisma.saaSInvoice.findUnique({ where: { id: invoiceId } }) : null)
+    const payment = await this.fetchPaymentFromYoo(String(obj.id))
+    const invoiceId = payment?.metadata?.invoiceId || obj?.metadata?.invoiceId
+
+    const byPayment = await this.prisma.saaSInvoice.findFirst({ where: { providerPaymentId: String(obj.id) } })
+    const invoice = byPayment || (invoiceId ? await this.prisma.saaSInvoice.findUnique({ where: { id: String(invoiceId) } }) : null)
     if (!invoice) return { ok: true }
 
-    if (event === 'payment.succeeded') {
-      await this.markInvoicePaid({ id: invoice.id, tenantId: invoice.tenantId, plan: invoice.plan as any, durationMonths: invoice.durationMonths || 1 }, payload)
-    } else if (event === 'payment.canceled' || event === 'payment.waiting_for_capture') {
+    const amountValue = Number(payment?.amount?.value || 0)
+    if (amountValue > 0 && Math.round(amountValue) !== Math.round(invoice.amountRub)) {
+      throw new BadRequestException('Webhook amount does not match invoice amount')
+    }
+
+    const status = String(payment?.status || '').toLowerCase()
+    if (status === 'succeeded') {
+      await this.markInvoicePaid({ id: invoice.id, tenantId: invoice.tenantId, plan: invoice.plan as any, durationMonths: invoice.durationMonths || 1 }, payment)
+    } else if (status === 'canceled') {
       await this.prisma.saaSInvoice.update({
         where: { id: invoice.id },
         data: {
-          status: event === 'payment.canceled' ? 'CANCELED' : 'PENDING',
-          providerResponse: payload,
+          status: 'CANCELED',
+          providerResponse: payment,
+        },
+      })
+    } else {
+      await this.prisma.saaSInvoice.update({
+        where: { id: invoice.id },
+        data: {
+          status: 'PENDING',
+          providerResponse: payment,
         },
       })
     }

@@ -31,7 +31,7 @@ export class SaasBillingController {
   }
 
   @Post('webhooks/yookassa')
-  async yookassaWebhook(@Body() payload: any) {
-    return this.saasBilling.handleWebhook(payload)
+  async yookassaWebhook(@Body() payload: any, @Req() req: Request) {
+    return this.saasBilling.handleWebhook(payload, req.headers as Record<string, string | string[] | undefined>)
   }
 }
