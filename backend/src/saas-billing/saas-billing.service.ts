@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common'
+import { BadRequestException, Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { PrismaService } from '../prisma/prisma.service'
 
@@ -26,25 +26,6 @@ export class SaasBillingService {
     const secretKey = this.config.get<string>('YOOKASSA_SECRET_KEY')
     if (!shopId || !secretKey) throw new BadRequestException('YooKassa не настроена')
     return `Basic ${Buffer.from(`${shopId}:${secretKey}`).toString('base64')}`
-  }
-
-  private readHeader(headers: Record<string, string | string[] | undefined>, key: string) {
-    const v = headers[key] ?? headers[key.toLowerCase()]
-    return Array.isArray(v) ? v[0] : v
-  }
-
-  private assertWebhookSecret(headers: Record<string, string | string[] | undefined>) {
-    const expected = this.config.get<string>('YOOKASSA_WEBHOOK_SECRET')
-    if (!expected) return
-
-    const actual =
-      this.readHeader(headers, 'x-yookassa-webhook-token') ||
-      this.readHeader(headers, 'x-webhook-secret') ||
-      this.readHeader(headers, 'x-api-key')
-
-    if (!actual || actual !== expected) {
-      throw new UnauthorizedException('Invalid YooKassa webhook secret')
-    }
   }
 
   private async fetchPaymentFromYoo(paymentId: string) {
@@ -309,9 +290,7 @@ export class SaasBillingService {
     }
   }
 
-  async handleWebhook(payload: any, headers: Record<string, string | string[] | undefined> = {}) {
-    this.assertWebhookSecret(headers)
-
+  async handleWebhook(payload: any) {
     const event = payload?.event
     const obj = payload?.object
     if (!event || !obj?.id) return { ok: true }
