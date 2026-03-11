@@ -422,13 +422,16 @@ export default function TenantSettingsPage() {
                 <select
                   className="select"
                   value={row.user?.role}
-                  disabled={row.user?.id === account?.user?.id}
+                  disabled={row.user?.id === account?.user?.id || !(row.user?.role === 'MANAGER' || row.user?.role === 'MECHANIC')}
                   onChange={(e) => updateTenantUser(row.user.id, { role: e.target.value as 'MANAGER' | 'MECHANIC' })}
                 >
+                  {!(row.user?.role === 'MANAGER' || row.user?.role === 'MECHANIC') && (
+                    <option value={row.user?.role}>{row.user?.role === 'SAAS_USER' ? 'Владелец SaaS' : row.user?.role === 'FRANCHISEE' ? 'Владелец франшизы' : row.user?.role}</option>
+                  )}
                   <option value="MANAGER">Менеджер</option>
                   <option value="MECHANIC">Механик</option>
                 </select>
-                {row.user?.id !== account?.user?.id ? (
+                {row.user?.id !== account?.user?.id && (row.user?.role === 'MANAGER' || row.user?.role === 'MECHANIC') ? (
                   <>
                     <button className="btn" onClick={() => updateTenantUser(row.user.id, { isActive: !row.user?.isActive })}>
                       {row.user?.isActive ? 'Деактивировать' : 'Активировать'}
@@ -444,35 +447,43 @@ export default function TenantSettingsPage() {
                     <button className="btn border-red-500/60 text-red-300" onClick={() => removeTenantUser(row.user.id)}>Убрать из точки</button>
                   </>
                 ) : (
-                  <div className="text-xs text-amber-300">Свою роль и доступы здесь менять нельзя.</div>
+                  <div className="text-xs text-amber-300">
+                    {row.user?.id === account?.user?.id
+                      ? 'Свою роль и доступы здесь менять нельзя.'
+                      : 'Для владельца точки права на этом экране не редактируются.'}
+                  </div>
                 )}
               </div>
 
-              <div className="mt-2 grid gap-2 md:grid-cols-3">
-                {Object.entries(PERMISSION_LABELS).map(([key, label]) => {
-                  const checked = !!row.permissions?.[key]
-                  return (
-                    <label key={key} className="flex items-center gap-2 text-xs text-gray-300">
-                      <input
-                        type="checkbox"
-                        disabled={row.user?.id === account?.user?.id}
-                        checked={!!permissionDraftMap[row.user.id]?.[key]}
-                        onChange={(e) => {
-                          setPermissionDraftMap((prev) => ({
-                            ...prev,
-                            [row.user.id]: { ...(prev[row.user.id] || row.permissions || {}), [key]: e.target.checked },
-                          }))
-                        }}
-                      />
-                      {label}
-                    </label>
-                  )
-                })}
-              </div>
-              {row.user?.id !== account?.user?.id && (
-                <div className="mt-2">
-                  <button className="btn" onClick={() => saveUserPermissions(row.user.id)}>Сохранить права</button>
-                </div>
+              {(row.user?.role === 'MANAGER' || row.user?.role === 'MECHANIC') && (
+                <>
+                  <div className="mt-2 grid gap-2 md:grid-cols-3">
+                    {Object.entries(PERMISSION_LABELS).map(([key, label]) => {
+                      const checked = !!row.permissions?.[key]
+                      return (
+                        <label key={key} className="flex items-center gap-2 text-xs text-gray-300">
+                          <input
+                            type="checkbox"
+                            disabled={row.user?.id === account?.user?.id}
+                            checked={!!permissionDraftMap[row.user.id]?.[key]}
+                            onChange={(e) => {
+                              setPermissionDraftMap((prev) => ({
+                                ...prev,
+                                [row.user.id]: { ...(prev[row.user.id] || row.permissions || {}), [key]: e.target.checked },
+                              }))
+                            }}
+                          />
+                          {label}
+                        </label>
+                      )
+                    })}
+                  </div>
+                  {row.user?.id !== account?.user?.id && (
+                    <div className="mt-2">
+                      <button className="btn" onClick={() => saveUserPermissions(row.user.id)}>Сохранить права</button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           ))}
