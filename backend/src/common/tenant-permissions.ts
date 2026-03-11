@@ -76,7 +76,7 @@ export function permissionKeyFromPath(path: string): TenantPermissionKey | null 
   if (path.includes('/expenses')) return 'expenses'
   if (path.includes('/documents')) return 'documents'
   if (path.includes('/tenants/') && path.includes('/users')) return 'users'
-  if (path.includes('/my/tenant-settings') || path.includes('/my/account-settings')) return 'settings'
+  if (path.includes('/my/tenant-settings')) return 'settings'
 
   return null
 }

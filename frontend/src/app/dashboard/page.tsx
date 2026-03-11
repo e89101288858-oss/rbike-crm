@@ -282,7 +282,6 @@ export default function DashboardPage() {
     setShowOnboarding(fromQuery || fromStorage)
   }, [])
 
-  const showFranchiseeDashboard = !!role
   const rentalsCount = allRentals.length
 
   const rangeDays = Math.max(1, Math.floor((chartRange.to.getTime() - chartRange.from.getTime()) / (24 * 60 * 60 * 1000)) + 1)
@@ -311,10 +310,7 @@ export default function DashboardPage() {
       <Topbar tenants={tenants} />
       {error && <p className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
 
-      {!showFranchiseeDashboard ? (
-        <section className="rounded-lg border border-white/10 bg-[#1f2126] p-4 text-sm text-gray-300">Дашборд для роли {role || '—'} пока не настроен.</section>
-      ) : (
-        <>
+      <>
           {showOnboarding && (
             <section className="mb-6 rounded-lg border border-orange-500/40 bg-orange-500/10 p-4">
               <div className="grid gap-2 md:grid-cols-3 text-sm">
@@ -449,8 +445,7 @@ export default function DashboardPage() {
             </div>
           </section>
 
-        </>
-      )}
+      </>
     </main>
   )
 }
