@@ -63,9 +63,8 @@ export class SaasRentalsController {
 
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
-      select: { dailyRateRub: true, minRentalDays: true },
+      select: { minRentalDays: true },
     })
-    const dailyRateRub = tenant?.dailyRateRub ?? DEFAULT_DAILY_RENT_RUB
     const minRentalDays = tenant?.minRentalDays ?? DEFAULT_MIN_RENTAL_DAYS
 
     const startDate = new Date(dto.startDate)
@@ -141,7 +140,10 @@ export class SaasRentalsController {
       throw new BadRequestException('All selected batteries must be AVAILABLE')
     }
 
-    const weeklyRateRub = dto.weeklyRateRub && dto.weeklyRateRub > 0 ? dto.weeklyRateRub : dailyRateRub * 7
+    const weeklyRateRub = Number(dto.weeklyRateRub)
+    if (!Number.isFinite(weeklyRateRub) || weeklyRateRub <= 0) {
+      throw new BadRequestException('Для SaaS укажите ставку аренды вручную для каждой аренды')
+    }
     const effectiveDailyRateRub = weeklyRateRub / 7
 
     const rental = await this.prisma.$transaction(async (tx) => {

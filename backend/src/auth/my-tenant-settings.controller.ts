@@ -66,7 +66,7 @@ export class MyTenantSettingsController {
     const updated = await this.prisma.tenant.update({
       where: { id: tenantId },
       data: {
-        ...(dto.dailyRateRub !== undefined && { dailyRateRub: dto.dailyRateRub }),
+        ...(tenant?.mode !== 'SAAS' && dto.dailyRateRub !== undefined && { dailyRateRub: dto.dailyRateRub }),
         ...(dto.minRentalDays !== undefined && { minRentalDays: Math.trunc(dto.minRentalDays) }),
         ...(tenant?.mode !== 'SAAS' && dto.royaltyPercent !== undefined && { royaltyPercent: dto.royaltyPercent }),
       },

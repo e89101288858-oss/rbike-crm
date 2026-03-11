@@ -37,6 +37,7 @@ export default function RentalsPage() {
   const [dailyRateRub, setDailyRateRub] = useState(500)
   const [createDailyRateRub, setCreateDailyRateRub] = useState(500)
   const [minRentalDays, setMinRentalDays] = useState(7)
+  const [tenantMode, setTenantMode] = useState<'FRANCHISE' | 'SAAS'>('FRANCHISE')
   const [listTab, setListTab] = useState<'ACTIVE' | 'CLOSED'>('ACTIVE')
   const [search, setSearch] = useState('')
   const [selectedRentalId, setSelectedRentalId] = useState<string | null>(null)
@@ -277,9 +278,11 @@ export default function RentalsPage() {
       const currentTenantId = getTenantId() || myTenants[0]?.id || ''
       if (!getTenantId() && myTenants.length > 0) setTenantId(myTenants[0].id)
       const currentTenant = myTenants.find((t) => t.id === currentTenantId)
+      const mode = currentTenant?.mode === 'SAAS' ? 'SAAS' : 'FRANCHISE'
       const baseDailyRate = Number(currentTenant?.dailyRateRub ?? 500)
+      setTenantMode(mode)
       setDailyRateRub(baseDailyRate)
-      setCreateDailyRateRub(baseDailyRate)
+      setCreateDailyRateRub(mode === 'SAAS' ? 0 : baseDailyRate)
       setMinRentalDays(Number(currentTenant?.minRentalDays ?? 7))
       const fromQueryClientId = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('clientId') : null
       if (fromQueryClientId) setClientId(fromQueryClientId)
@@ -702,7 +705,7 @@ export default function RentalsPage() {
               </select>
               <input type="date" className="input" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
               <input type="date" className="input" value={plannedEndDate} onChange={(e) => setPlannedEndDate(e.target.value)} />
-              <input type="number" className="input md:col-span-4" min={1} step={10} value={createDailyRateRub} onChange={(e) => setCreateDailyRateRub(Number(e.target.value || 0))} placeholder="Суточная ставка, ₽" />
+              <input type="number" className="input md:col-span-4" min={1} step={10} value={createDailyRateRub} onChange={(e) => setCreateDailyRateRub(Number(e.target.value || 0))} placeholder={tenantMode === 'SAAS' ? 'Суточная ставка для этой аренды, ₽' : 'Суточная ставка, ₽'} />
 
               <div className="md:col-span-4 rounded-sm border border-[#2f3136] bg-[#181a1f] p-2 text-sm">
                 <div className="mb-2 flex items-center gap-3">
@@ -727,7 +730,7 @@ export default function RentalsPage() {
 
             {startDate && plannedEndDate && (
               <p className="mt-3 text-sm text-gray-400">
-                Тариф: {formatRub(Number(createDailyRateRub || 0))} / сутки (базовая {formatRub(dailyRateRub)}) · Срок: {rentalDays} дн. (минимум {minRentalDays}) · АКБ: {selectedBatteryIds.length}/{batteryCount} · Сумма: {formatRub(projectedTotalRub)}
+                Тариф: {formatRub(Number(createDailyRateRub || 0))} / сутки {tenantMode !== 'SAAS' ? `(базовая ${formatRub(dailyRateRub)})` : '(вручную для этой аренды)'} · Срок: {rentalDays} дн. (минимум {minRentalDays}) · АКБ: {selectedBatteryIds.length}/{batteryCount} · Сумма: {formatRub(projectedTotalRub)}
               </p>
             )}
 

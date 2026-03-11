@@ -144,11 +144,13 @@ export default function TenantSettingsPage() {
 
   async function saveTenantSettings() {
     try {
-      if (tenantForm.dailyRateRub < 1 || tenantForm.dailyRateRub > 100000) throw new Error('Ставка: 1..100000')
+      if (account?.tenant?.mode !== 'SAAS') {
+        if (tenantForm.dailyRateRub < 1 || tenantForm.dailyRateRub > 100000) throw new Error('Ставка: 1..100000')
+      }
       if (tenantForm.minRentalDays < 1 || tenantForm.minRentalDays > 365) throw new Error('Минимальный срок: 1..365')
 
       await api.updateMyTenantSettings({
-        dailyRateRub: Number(tenantForm.dailyRateRub),
+        ...(account?.tenant?.mode !== 'SAAS' && { dailyRateRub: Number(tenantForm.dailyRateRub) }),
         minRentalDays: Number(tenantForm.minRentalDays),
       })
       setSuccess('Условия аренды сохранены')
@@ -253,17 +255,19 @@ export default function TenantSettingsPage() {
         <h2 className="mb-2 text-base font-semibold">Условия аренды</h2>
 
         <div className="grid gap-2 md:grid-cols-2">
-          <label className="space-y-1">
-            <div className="text-xs text-gray-500">Суточная ставка (₽)</div>
-            <input
-              type="number"
-              min={1}
-              max={100000}
-              className="input"
-              value={tenantForm.dailyRateRub}
-              onChange={(e) => setTenantForm((p) => ({ ...p, dailyRateRub: Number(e.target.value) }))}
-            />
-          </label>
+          {account?.tenant?.mode !== 'SAAS' && (
+            <label className="space-y-1">
+              <div className="text-xs text-gray-500">Суточная ставка (₽)</div>
+              <input
+                type="number"
+                min={1}
+                max={100000}
+                className="input"
+                value={tenantForm.dailyRateRub}
+                onChange={(e) => setTenantForm((p) => ({ ...p, dailyRateRub: Number(e.target.value) }))}
+              />
+            </label>
+          )}
 
           <label className="space-y-1">
             <div className="text-xs text-gray-500">Минимальный срок (дней)</div>
@@ -277,6 +281,10 @@ export default function TenantSettingsPage() {
             />
           </label>
         </div>
+
+        {account?.tenant?.mode === 'SAAS' && (
+          <div className="mt-2 text-xs text-gray-500">Для SaaS ставка аренды задается вручную при создании каждой аренды.</div>
+        )}
 
         <div className="mt-4">
           <button className="btn-primary" onClick={saveTenantSettings}>Сохранить условия аренды</button>
