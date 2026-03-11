@@ -21,6 +21,23 @@ async function request<T>(path: string, init?: RequestInit, tenantScoped = false
   return res.json()
 }
 
+
+let tenantModeCache: { tenantId: string; mode: 'FRANCHISE' | 'SAAS' } | null = null
+
+async function paymentsBasePath(): Promise<string> {
+  const tenantId = getTenantId()
+  if (!tenantId) throw new Error('Не выбран tenant')
+
+  if (tenantModeCache?.tenantId === tenantId) {
+    return tenantModeCache.mode === 'SAAS' ? '/saas/payments' : '/franchise/payments'
+  }
+
+  const settings = await request<{ mode: 'FRANCHISE' | 'SAAS' }>('/my/tenant-settings', undefined, true)
+  const mode = settings?.mode === 'SAAS' ? 'SAAS' : 'FRANCHISE'
+  tenantModeCache = { tenantId, mode }
+  return mode === 'SAAS' ? '/saas/payments' : '/franchise/payments'
+}
+
 export type Client = {
   id: string
   fullName: string
@@ -434,15 +451,22 @@ export const api = {
     URL.revokeObjectURL(url)
   },
 
-  payments: (query = '') => request<any[]>(`/payments${query ? `?${query}` : ''}`, undefined, true),
+  payments: async (query = '') => {
+    const base = await paymentsBasePath()
+    return request<any[]>(`${base}${query ? `?${query}` : ''}`, undefined, true)
+  },
 
-  revenueByBike: (query = '') =>
-    request<any>(`/payments/revenue-by-bike${query ? `?${query}` : ''}`, undefined, true),
+  revenueByBike: async (query = '') => {
+    const base = await paymentsBasePath()
+    return request<any>(`${base}/revenue-by-bike${query ? `?${query}` : ''}`, undefined, true)
+  },
 
-  revenueByDays: (query = '') =>
-    request<any>(`/payments/revenue-by-days${query ? `?${query}` : ''}`, undefined, true),
+  revenueByDays: async (query = '') => {
+    const base = await paymentsBasePath()
+    return request<any>(`${base}/revenue-by-days${query ? `?${query}` : ''}`, undefined, true)
+  },
 
-  updatePayment: (
+  updatePayment: async (
     paymentId: string,
     payload: {
       amount?: number
@@ -452,19 +476,28 @@ export const api = {
       periodEnd?: string
       paidAt?: string
     },
-  ) =>
-    request<any>(`/payments/${paymentId}`, {
+  ) => {
+    const base = await paymentsBasePath()
+    return request<any>(`${base}/${paymentId}`, {
       method: 'PATCH',
       body: JSON.stringify(payload),
-    }, true),
+    }, true)
+  },
 
-  deletePayment: (paymentId: string) => request<any>(`/payments/${paymentId}`, { method: 'DELETE' }, true),
+  deletePayment: async (paymentId: string) => {
+    const base = await paymentsBasePath()
+    return request<any>(`${base}/${paymentId}`, { method: 'DELETE' }, true)
+  },
 
-  markPaid: (paymentId: string) =>
-    request<any>(`/payments/${paymentId}/mark-paid`, { method: 'POST' }, true),
+  markPaid: async (paymentId: string) => {
+    const base = await paymentsBasePath()
+    return request<any>(`${base}/${paymentId}/mark-paid`, { method: 'POST' }, true)
+  },
 
-  markPlanned: (paymentId: string) =>
-    request<any>(`/payments/${paymentId}/mark-planned`, { method: 'POST' }, true),
+  markPlanned: async (paymentId: string) => {
+    const base = await paymentsBasePath()
+    return request<any>(`${base}/${paymentId}/mark-planned`, { method: 'POST' }, true)
+  },
 
   debts: (overdueOnly = false) =>
     request<any>(`/weekly-payments/debts?overdueOnly=${overdueOnly}`, undefined, true),

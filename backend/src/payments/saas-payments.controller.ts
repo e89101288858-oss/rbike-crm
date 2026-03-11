@@ -14,11 +14,11 @@ import { RevenueByDaysQueryDto } from './dto/revenue-by-days.query.dto'
 import { UpdatePaymentDto } from './dto/update-payment.dto'
 import { PaymentsService } from './payments.service'
 
-@Controller('franchise/payments')
+@Controller('saas/payments')
 @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard, TenantModeGuard)
-@Roles('OWNER', 'FRANCHISEE', 'MANAGER')
-@TenantModes('FRANCHISE')
-export class PaymentsController {
+@Roles('OWNER', 'SAAS_USER', 'MANAGER')
+@TenantModes('SAAS')
+export class SaasPaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
   @Get()
@@ -52,11 +52,7 @@ export class PaymentsController {
   }
 
   @Post(':id/mark-paid')
-  async markPaid(
-    @Req() req: Request,
-    @Param('id') id: string,
-    @CurrentUser() user: JwtUser,
-  ) {
+  async markPaid(@Req() req: Request, @Param('id') id: string, @CurrentUser() user: JwtUser) {
     const tenantId = req.tenantId!
     return this.paymentsService.markPaid(tenantId, id, user.userId)
   }
