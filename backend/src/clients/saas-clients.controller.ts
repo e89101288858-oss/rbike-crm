@@ -12,11 +12,11 @@ import { ImportClientsDto } from './dto/import-clients.dto'
 import { ListClientsQueryDto } from './dto/list-clients.query.dto'
 import { UpdateClientDto } from './dto/update-client.dto'
 
-@Controller('franchise/clients')
+@Controller('saas/clients')
 @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard, TenantModeGuard)
-@Roles('OWNER', 'FRANCHISEE', 'MANAGER')
-@TenantModes('FRANCHISE')
-export class ClientsController {
+@Roles('OWNER', 'SAAS_USER', 'MANAGER')
+@TenantModes('SAAS')
+export class SaasClientsController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Post()

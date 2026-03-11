@@ -81,6 +81,20 @@ async function bikesBasePath(): Promise<string> {
   return mode === 'SAAS' ? '/saas/bikes' : '/franchise/bikes'
 }
 
+async function clientsBasePath(): Promise<string> {
+  const tenantId = getTenantId()
+  if (!tenantId) throw new Error('Не выбран tenant')
+
+  if (tenantModeCache?.tenantId === tenantId) {
+    return tenantModeCache.mode === 'SAAS' ? '/saas/clients' : '/franchise/clients'
+  }
+
+  const settings = await request<{ mode: 'FRANCHISE' | 'SAAS' }>('/my/tenant-settings', undefined, true)
+  const mode = settings?.mode === 'SAAS' ? 'SAAS' : 'FRANCHISE'
+  tenantModeCache = { tenantId, mode }
+  return mode === 'SAAS' ? '/saas/clients' : '/franchise/clients'
+}
+
 export type Client = {
   id: string
   fullName: string
@@ -268,9 +282,12 @@ export const api = {
       body: JSON.stringify({ plan, durationMonths }),
     }, true),
 
-  clients: (query = '') => request<Client[]>(`/clients${query ? `?${query}` : ''}`, undefined, true),
+  clients: async (query = '') => {
+    const base = await clientsBasePath()
+    return request<Client[]>(`${base}${query ? `?${query}` : ''}`, undefined, true)
+  },
 
-  createClient: (payload: {
+  createClient: async (payload: {
     fullName: string
     phone?: string
     birthDate?: string
@@ -279,22 +296,31 @@ export const api = {
     passportNumber?: string
     emergencyContactPhone?: string
     notes?: string
-  }) =>
-    request<Client>('/clients', {
+  }) => {
+    const base = await clientsBasePath()
+    return request<Client>(base, {
       method: 'POST',
       body: JSON.stringify(payload),
-    }, true),
+    }, true)
+  },
 
-  updateClient: (clientId: string, payload: Partial<Client>) =>
-    request<Client>(`/clients/${clientId}`, {
+  updateClient: async (clientId: string, payload: Partial<Client>) => {
+    const base = await clientsBasePath()
+    return request<Client>(`${base}/${clientId}`, {
       method: 'PATCH',
       body: JSON.stringify(payload),
-    }, true),
+    }, true)
+  },
 
-  deleteClient: (clientId: string) => request<any>(`/clients/${clientId}`, { method: 'DELETE' }, true),
-  restoreClient: (clientId: string) =>
-    request<any>(`/clients/${clientId}/restore`, { method: 'POST' }, true),
-  importClients: (rows: Array<{
+  deleteClient: async (clientId: string) => {
+    const base = await clientsBasePath()
+    return request<any>(`${base}/${clientId}`, { method: 'DELETE' }, true)
+  },
+  restoreClient: async (clientId: string) => {
+    const base = await clientsBasePath()
+    return request<any>(`${base}/${clientId}/restore`, { method: 'POST' }, true)
+  },
+  importClients: async (rows: Array<{
     fullName: string
     phone?: string
     birthDate?: string
@@ -302,11 +328,13 @@ export const api = {
     passportSeries?: string
     passportNumber?: string
     notes?: string
-  }>) =>
-    request<any>('/clients/import', {
+  }>) => {
+    const base = await clientsBasePath()
+    return request<any>(`${base}/import`, {
       method: 'POST',
       body: JSON.stringify({ rows }),
-    }, true),
+    }, true)
+  },
 
   bikes: async (query = '') => {
     const base = await bikesBasePath()
