@@ -198,6 +198,9 @@ export class TenantUsersController {
       if (dto.role !== 'MANAGER' && dto.role !== 'MECHANIC') {
         throw new BadRequestException('Допустимые роли: MANAGER, MECHANIC')
       }
+      if (currentUser.userId === userId) {
+        throw new BadRequestException('Нельзя менять свою роль')
+      }
       patch.role = dto.role
     }
 

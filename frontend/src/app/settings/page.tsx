@@ -422,25 +422,30 @@ export default function TenantSettingsPage() {
                 <select
                   className="select"
                   value={row.user?.role}
+                  disabled={row.user?.id === account?.user?.id}
                   onChange={(e) => updateTenantUser(row.user.id, { role: e.target.value as 'MANAGER' | 'MECHANIC' })}
                 >
                   <option value="MANAGER">Менеджер</option>
                   <option value="MECHANIC">Механик</option>
                 </select>
-                {row.user?.id !== account?.user?.id && (
-                  <button className="btn" onClick={() => updateTenantUser(row.user.id, { isActive: !row.user?.isActive })}>
-                    {row.user?.isActive ? 'Деактивировать' : 'Активировать'}
-                  </button>
+                {row.user?.id !== account?.user?.id ? (
+                  <>
+                    <button className="btn" onClick={() => updateTenantUser(row.user.id, { isActive: !row.user?.isActive })}>
+                      {row.user?.isActive ? 'Деактивировать' : 'Активировать'}
+                    </button>
+                    <input
+                      className="input"
+                      placeholder="Новый пароль"
+                      type="password"
+                      value={userPwdMap[row.user.id] || ''}
+                      onChange={(e) => setUserPwdMap((prev) => ({ ...prev, [row.user.id]: e.target.value }))}
+                    />
+                    <button className="btn" onClick={() => updateTenantUser(row.user.id, { password: userPwdMap[row.user.id] || '' })}>Сменить пароль</button>
+                    <button className="btn border-red-500/60 text-red-300" onClick={() => removeTenantUser(row.user.id)}>Убрать из точки</button>
+                  </>
+                ) : (
+                  <div className="text-xs text-amber-300">Свою роль и доступы здесь менять нельзя.</div>
                 )}
-                <input
-                  className="input"
-                  placeholder="Новый пароль"
-                  type="password"
-                  value={userPwdMap[row.user.id] || ''}
-                  onChange={(e) => setUserPwdMap((prev) => ({ ...prev, [row.user.id]: e.target.value }))}
-                />
-                <button className="btn" onClick={() => updateTenantUser(row.user.id, { password: userPwdMap[row.user.id] || '' })}>Сменить пароль</button>
-                <button className="btn border-red-500/60 text-red-300" onClick={() => removeTenantUser(row.user.id)}>Убрать из точки</button>
               </div>
 
               <div className="mt-2 grid gap-2 md:grid-cols-3">
@@ -450,6 +455,7 @@ export default function TenantSettingsPage() {
                     <label key={key} className="flex items-center gap-2 text-xs text-gray-300">
                       <input
                         type="checkbox"
+                        disabled={row.user?.id === account?.user?.id}
                         checked={!!permissionDraftMap[row.user.id]?.[key]}
                         onChange={(e) => {
                           setPermissionDraftMap((prev) => ({
@@ -463,9 +469,11 @@ export default function TenantSettingsPage() {
                   )
                 })}
               </div>
-              <div className="mt-2">
-                <button className="btn" onClick={() => saveUserPermissions(row.user.id)}>Сохранить права</button>
-              </div>
+              {row.user?.id !== account?.user?.id && (
+                <div className="mt-2">
+                  <button className="btn" onClick={() => saveUserPermissions(row.user.id)}>Сохранить права</button>
+                </div>
+              )}
             </div>
           ))}
           {!tenantUsers.length && <div className="text-xs text-gray-500">Пользователи точки пока не добавлены.</div>}
