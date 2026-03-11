@@ -728,7 +728,7 @@ export default function RentalsPage() {
               <label className="space-y-1 md:col-span-4">
                 <div className="text-xs text-gray-500">Суточная ставка, ₽</div>
                 <input type="number" className="input" min={1} step={10} value={createDailyRateRub} onChange={(e) => setCreateDailyRateRub(Number(e.target.value || 0))} placeholder={tenantMode === 'SAAS' ? 'Введи ставку для этой аренды' : 'Введи ставку (можно изменить от базовой)'} />
-                <div className="text-[11px] text-gray-500">{tenantMode === 'SAAS' ? 'Для SaaS ставка задается вручную для каждой аренды.' : 'Для франшизы можно использовать базовую ставку точки или указать свою.'}</div>
+                <div className="text-[11px] text-gray-500">{tenantMode === 'SAAS' ? 'Ставка задается вручную для каждой аренды.' : 'Для франшизы можно использовать базовую ставку точки или указать свою.'}</div>
               </label>
 
               <div className="md:col-span-4 rounded-sm border border-[#2f3136] bg-[#181a1f] p-2 text-sm">

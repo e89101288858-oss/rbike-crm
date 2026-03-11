@@ -25,7 +25,7 @@ export default function Page() {
     <main className="page with-sidebar">
       <Topbar />
       <section className="crm-card text-sm">
-        <div className="text-base font-semibold">OWNER / SaaS</div>
+        <div className="text-base font-semibold">OWNER / Подписка</div>
         <div className="mt-2 text-gray-400">Раздел очищен. Пересобираем админ-панель с нуля.</div>
       </section>
     </main>

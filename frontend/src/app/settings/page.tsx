@@ -368,7 +368,7 @@ export default function TenantSettingsPage() {
         </div>
 
         {account?.tenant?.mode === 'SAAS' && (
-          <div className="mt-2 text-xs text-gray-500">Для SaaS ставка аренды задается вручную при создании каждой аренды.</div>
+          <div className="mt-2 text-xs text-gray-500">Ставка аренды задается вручную при создании каждой аренды.</div>
         )}
 
         <div className="mt-4">
@@ -426,7 +426,7 @@ export default function TenantSettingsPage() {
                   onChange={(e) => updateTenantUser(row.user.id, { role: e.target.value as 'MANAGER' | 'MECHANIC' })}
                 >
                   {!(row.user?.role === 'MANAGER' || row.user?.role === 'MECHANIC') && (
-                    <option value={row.user?.role}>{row.user?.role === 'SAAS_USER' ? 'Владелец SaaS' : row.user?.role === 'FRANCHISEE' ? 'Владелец франшизы' : row.user?.role}</option>
+                    <option value={row.user?.role}>{row.user?.role === 'SAAS_USER' ? 'Администратор' : row.user?.role === 'FRANCHISEE' ? 'Франчази' : row.user?.role}</option>
                   )}
                   <option value="MANAGER">Менеджер</option>
                   <option value="MECHANIC">Механик</option>
