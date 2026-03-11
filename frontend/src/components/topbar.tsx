@@ -52,7 +52,7 @@ const opsNav: NavGroup[] = [
     title: 'Инструменты',
     items: [
       { href: '/import', label: 'Импорт CSV', roles: ['FRANCHISEE', 'SAAS_USER', 'MANAGER'] },
-      { href: '/billing', label: 'Биллинг', roles: ['SAAS_USER', 'FRANCHISEE', 'MANAGER'] },
+      { href: '/billing', label: 'Биллинг', roles: ['SAAS_USER'] },
       { href: '/settings', label: 'Настройки точки', roles: ['FRANCHISEE', 'SAAS_USER', 'MANAGER'] },
     ],
   },

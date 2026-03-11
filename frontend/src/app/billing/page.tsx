@@ -23,8 +23,13 @@ export default function BillingPage() {
   const total = useMemo(() => Number(billing?.plans?.[plan]?.priceRub || 0) * duration, [billing, plan, duration])
 
   async function load() {
-    const [me, myTenants, bill] = await Promise.all([api.me(), api.myTenants(), api.mySaasBilling()])
+    const [me, myTenants] = await Promise.all([api.me(), api.myTenants()])
     if (me.role === 'OWNER') return router.replace('/owner')
+    if (me.role !== 'SAAS_USER') return router.replace('/dashboard')
+
+    const bill = await api.mySaasBilling()
+    if (bill?.tenant?.mode !== 'SAAS') return router.replace('/dashboard')
+
     setTenants(myTenants)
     setBilling(bill)
   }

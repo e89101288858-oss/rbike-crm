@@ -14,14 +14,14 @@ export class SaasBillingController {
 
   @Get('my/saas-billing')
   @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard)
-  @Roles('OWNER', 'FRANCHISEE', 'SAAS_USER', 'MANAGER')
+  @Roles('SAAS_USER')
   async myBilling(@Req() req: Request) {
     return this.saasBilling.getMyBilling(req.tenantId!)
   }
 
   @Post('my/saas-billing/checkout')
   @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard)
-  @Roles('OWNER', 'FRANCHISEE', 'SAAS_USER', 'MANAGER')
+  @Roles('SAAS_USER')
   async createCheckout(
     @Req() req: Request,
     @CurrentUser() user: JwtUser,
