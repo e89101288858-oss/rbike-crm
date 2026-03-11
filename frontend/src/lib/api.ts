@@ -67,6 +67,20 @@ async function expensesBasePath(): Promise<string> {
   return mode === 'SAAS' ? '/saas/expenses' : '/franchise/expenses'
 }
 
+async function bikesBasePath(): Promise<string> {
+  const tenantId = getTenantId()
+  if (!tenantId) throw new Error('Не выбран tenant')
+
+  if (tenantModeCache?.tenantId === tenantId) {
+    return tenantModeCache.mode === 'SAAS' ? '/saas/bikes' : '/franchise/bikes'
+  }
+
+  const settings = await request<{ mode: 'FRANCHISE' | 'SAAS' }>('/my/tenant-settings', undefined, true)
+  const mode = settings?.mode === 'SAAS' ? 'SAAS' : 'FRANCHISE'
+  tenantModeCache = { tenantId, mode }
+  return mode === 'SAAS' ? '/saas/bikes' : '/franchise/bikes'
+}
+
 export type Client = {
   id: string
   fullName: string
@@ -294,32 +308,39 @@ export const api = {
       body: JSON.stringify({ rows }),
     }, true),
 
-  bikes: (query = '') => request<Bike[]>(`/bikes${query ? `?${query}` : ''}`, undefined, true),
+  bikes: async (query = '') => {
+    const base = await bikesBasePath()
+    return request<Bike[]>(`${base}${query ? `?${query}` : ''}`, undefined, true)
+  },
 
-  createBike: (payload: {
+  createBike: async (payload: {
     code: string
     model?: string
     frameNumber?: string
     motorWheelNumber?: string
     simCardNumber?: string
     status?: string
-  }) =>
-    request<Bike>('/bikes', {
+  }) => {
+    const base = await bikesBasePath()
+    return request<Bike>(base, {
       method: 'POST',
       body: JSON.stringify(payload),
-    }, true),
+    }, true)
+  },
 
-  bikeSummary: () =>
-    request<{
+  bikeSummary: async () => {
+    const base = await bikesBasePath()
+    return request<{
       available: number
       rented: number
       maintenance: number
       revenueTodayRub: number
       revenueMonthRub: number
       currency: string
-    }>('/bikes/summary', undefined, true),
+    }>(`${base}/summary`, undefined, true)
+  },
 
-  updateBike: (
+  updateBike: async (
     bikeId: string,
     payload: {
       code?: string
@@ -331,26 +352,36 @@ export const api = {
       repairReason?: string
       repairEndDate?: string
     },
-  ) =>
-    request<any>(`/bikes/${bikeId}`, {
+  ) => {
+    const base = await bikesBasePath()
+    return request<any>(`${base}/${bikeId}`, {
       method: 'PATCH',
       body: JSON.stringify(payload),
-    }, true),
+    }, true)
+  },
 
-  deleteBike: (bikeId: string) => request<any>(`/bikes/${bikeId}`, { method: 'DELETE' }, true),
-  restoreBike: (bikeId: string) => request<any>(`/bikes/${bikeId}/restore`, { method: 'POST' }, true),
-  importBikes: (rows: Array<{
+  deleteBike: async (bikeId: string) => {
+    const base = await bikesBasePath()
+    return request<any>(`${base}/${bikeId}`, { method: 'DELETE' }, true)
+  },
+  restoreBike: async (bikeId: string) => {
+    const base = await bikesBasePath()
+    return request<any>(`${base}/${bikeId}/restore`, { method: 'POST' }, true)
+  },
+  importBikes: async (rows: Array<{
     code: string
     model?: string
     frameNumber?: string
     motorWheelNumber?: string
     simCardNumber?: string
     status?: string
-  }>) =>
-    request<any>('/bikes/import', {
+  }>) => {
+    const base = await bikesBasePath()
+    return request<any>(`${base}/import`, {
       method: 'POST',
       body: JSON.stringify({ rows }),
-    }, true),
+    }, true)
+  },
 
   rentals: async (status?: 'ACTIVE' | 'CLOSED') => {
     const base = await rentalsBasePath()

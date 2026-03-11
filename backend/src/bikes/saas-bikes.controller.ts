@@ -29,15 +29,15 @@ import { ImportBikesDto } from './dto/import-bikes.dto'
 import { ListBikesQueryDto } from './dto/list-bikes.query.dto'
 import { UpdateBikeDto } from './dto/update-bike.dto'
 
-@Controller('franchise/bikes')
+@Controller('saas/bikes')
 @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard, TenantModeGuard)
-@Roles('OWNER', 'FRANCHISEE', 'MANAGER', 'MECHANIC')
-@TenantModes('FRANCHISE')
-export class BikesController {
+@Roles('OWNER', 'SAAS_USER', 'MANAGER', 'MECHANIC')
+@TenantModes('SAAS')
+export class SaasBikesController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Post()
-  @Roles('OWNER', 'FRANCHISEE', 'MANAGER')
+  @Roles('OWNER', 'SAAS_USER', 'MANAGER')
   async create(@Req() req: Request, @Body() dto: CreateBikeDto) {
     const tenantId = req.tenantId!
 
@@ -69,7 +69,7 @@ export class BikesController {
   }
 
   @Post('import')
-  @Roles('OWNER', 'FRANCHISEE', 'MANAGER')
+  @Roles('OWNER', 'SAAS_USER', 'MANAGER')
   async importRows(@Req() req: Request, @Body() dto: ImportBikesDto) {
     const tenantId = req.tenantId!
 
@@ -151,7 +151,7 @@ export class BikesController {
   }
 
   @Delete(':id')
-  @Roles('OWNER', 'FRANCHISEE', 'MANAGER')
+  @Roles('OWNER', 'SAAS_USER', 'MANAGER')
   async remove(@Req() req: Request, @Param('id') id: string) {
     const tenantId = req.tenantId!
 
@@ -171,7 +171,7 @@ export class BikesController {
   }
 
   @Post(':id/restore')
-  @Roles('OWNER', 'FRANCHISEE', 'MANAGER')
+  @Roles('OWNER', 'SAAS_USER', 'MANAGER')
   async restore(@Req() req: Request, @Param('id') id: string) {
     const tenantId = req.tenantId!
     const existing = await this.prisma.bike.findFirst({ where: { id, tenantId }, select: { id: true } })
@@ -182,7 +182,7 @@ export class BikesController {
   }
 
   @Patch(':id')
-  @Roles('OWNER', 'FRANCHISEE', 'MANAGER', 'MECHANIC')
+  @Roles('OWNER', 'SAAS_USER', 'MANAGER', 'MECHANIC')
   async update(
     @Req() req: Request,
     @Param('id') id: string,
