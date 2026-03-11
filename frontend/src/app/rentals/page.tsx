@@ -695,17 +695,41 @@ export default function RentalsPage() {
             </div>
 
             <div className="grid gap-2 md:grid-cols-4">
-              <select className="select" value={clientId} onChange={(e) => setClientId(e.target.value)}>
-                <option value="">Курьер</option>
-                {clients.map((c) => <option key={c.id} value={c.id}>{c.fullName}</option>)}
-              </select>
-              <select className="select" value={bikeId} onChange={(e) => { setBikeId(e.target.value); setBattery1Id(''); setBattery2Id('') }}>
-                <option value="">Велосипед</option>
-                {bikes.filter((b) => b.status === 'AVAILABLE').map((b) => <option key={b.id} value={b.id}>{b.code}</option>)}
-              </select>
-              <input type="date" className="input" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-              <input type="date" className="input" value={plannedEndDate} onChange={(e) => setPlannedEndDate(e.target.value)} />
-              <input type="number" className="input md:col-span-4" min={1} step={10} value={createDailyRateRub} onChange={(e) => setCreateDailyRateRub(Number(e.target.value || 0))} placeholder={tenantMode === 'SAAS' ? 'Суточная ставка для этой аренды, ₽' : 'Суточная ставка, ₽'} />
+              <label className="space-y-1">
+                <div className="text-xs text-gray-500">Курьер</div>
+                <select className="select" value={clientId} onChange={(e) => setClientId(e.target.value)}>
+                  <option value="">Выбери курьера для аренды</option>
+                  {clients.map((c) => <option key={c.id} value={c.id}>{c.fullName}</option>)}
+                </select>
+                <div className="text-[11px] text-gray-500">Кто получает велосипед по этой аренде.</div>
+              </label>
+
+              <label className="space-y-1">
+                <div className="text-xs text-gray-500">Велосипед</div>
+                <select className="select" value={bikeId} onChange={(e) => { setBikeId(e.target.value); setBattery1Id(''); setBattery2Id('') }}>
+                  <option value="">Выбери доступный велосипед</option>
+                  {bikes.filter((b) => b.status === 'AVAILABLE').map((b) => <option key={b.id} value={b.id}>{b.code}</option>)}
+                </select>
+                <div className="text-[11px] text-gray-500">Только велосипед со статусом «Доступен».</div>
+              </label>
+
+              <label className="space-y-1">
+                <div className="text-xs text-gray-500">Дата начала</div>
+                <input type="date" className="input" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                <div className="text-[11px] text-gray-500">Первый день аренды.</div>
+              </label>
+
+              <label className="space-y-1">
+                <div className="text-xs text-gray-500">Плановая дата окончания</div>
+                <input type="date" className="input" value={plannedEndDate} onChange={(e) => setPlannedEndDate(e.target.value)} />
+                <div className="text-[11px] text-gray-500">Можно продлить позже, если нужно.</div>
+              </label>
+
+              <label className="space-y-1 md:col-span-4">
+                <div className="text-xs text-gray-500">Суточная ставка, ₽</div>
+                <input type="number" className="input" min={1} step={10} value={createDailyRateRub} onChange={(e) => setCreateDailyRateRub(Number(e.target.value || 0))} placeholder={tenantMode === 'SAAS' ? 'Введи ставку для этой аренды' : 'Введи ставку (можно изменить от базовой)'} />
+                <div className="text-[11px] text-gray-500">{tenantMode === 'SAAS' ? 'Для SaaS ставка задается вручную для каждой аренды.' : 'Для франшизы можно использовать базовую ставку точки или указать свою.'}</div>
+              </label>
 
               <div className="md:col-span-4 rounded-sm border border-[#2f3136] bg-[#181a1f] p-2 text-sm">
                 <div className="mb-2 flex items-center gap-3">
@@ -714,15 +738,23 @@ export default function RentalsPage() {
                   <label className="flex items-center gap-1"><input type="radio" checked={batteryCount === 2} onChange={() => setBatteryCount(2)} /> 2</label>
                 </div>
                 <div className="grid gap-2 md:grid-cols-2">
-                  <select className="select" value={battery1Id} onChange={(e) => setBattery1Id(e.target.value)}>
-                    <option value="">Выбери АКБ 1</option>
-                    {availableBatteries.map((b) => <option key={b.id} value={b.id}>{b.code}{b.serialNumber ? ` (${b.serialNumber})` : ''}</option>)}
-                  </select>
-                  {batteryCount === 2 && (
-                    <select className="select" value={battery2Id} onChange={(e) => setBattery2Id(e.target.value)}>
-                      <option value="">Выбери АКБ 2</option>
-                      {availableBatteries.filter((b) => b.id !== battery1Id).map((b) => <option key={b.id} value={b.id}>{b.code}{b.serialNumber ? ` (${b.serialNumber})` : ''}</option>)}
+                  <label className="space-y-1">
+                    <div className="text-xs text-gray-500">АКБ 1</div>
+                    <select className="select" value={battery1Id} onChange={(e) => setBattery1Id(e.target.value)}>
+                      <option value="">Выбери первую АКБ</option>
+                      {availableBatteries.map((b) => <option key={b.id} value={b.id}>{b.code}{b.serialNumber ? ` (${b.serialNumber})` : ''}</option>)}
                     </select>
+                    <div className="text-[11px] text-gray-500">Основная АКБ, которую выдаем с велосипедом.</div>
+                  </label>
+                  {batteryCount === 2 && (
+                    <label className="space-y-1">
+                      <div className="text-xs text-gray-500">АКБ 2</div>
+                      <select className="select" value={battery2Id} onChange={(e) => setBattery2Id(e.target.value)}>
+                        <option value="">Выбери вторую АКБ</option>
+                        {availableBatteries.filter((b) => b.id !== battery1Id).map((b) => <option key={b.id} value={b.id}>{b.code}{b.serialNumber ? ` (${b.serialNumber})` : ''}</option>)}
+                      </select>
+                      <div className="text-[11px] text-gray-500">Дополнительная АКБ (не должна совпадать с АКБ 1).</div>
+                    </label>
                   )}
                 </div>
               </div>
