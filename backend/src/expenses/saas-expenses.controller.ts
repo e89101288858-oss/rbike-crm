@@ -13,11 +13,11 @@ import { ListExpensesQueryDto } from './dto/list-expenses.query.dto'
 import { UpdateExpenseDto } from './dto/update-expense.dto'
 import { ExpensesService } from './expenses.service'
 
-@Controller('franchise/expenses')
+@Controller('saas/expenses')
 @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard, TenantModeGuard)
-@Roles('OWNER', 'FRANCHISEE', 'MANAGER')
-@TenantModes('FRANCHISE')
-export class ExpensesController {
+@Roles('OWNER', 'SAAS_USER', 'MANAGER')
+@TenantModes('SAAS')
+export class SaasExpensesController {
   constructor(private readonly expensesService: ExpensesService) {}
 
   @Get()

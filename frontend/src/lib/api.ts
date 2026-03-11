@@ -53,6 +53,20 @@ async function rentalsBasePath(): Promise<string> {
   return mode === 'SAAS' ? '/saas/rentals' : '/franchise/rentals'
 }
 
+async function expensesBasePath(): Promise<string> {
+  const tenantId = getTenantId()
+  if (!tenantId) throw new Error('Не выбран tenant')
+
+  if (tenantModeCache?.tenantId === tenantId) {
+    return tenantModeCache.mode === 'SAAS' ? '/saas/expenses' : '/franchise/expenses'
+  }
+
+  const settings = await request<{ mode: 'FRANCHISE' | 'SAAS' }>('/my/tenant-settings', undefined, true)
+  const mode = settings?.mode === 'SAAS' ? 'SAAS' : 'FRANCHISE'
+  tenantModeCache = { tenantId, mode }
+  return mode === 'SAAS' ? '/saas/expenses' : '/franchise/expenses'
+}
+
 export type Client = {
   id: string
   fullName: string
@@ -350,19 +364,33 @@ export const api = {
 
   batteries: (query = '') => request<Battery[]>(`/batteries${query ? `?${query}` : ''}`, undefined, true),
 
-  expenses: (query = '') => request<Expense[]>(`/expenses${query ? `?${query}` : ''}`, undefined, true),
-  createExpense: (payload: {
+  expenses: async (query = '') => {
+    const base = await expensesBasePath()
+    return request<Expense[]>(`${base}${query ? `?${query}` : ''}`, undefined, true)
+  },
+  createExpense: async (payload: {
     amountRub: number
     category: string
     notes?: string
     spentAt: string
     scopeType: 'SINGLE' | 'MULTI' | 'ALL_BIKES'
     bikeIds?: string[]
-  }) => request<Expense>('/expenses', { method: 'POST', body: JSON.stringify(payload) }, true),
-  updateExpense: (id: string, payload: Partial<Expense> & { bikeIds?: string[] }) =>
-    request<Expense>(`/expenses/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }, true),
-  deleteExpense: (id: string) => request<any>(`/expenses/${id}`, { method: 'DELETE' }, true),
-  restoreExpense: (id: string) => request<any>(`/expenses/${id}/restore`, { method: 'POST' }, true),
+  }) => {
+    const base = await expensesBasePath()
+    return request<Expense>(base, { method: 'POST', body: JSON.stringify(payload) }, true)
+  },
+  updateExpense: async (id: string, payload: Partial<Expense> & { bikeIds?: string[] }) => {
+    const base = await expensesBasePath()
+    return request<Expense>(`${base}/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }, true)
+  },
+  deleteExpense: async (id: string) => {
+    const base = await expensesBasePath()
+    return request<any>(`${base}/${id}`, { method: 'DELETE' }, true)
+  },
+  restoreExpense: async (id: string) => {
+    const base = await expensesBasePath()
+    return request<any>(`${base}/${id}/restore`, { method: 'POST' }, true)
+  },
 
   createBattery: (payload: {
     code: string
