@@ -366,7 +366,7 @@ export default function TenantSettingsPage() {
 
       {(role === 'OWNER' || role === 'FRANCHISEE' || role === 'SAAS_USER') && (
       <section className="crm-card mb-4 text-sm">
-        <h2 className="mb-2 text-base font-semibold">Пользователи точки</h2>
+        <h2 className="mb-2 text-base font-semibold">Пользователи</h2>
 
         <div className="mb-3 grid gap-2 md:grid-cols-5">
           <input className="input" placeholder="Email" value={userForm.email} onChange={(e) => setUserForm((p) => ({ ...p, email: e.target.value }))} />
@@ -401,9 +401,11 @@ export default function TenantSettingsPage() {
                   <option value="MANAGER">Менеджер</option>
                   <option value="MECHANIC">Механик</option>
                 </select>
-                <button className="btn" onClick={() => updateTenantUser(row.user.id, { isActive: !row.user?.isActive })}>
-                  {row.user?.isActive ? 'Деактивировать' : 'Активировать'}
-                </button>
+                {row.user?.id !== account?.user?.id && (
+                  <button className="btn" onClick={() => updateTenantUser(row.user.id, { isActive: !row.user?.isActive })}>
+                    {row.user?.isActive ? 'Деактивировать' : 'Активировать'}
+                  </button>
+                )}
                 <input
                   className="input"
                   placeholder="Новый пароль"

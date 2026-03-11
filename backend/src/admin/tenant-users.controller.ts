@@ -191,7 +191,12 @@ export class TenantUsersController {
       patch.role = dto.role
     }
 
-    if (dto.isActive !== undefined) patch.isActive = !!dto.isActive
+    if (dto.isActive !== undefined) {
+      if (currentUser.userId === userId && dto.isActive === false) {
+        throw new BadRequestException('Нельзя деактивировать самого себя')
+      }
+      patch.isActive = !!dto.isActive
+    }
     if (dto.fullName !== undefined) patch.fullName = dto.fullName?.trim() || null
     if (dto.phone !== undefined) patch.phone = dto.phone?.trim() || null
 
@@ -222,6 +227,10 @@ export class TenantUsersController {
     @CurrentUser() currentUser: JwtUser,
   ) {
     await this.resolveTenantWithAccess(tenantId, currentUser)
+
+    if (currentUser.userId === userId) {
+      throw new BadRequestException('Нельзя удалить самого себя из точки')
+    }
 
     const existing = await this.prisma.userTenant.findUnique({
       where: {
