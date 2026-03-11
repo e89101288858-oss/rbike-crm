@@ -63,7 +63,8 @@ export default function TenantSettingsPage() {
   async function load() {
     try {
       const [me, myTenants] = await Promise.all([api.me(), api.myTenants()])
-      setRole(me.role || '')
+      const currentRole = me.role || ''
+      setRole(currentRole)
       setTenants(myTenants)
 
       if (!getTenantId() && myTenants.length > 0) setTenantId(myTenants[0].id)
@@ -94,12 +95,14 @@ export default function TenantSettingsPage() {
       })
 
       const activeTenantId = getTenantId() || myTenants[0]?.id
-      if (activeTenantId) {
+      const canManageUsers = currentRole === 'OWNER' || currentRole === 'FRANCHISEE' || currentRole === 'SAAS_USER'
+      if (activeTenantId && canManageUsers) {
         const rows = await api.tenantUsers(activeTenantId)
         setTenantUsers(rows)
         setPermissionDraftMap(Object.fromEntries(rows.map((r: any) => [r.user?.id, { ...(r.permissions || {}) }])))
       } else {
         setTenantUsers([])
+        setPermissionDraftMap({})
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки настроек точки')
