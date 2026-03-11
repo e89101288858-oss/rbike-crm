@@ -48,11 +48,11 @@ function diffDaysCeil(from: Date, to: Date) {
   return Math.max(1, Math.ceil((to.getTime() - from.getTime()) / MS_PER_DAY))
 }
 
-@Controller('franchise/rentals')
+@Controller('saas/rentals')
 @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard, TenantModeGuard)
-@Roles('OWNER', 'FRANCHISEE', 'MANAGER')
-@TenantModes('FRANCHISE')
-export class RentalsController {
+@Roles('OWNER', 'SAAS_USER', 'MANAGER')
+@TenantModes('SAAS')
+export class SaasRentalsController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Post()

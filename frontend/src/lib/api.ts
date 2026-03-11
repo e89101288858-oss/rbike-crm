@@ -38,6 +38,21 @@ async function paymentsBasePath(): Promise<string> {
   return mode === 'SAAS' ? '/saas/payments' : '/franchise/payments'
 }
 
+
+async function rentalsBasePath(): Promise<string> {
+  const tenantId = getTenantId()
+  if (!tenantId) throw new Error('Не выбран tenant')
+
+  if (tenantModeCache?.tenantId === tenantId) {
+    return tenantModeCache.mode === 'SAAS' ? '/saas/rentals' : '/franchise/rentals'
+  }
+
+  const settings = await request<{ mode: 'FRANCHISE' | 'SAAS' }>('/my/tenant-settings', undefined, true)
+  const mode = settings?.mode === 'SAAS' ? 'SAAS' : 'FRANCHISE'
+  tenantModeCache = { tenantId, mode }
+  return mode === 'SAAS' ? '/saas/rentals' : '/franchise/rentals'
+}
+
 export type Client = {
   id: string
   fullName: string
@@ -323,10 +338,15 @@ export const api = {
       body: JSON.stringify({ rows }),
     }, true),
 
-  rentals: (status?: 'ACTIVE' | 'CLOSED') =>
-    request<Rental[]>(`/rentals${status ? `?status=${status}` : ''}`, undefined, true),
+  rentals: async (status?: 'ACTIVE' | 'CLOSED') => {
+    const base = await rentalsBasePath()
+    return request<Rental[]>(`${base}${status ? `?status=${status}` : ''}`, undefined, true)
+  },
 
-  activeRentals: () => request<Rental[]>('/rentals/active', undefined, true),
+  activeRentals: async () => {
+    const base = await rentalsBasePath()
+    return request<Rental[]>(`${base}/active`, undefined, true)
+  },
 
   batteries: (query = '') => request<Battery[]>(`/batteries${query ? `?${query}` : ''}`, undefined, true),
 
@@ -365,52 +385,70 @@ export const api = {
   deleteBattery: (batteryId: string) => request<any>(`/batteries/${batteryId}`, { method: 'DELETE' }, true),
   restoreBattery: (batteryId: string) => request<any>(`/batteries/${batteryId}/restore`, { method: 'POST' }, true),
 
-  createRental: (payload: {
+  createRental: async (payload: {
     bikeId: string
     clientId: string
     startDate: string
     plannedEndDate: string
     weeklyRateRub?: number
     batteryIds: string[]
-  }) =>
-    request<any>('/rentals', {
+  }) => {
+    const base = await rentalsBasePath()
+    return request<any>(base, {
       method: 'POST',
       body: JSON.stringify(payload),
-    }, true),
+    }, true)
+  },
 
-  setWeeklyRate: (rentalId: string, weeklyRateRub: number) =>
-    request<any>(`/rentals/${rentalId}/weekly-rate`, {
+  setWeeklyRate: async (rentalId: string, weeklyRateRub: number) => {
+    const base = await rentalsBasePath()
+    return request<any>(`${base}/${rentalId}/weekly-rate`, {
       method: 'PATCH',
       body: JSON.stringify({ weeklyRateRub }),
-    }, true),
+    }, true)
+  },
 
-  extendRental: (rentalId: string, days: number) =>
-    request<any>(`/rentals/${rentalId}/extend`, {
+  extendRental: async (rentalId: string, days: number) => {
+    const base = await rentalsBasePath()
+    return request<any>(`${base}/${rentalId}/extend`, {
       method: 'POST',
       body: JSON.stringify({ days }),
-    }, true),
+    }, true)
+  },
 
-  closeRental: (rentalId: string, reason: string) =>
-    request<any>(`/rentals/${rentalId}/close`, {
+  closeRental: async (rentalId: string, reason: string) => {
+    const base = await rentalsBasePath()
+    return request<any>(`${base}/${rentalId}/close`, {
       method: 'POST',
       body: JSON.stringify({ reason }),
-    }, true),
+    }, true)
+  },
 
-  deleteRental: (rentalId: string) => request<any>(`/rentals/${rentalId}`, { method: 'DELETE' }, true),
+  deleteRental: async (rentalId: string) => {
+    const base = await rentalsBasePath()
+    return request<any>(`${base}/${rentalId}`, { method: 'DELETE' }, true)
+  },
 
-  addRentalBattery: (rentalId: string, batteryId: string) =>
-    request<any>(`/rentals/${rentalId}/batteries`, {
+  addRentalBattery: async (rentalId: string, batteryId: string) => {
+    const base = await rentalsBasePath()
+    return request<any>(`${base}/${rentalId}/batteries`, {
       method: 'POST',
       body: JSON.stringify({ batteryId }),
-    }, true),
+    }, true)
+  },
 
-  replaceRentalBattery: (rentalId: string, removeBatteryId: string, addBatteryId: string) =>
-    request<any>(`/rentals/${rentalId}/batteries/replace`, {
+  replaceRentalBattery: async (rentalId: string, removeBatteryId: string, addBatteryId: string) => {
+    const base = await rentalsBasePath()
+    return request<any>(`${base}/${rentalId}/batteries/replace`, {
       method: 'POST',
       body: JSON.stringify({ removeBatteryId, addBatteryId }),
-    }, true),
+    }, true)
+  },
 
-  rentalJournal: (rentalId: string) => request<any>(`/rentals/${rentalId}/journal`, undefined, true),
+  rentalJournal: async (rentalId: string) => {
+    const base = await rentalsBasePath()
+    return request<any>(`${base}/${rentalId}/journal`, undefined, true)
+  },
 
   generateRentalContract: (rentalId: string) =>
     request<RentalDocument>(`/documents/contracts/${rentalId}/generate`, {
