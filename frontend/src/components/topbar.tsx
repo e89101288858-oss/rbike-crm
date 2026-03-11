@@ -9,6 +9,7 @@ import { API_BASE } from '@/lib/config'
 
 type TenantOption = { id: string; name: string; franchisee?: { name: string } }
 type UserRole = 'OWNER' | 'FRANCHISEE' | 'SAAS_USER' | 'MANAGER' | 'MECHANIC' | ''
+type TenantMode = 'FRANCHISE' | 'SAAS' | null
 
 type NavGroup = {
   title: string
@@ -24,36 +25,69 @@ const ownerNav: NavGroup[] = [
   },
 ]
 
-const opsNav: NavGroup[] = [
+const franchiseOpsNav: NavGroup[] = [
   {
     title: 'Операции',
     items: [
-      { href: '/dashboard', label: 'Дашборд', roles: ['FRANCHISEE', 'SAAS_USER', 'MANAGER', 'MECHANIC'] },
-      { href: '/rentals', label: 'Аренды', roles: ['FRANCHISEE', 'SAAS_USER', 'MANAGER'] },
+      { href: '/dashboard', label: 'Дашборд', roles: ['FRANCHISEE', 'MANAGER', 'MECHANIC'] },
+      { href: '/rentals', label: 'Аренды', roles: ['FRANCHISEE', 'MANAGER'] },
     ],
   },
   {
     title: 'Справочники',
     items: [
-      { href: '/clients', label: 'Курьеры', roles: ['FRANCHISEE', 'SAAS_USER', 'MANAGER'] },
-      { href: '/bikes', label: 'Велосипеды', roles: ['FRANCHISEE', 'SAAS_USER', 'MANAGER', 'MECHANIC'] },
-      { href: '/batteries', label: 'АКБ', roles: ['FRANCHISEE', 'SAAS_USER', 'MANAGER', 'MECHANIC'] },
+      { href: '/clients', label: 'Курьеры', roles: ['FRANCHISEE', 'MANAGER'] },
+      { href: '/bikes', label: 'Велосипеды', roles: ['FRANCHISEE', 'MANAGER', 'MECHANIC'] },
+      { href: '/batteries', label: 'АКБ', roles: ['FRANCHISEE', 'MANAGER', 'MECHANIC'] },
     ],
   },
   {
     title: 'Аналитика',
     items: [
-      { href: '/finance', label: 'Финансы', roles: ['FRANCHISEE', 'SAAS_USER', 'MANAGER'] },
-      { href: '/expenses', label: 'Расходы', roles: ['FRANCHISEE', 'SAAS_USER', 'MANAGER'] },
-      { href: '/payments', label: 'Платежи', roles: ['FRANCHISEE', 'SAAS_USER', 'MANAGER'] },
+      { href: '/finance', label: 'Финансы', roles: ['FRANCHISEE', 'MANAGER'] },
+      { href: '/expenses', label: 'Расходы', roles: ['FRANCHISEE', 'MANAGER'] },
+      { href: '/payments', label: 'Платежи', roles: ['FRANCHISEE', 'MANAGER'] },
     ],
   },
   {
     title: 'Инструменты',
     items: [
-      { href: '/import', label: 'Импорт CSV', roles: ['FRANCHISEE', 'SAAS_USER', 'MANAGER'] },
+      { href: '/import', label: 'Импорт CSV', roles: ['FRANCHISEE', 'MANAGER'] },
+      { href: '/settings', label: 'Настройки точки', roles: ['FRANCHISEE', 'MANAGER'] },
+    ],
+  },
+]
+
+const saasOpsNav: NavGroup[] = [
+  {
+    title: 'Операции',
+    items: [
+      { href: '/dashboard', label: 'Дашборд', roles: ['SAAS_USER', 'MANAGER', 'MECHANIC'] },
+      { href: '/rentals', label: 'Аренды', roles: ['SAAS_USER', 'MANAGER'] },
+    ],
+  },
+  {
+    title: 'Справочники',
+    items: [
+      { href: '/clients', label: 'Курьеры', roles: ['SAAS_USER', 'MANAGER'] },
+      { href: '/bikes', label: 'Велосипеды', roles: ['SAAS_USER', 'MANAGER', 'MECHANIC'] },
+      { href: '/batteries', label: 'АКБ', roles: ['SAAS_USER', 'MANAGER', 'MECHANIC'] },
+    ],
+  },
+  {
+    title: 'Аналитика',
+    items: [
+      { href: '/finance', label: 'Финансы', roles: ['SAAS_USER', 'MANAGER'] },
+      { href: '/expenses', label: 'Расходы', roles: ['SAAS_USER', 'MANAGER'] },
+      { href: '/payments', label: 'Платежи', roles: ['SAAS_USER', 'MANAGER'] },
+    ],
+  },
+  {
+    title: 'Инструменты',
+    items: [
+      { href: '/import', label: 'Импорт CSV', roles: ['SAAS_USER', 'MANAGER'] },
       { href: '/billing', label: 'Биллинг', roles: ['SAAS_USER'] },
-      { href: '/settings', label: 'Настройки точки', roles: ['FRANCHISEE', 'SAAS_USER', 'MANAGER'] },
+      { href: '/settings', label: 'Настройки точки', roles: ['SAAS_USER', 'MANAGER'] },
     ],
   },
 ]
@@ -64,6 +98,7 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
   const [tenantId, setTenantIdState] = useState(getTenantId())
   const [role, setRole] = useState<UserRole>('')
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [tenantMode, setTenantMode] = useState<TenantMode>(null)
   const [daysLeft, setDaysLeft] = useState<number | null>(null)
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null)
 
@@ -86,7 +121,9 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
         const paidUntil = acc?.billing?.paidUntil
         const trialEnds = acc?.billing?.trialEndsAt
         const status = acc?.billing?.status
-        const mode = acc?.tenant?.mode
+        const mode = (acc?.tenant?.mode as TenantMode) || null
+
+        setTenantMode(mode)
 
         if (mode !== 'SAAS') {
           setDaysLeft(null)
@@ -113,6 +150,7 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
       } catch {
         setDaysLeft(null)
         setTrialEndsAt(null)
+        setTenantMode(null)
       }
     })()
   }, [role, tenantId])
@@ -142,7 +180,15 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
     return () => window.removeEventListener('pagehide', onPageHide)
   }, [])
 
-  const nav = role === 'OWNER' ? ownerNav : opsNav
+  const nav = role === 'OWNER'
+    ? ownerNav
+    : role === 'FRANCHISEE'
+      ? franchiseOpsNav
+      : role === 'SAAS_USER'
+        ? saasOpsNav
+        : tenantMode === 'SAAS'
+          ? saasOpsNav
+          : franchiseOpsNav
   const visibleGroups = nav
     .map((g) => ({ ...g, items: g.items.filter((i) => !role || i.roles.includes(role)) }))
     .filter((g) => g.items.length > 0)
