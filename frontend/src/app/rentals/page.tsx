@@ -12,6 +12,7 @@ export default function RentalsPage() {
   const pathname = usePathname()
   const [tenants, setTenants] = useState<any[]>([])
   const [role, setRole] = useState('')
+  const [permissions, setPermissions] = useState<Record<string, boolean> | null>(null)
   const [clients, setClients] = useState<Client[]>([])
   const [bikes, setBikes] = useState<Bike[]>([])
   const [rentals, setRentals] = useState<Rental[]>([])
@@ -54,14 +55,15 @@ export default function RentalsPage() {
   const [success, setSuccess] = useState('')
   const [openSection, setOpenSection] = useState<'payments' | 'docs' | 'journal'>('payments')
 
-  async function loadAll() {
+  async function loadAll(permOverride?: Record<string, boolean> | null) {
     setError('')
     try {
+      const p = permOverride ?? permissions
       const [clientsRes, bikesRes, rentalsRes, batteriesRes] = await Promise.all([
-        api.clients(),
-        api.bikes(),
-        api.rentals(listTab),
-        api.batteries(),
+        p && p.clients === false ? Promise.resolve([]) : api.clients().catch(() => []),
+        p && p.bikes === false ? Promise.resolve([]) : api.bikes().catch(() => []),
+        p && p.rentals === false ? Promise.resolve([]) : api.rentals(listTab).catch(() => []),
+        p && p.batteries === false ? Promise.resolve([]) : api.batteries().catch(() => []),
       ])
       setClients(clientsRes)
       setBikes(bikesRes)
@@ -73,7 +75,12 @@ export default function RentalsPage() {
       )
       setDocsMap(Object.fromEntries(docsEntries))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка загрузки')
+      const msg = err instanceof Error ? err.message : ''
+      if (msg.includes('403') || msg.toLowerCase().includes('forbidden')) {
+        setError('')
+        return
+      }
+      setError(msg || 'Ошибка загрузки')
     }
   }
 
@@ -272,9 +279,11 @@ export default function RentalsPage() {
   useEffect(() => {
     if (!getToken()) return router.replace('/login')
     ;(async () => {
-      const [myTenants, me] = await Promise.all([api.myTenants(), api.me()])
+      const [myTenants, me, acc] = await Promise.all([api.myTenants(), api.me(), api.myAccountSettings().catch(() => null)])
+      const p = (acc?.permissions || null) as Record<string, boolean> | null
       setTenants(myTenants)
       setRole(me.role || '')
+      setPermissions(p)
       const currentTenantId = getTenantId() || myTenants[0]?.id || ''
       if (!getTenantId() && myTenants.length > 0) setTenantId(myTenants[0].id)
       const currentTenant = myTenants.find((t) => t.id === currentTenantId)
@@ -286,7 +295,7 @@ export default function RentalsPage() {
       setMinRentalDays(Number(currentTenant?.minRentalDays ?? 7))
       const fromQueryClientId = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('clientId') : null
       if (fromQueryClientId) setClientId(fromQueryClientId)
-      await loadAll()
+      await loadAll(p)
     })()
   }, [router])
 
@@ -372,6 +381,7 @@ export default function RentalsPage() {
     return filteredRentals.slice(start, start + pageSize)
   }, [filteredRentals, safePage, pageSize])
   const selectedRental = selectedRentalId ? filteredRentals.find((r) => r.id === selectedRentalId) : null
+  const canCreateRental = (permissions?.rentals !== false) && (permissions?.clients !== false) && (permissions?.bikes !== false) && (permissions?.batteries !== false)
 
   function daysHighlightClass(daysLeft: number) {
     if (daysLeft <= 0) return 'border-[#7f1d1d] bg-[#4a1d24] border-l-4 border-l-[#be123c]'
@@ -392,7 +402,7 @@ export default function RentalsPage() {
             <>
               <button className={listTab === 'ACTIVE' ? 'btn-primary' : 'btn'} onClick={() => setListTab('ACTIVE')}>Активные</button>
               <button className={listTab === 'CLOSED' ? 'btn-primary' : 'btn'} onClick={() => setListTab('CLOSED')}>Завершенные</button>
-              <button type="button" className="btn-primary" onClick={() => setCreateModalOpen(true)}>Создать аренду</button>
+              {canCreateRental && <button type="button" className="btn-primary" onClick={() => setCreateModalOpen(true)}>Создать аренду</button>}
             </>
           )}
         </div>

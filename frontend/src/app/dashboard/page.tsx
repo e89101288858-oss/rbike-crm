@@ -184,6 +184,7 @@ export default function DashboardPage() {
       } catch (err) {
         const msg = err instanceof Error ? err.message : ''
         if (msg.includes('401') || msg.toLowerCase().includes('unauthorized')) return router.replace('/login')
+        if (msg.includes('403') || msg.toLowerCase().includes('forbidden')) return
         setError(msg || 'Ошибка загрузки дашборда')
       }
     })()
@@ -261,7 +262,10 @@ export default function DashboardPage() {
         setEarlyClosuresCount(earlyCount)
         setEarlyClosuresRate(closedInPeriod.length ? (earlyCount / closedInPeriod.length) * 100 : 0)
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Ошибка загрузки выручки')
+        const msg = err instanceof Error ? err.message : ''
+        if (!cancelled && !(msg.includes('403') || msg.toLowerCase().includes('forbidden'))) {
+          setError(msg || 'Ошибка загрузки выручки')
+        }
       }
     })()
 
