@@ -42,6 +42,7 @@ export default function TenantSettingsPage() {
   const [tenantUsers, setTenantUsers] = useState<any[]>([])
   const [userForm, setUserForm] = useState({ email: '', password: '', fullName: '', phone: '', role: 'MANAGER' as 'MANAGER' | 'MECHANIC' })
   const [userPwdMap, setUserPwdMap] = useState<Record<string, string>>({})
+  const [permissionDraftMap, setPermissionDraftMap] = useState<Record<string, Record<string, boolean>>>({})
 
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -96,6 +97,7 @@ export default function TenantSettingsPage() {
       if (activeTenantId) {
         const rows = await api.tenantUsers(activeTenantId)
         setTenantUsers(rows)
+        setPermissionDraftMap(Object.fromEntries(rows.map((r: any) => [r.user?.id, { ...(r.permissions || {}) }])))
       } else {
         setTenantUsers([])
       }
@@ -251,6 +253,18 @@ export default function TenantSettingsPage() {
       await load()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка удаления пользователя')
+    }
+  }
+
+
+  async function saveUserPermissions(userId: string) {
+    try {
+      const draft = permissionDraftMap[userId] || {}
+      await updateTenantUser(userId, { permissions: draft })
+      setSuccess('Права доступа сохранены')
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка сохранения прав')
     }
   }
 
@@ -436,16 +450,21 @@ export default function TenantSettingsPage() {
                     <label key={key} className="flex items-center gap-2 text-xs text-gray-300">
                       <input
                         type="checkbox"
-                        checked={checked}
+                        checked={!!permissionDraftMap[row.user.id]?.[key]}
                         onChange={(e) => {
-                          const next = { ...(row.permissions || {}), [key]: e.target.checked }
-                          void updateTenantUser(row.user.id, { permissions: next })
+                          setPermissionDraftMap((prev) => ({
+                            ...prev,
+                            [row.user.id]: { ...(prev[row.user.id] || row.permissions || {}), [key]: e.target.checked },
+                          }))
                         }}
                       />
                       {label}
                     </label>
                   )
                 })}
+              </div>
+              <div className="mt-2">
+                <button className="btn" onClick={() => saveUserPermissions(row.user.id)}>Сохранить права</button>
               </div>
             </div>
           ))}
