@@ -111,6 +111,7 @@ export default function DashboardPage() {
   const [earlyClosuresRate, setEarlyClosuresRate] = useState(0)
 
   const [error, setError] = useState('')
+  const [permissions, setPermissions] = useState<Record<string, boolean> | null>(null)
 
   const chartRange = useMemo(() => {
     if (chartMode === 'month') {
@@ -164,16 +165,20 @@ export default function DashboardPage() {
           return
         }
 
+        const acc = await api.myAccountSettings().catch(() => null)
+        const p = (acc?.permissions || null) as Record<string, boolean> | null
+        setPermissions(p)
+
         const [summaryRes, bikesRes, clientsRes, activeRes, closedRes] = await Promise.all([
-          api.bikeSummary(),
-          api.bikes(),
-          api.clients(),
-          api.rentals('ACTIVE'),
-          api.rentals('CLOSED'),
+          p && p.bikes === false ? Promise.resolve(null) : api.bikeSummary().catch(() => null),
+          p && p.bikes === false ? Promise.resolve([]) : api.bikes().catch(() => []),
+          p && p.clients === false ? Promise.resolve([]) : api.clients().catch(() => []),
+          p && p.rentals === false ? Promise.resolve([]) : api.rentals('ACTIVE').catch(() => []),
+          p && p.rentals === false ? Promise.resolve([]) : api.rentals('CLOSED').catch(() => []),
         ])
 
         setBikeSummary(summaryRes)
-        setAllBikesCount(bikesRes.length)
+        setAllBikesCount((bikesRes || []).length)
         setClientsCount((clientsRes ?? []).length)
         setAllRentals([...(activeRes ?? []), ...(closedRes ?? [])])
       } catch (err) {
@@ -189,9 +194,11 @@ export default function DashboardPage() {
 
     ;(async () => {
       try {
-        const rev = await api.revenueByDays(
-          `from=${encodeURIComponent(chartRange.from.toISOString())}&to=${encodeURIComponent(chartRange.to.toISOString())}`,
-        )
+        const rev = permissions?.payments === false
+          ? { days: [], totalRevenueRub: 0 }
+          : await api.revenueByDays(
+              `from=${encodeURIComponent(chartRange.from.toISOString())}&to=${encodeURIComponent(chartRange.to.toISOString())}`,
+            )
         if (cancelled) return
 
         const rows = aggregateRevenue(rev.days ?? [], chartMode, chartRange.from, chartRange.to)
@@ -261,7 +268,7 @@ export default function DashboardPage() {
     return () => {
       cancelled = true
     }
-  }, [chartMode, chartRange, allRentals])
+  }, [chartMode, chartRange, allRentals, permissions])
 
   const maxBar = useMemo(() => Math.max(1, ...chartRows.map((r) => r.value)), [chartRows])
 

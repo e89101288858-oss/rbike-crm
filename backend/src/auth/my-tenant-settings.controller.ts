@@ -11,6 +11,7 @@ import type { JwtUser } from '../common/decorators/current-user.decorator'
 import { UpdateMyTenantSettingsDto } from './dto/update-my-tenant-settings.dto'
 import { UpdateMyAccountSettingsDto } from './dto/update-my-account-settings.dto'
 import { ChangeMyPasswordDto } from './dto/change-my-password.dto'
+import { ALL_TENANT_PERMISSION_KEYS, defaultPermissionsForRole, normalizePermissions } from '../common/tenant-permissions'
 
 @Controller('my')
 @UseGuards(JwtAuthGuard, TenantGuard, TenantModeGuard)
@@ -93,7 +94,7 @@ export class MyTenantSettingsController {
     this.ensureAllowedRole(user.role)
     const tenantId = req.tenantId!
 
-    const [tenant, me] = await Promise.all([
+    const [tenant, me, userTenant] = await Promise.all([
       this.prisma.tenant.findUnique({
         where: { id: tenantId },
         select: {
@@ -125,12 +126,17 @@ export class MyTenantSettingsController {
           email: true,
           fullName: true,
           phone: true,
+          role: true,
           passwordChangedAt: true,
           lastLoginAt: true,
           lastLoginIp: true,
           lastLoginUserAgent: true,
         },
       }),
+      this.prisma.userTenant.findUnique({
+        where: { userId_tenantId: { userId: user.userId, tenantId } },
+        select: { permissions: true },
+      } as any),
     ])
 
     const planLimits: Record<string, { maxBikes: number; maxActiveRentals: number }> = {
@@ -158,9 +164,16 @@ export class MyTenantSettingsController {
       }
     }
 
+    const fullPermissions = Object.fromEntries(ALL_TENANT_PERMISSION_KEYS.map((k) => [k, true]))
+    const permissions =
+      me?.role === 'MANAGER' || me?.role === 'MECHANIC'
+        ? normalizePermissions((userTenant as any)?.permissions ?? defaultPermissionsForRole(me.role), me.role)
+        : fullPermissions
+
     return {
       user: me,
       tenant,
+      permissions,
       franchisee: tenant?.franchisee,
       billing: {
         plan: tenant?.saasPlan ?? null,

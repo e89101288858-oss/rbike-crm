@@ -13,7 +13,7 @@ type TenantMode = 'FRANCHISE' | 'SAAS' | null
 
 type NavGroup = {
   title: string
-  items: Array<{ href: string; label: string; roles: UserRole[] }>
+  items: Array<{ href: string; label: string; roles: UserRole[]; permission?: string }>
 }
 
 const ownerNav: NavGroup[] = [
@@ -29,31 +29,31 @@ const franchiseOpsNav: NavGroup[] = [
   {
     title: 'Операции',
     items: [
-      { href: '/dashboard', label: 'Дашборд', roles: ['FRANCHISEE', 'MANAGER', 'MECHANIC'] },
-      { href: '/rentals', label: 'Аренды', roles: ['FRANCHISEE', 'MANAGER'] },
+      { href: '/dashboard', label: 'Дашборд', roles: ['FRANCHISEE', 'MANAGER', 'MECHANIC'], permission: 'rentals' },
+      { href: '/rentals', label: 'Аренды', roles: ['FRANCHISEE', 'MANAGER'], permission: 'rentals' },
     ],
   },
   {
     title: 'Справочники',
     items: [
-      { href: '/clients', label: 'Курьеры', roles: ['FRANCHISEE', 'MANAGER'] },
-      { href: '/bikes', label: 'Велосипеды', roles: ['FRANCHISEE', 'MANAGER', 'MECHANIC'] },
-      { href: '/batteries', label: 'АКБ', roles: ['FRANCHISEE', 'MANAGER', 'MECHANIC'] },
+      { href: '/clients', label: 'Курьеры', roles: ['FRANCHISEE', 'MANAGER'], permission: 'clients' },
+      { href: '/bikes', label: 'Велосипеды', roles: ['FRANCHISEE', 'MANAGER', 'MECHANIC'], permission: 'bikes' },
+      { href: '/batteries', label: 'АКБ', roles: ['FRANCHISEE', 'MANAGER', 'MECHANIC'], permission: 'batteries' },
     ],
   },
   {
     title: 'Аналитика',
     items: [
-      { href: '/finance', label: 'Финансы', roles: ['FRANCHISEE', 'MANAGER'] },
-      { href: '/expenses', label: 'Расходы', roles: ['FRANCHISEE', 'MANAGER'] },
-      { href: '/payments', label: 'Платежи', roles: ['FRANCHISEE', 'MANAGER'] },
+      { href: '/finance', label: 'Финансы', roles: ['FRANCHISEE', 'MANAGER'], permission: 'payments' },
+      { href: '/expenses', label: 'Расходы', roles: ['FRANCHISEE', 'MANAGER'], permission: 'expenses' },
+      { href: '/payments', label: 'Платежи', roles: ['FRANCHISEE', 'MANAGER'], permission: 'payments' },
     ],
   },
   {
     title: 'Инструменты',
     items: [
-      { href: '/import', label: 'Импорт CSV', roles: ['FRANCHISEE', 'MANAGER'] },
-      { href: '/settings', label: 'Настройки', roles: ['FRANCHISEE', 'MANAGER'] },
+      { href: '/import', label: 'Импорт CSV', roles: ['FRANCHISEE', 'MANAGER'], permission: 'settings' },
+      { href: '/settings', label: 'Настройки', roles: ['FRANCHISEE', 'MANAGER'], permission: 'settings' },
     ],
   },
 ]
@@ -62,32 +62,32 @@ const saasOpsNav: NavGroup[] = [
   {
     title: 'Операции',
     items: [
-      { href: '/dashboard', label: 'Дашборд', roles: ['SAAS_USER', 'MANAGER', 'MECHANIC'] },
-      { href: '/rentals', label: 'Аренды', roles: ['SAAS_USER', 'MANAGER'] },
+      { href: '/dashboard', label: 'Дашборд', roles: ['SAAS_USER', 'MANAGER', 'MECHANIC'], permission: 'rentals' },
+      { href: '/rentals', label: 'Аренды', roles: ['SAAS_USER', 'MANAGER'], permission: 'rentals' },
     ],
   },
   {
     title: 'Справочники',
     items: [
-      { href: '/clients', label: 'Курьеры', roles: ['SAAS_USER', 'MANAGER'] },
-      { href: '/bikes', label: 'Велосипеды', roles: ['SAAS_USER', 'MANAGER', 'MECHANIC'] },
-      { href: '/batteries', label: 'АКБ', roles: ['SAAS_USER', 'MANAGER', 'MECHANIC'] },
+      { href: '/clients', label: 'Курьеры', roles: ['SAAS_USER', 'MANAGER'], permission: 'clients' },
+      { href: '/bikes', label: 'Велосипеды', roles: ['SAAS_USER', 'MANAGER', 'MECHANIC'], permission: 'bikes' },
+      { href: '/batteries', label: 'АКБ', roles: ['SAAS_USER', 'MANAGER', 'MECHANIC'], permission: 'batteries' },
     ],
   },
   {
     title: 'Аналитика',
     items: [
-      { href: '/finance', label: 'Финансы', roles: ['SAAS_USER', 'MANAGER'] },
-      { href: '/expenses', label: 'Расходы', roles: ['SAAS_USER', 'MANAGER'] },
-      { href: '/payments', label: 'Платежи', roles: ['SAAS_USER', 'MANAGER'] },
+      { href: '/finance', label: 'Финансы', roles: ['SAAS_USER', 'MANAGER'], permission: 'payments' },
+      { href: '/expenses', label: 'Расходы', roles: ['SAAS_USER', 'MANAGER'], permission: 'expenses' },
+      { href: '/payments', label: 'Платежи', roles: ['SAAS_USER', 'MANAGER'], permission: 'payments' },
     ],
   },
   {
     title: 'Инструменты',
     items: [
-      { href: '/import', label: 'Импорт CSV', roles: ['SAAS_USER', 'MANAGER'] },
+      { href: '/import', label: 'Импорт CSV', roles: ['SAAS_USER', 'MANAGER'], permission: 'settings' },
       { href: '/billing', label: 'Биллинг', roles: ['SAAS_USER'] },
-      { href: '/settings', label: 'Настройки', roles: ['SAAS_USER', 'MANAGER'] },
+      { href: '/settings', label: 'Настройки', roles: ['SAAS_USER', 'MANAGER'], permission: 'settings' },
     ],
   },
 ]
@@ -99,6 +99,7 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
   const [role, setRole] = useState<UserRole>('')
   const [mobileOpen, setMobileOpen] = useState(false)
   const [tenantMode, setTenantMode] = useState<TenantMode>(null)
+  const [permissions, setPermissions] = useState<Record<string, boolean> | null>(null)
   const [daysLeft, setDaysLeft] = useState<number | null>(null)
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null)
 
@@ -124,6 +125,7 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
         const mode = (acc?.tenant?.mode as TenantMode) || null
 
         setTenantMode(mode)
+        setPermissions(acc?.permissions || null)
 
         if (mode !== 'SAAS') {
           setDaysLeft(null)
@@ -151,6 +153,7 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
         setDaysLeft(null)
         setTrialEndsAt(null)
         setTenantMode(null)
+        setPermissions(null)
       }
     })()
   }, [role, tenantId])
@@ -190,7 +193,16 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
           ? saasOpsNav
           : franchiseOpsNav
   const visibleGroups = nav
-    .map((g) => ({ ...g, items: g.items.filter((i) => !role || i.roles.includes(role)) }))
+    .map((g) => ({
+      ...g,
+      items: g.items.filter((i) => {
+        if (role && !i.roles.includes(role)) return false
+        if ((role === 'MANAGER' || role === 'MECHANIC') && i.permission) {
+          return !!permissions?.[i.permission]
+        }
+        return true
+      }),
+    }))
     .filter((g) => g.items.length > 0)
 
   return (
