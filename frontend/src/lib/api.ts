@@ -95,6 +95,20 @@ async function clientsBasePath(): Promise<string> {
   return mode === 'SAAS' ? '/saas/clients' : '/franchise/clients'
 }
 
+async function batteriesBasePath(): Promise<string> {
+  const tenantId = getTenantId()
+  if (!tenantId) throw new Error('Не выбран tenant')
+
+  if (tenantModeCache?.tenantId === tenantId) {
+    return tenantModeCache.mode === 'SAAS' ? '/saas/batteries' : '/franchise/batteries'
+  }
+
+  const settings = await request<{ mode: 'FRANCHISE' | 'SAAS' }>('/my/tenant-settings', undefined, true)
+  const mode = settings?.mode === 'SAAS' ? 'SAAS' : 'FRANCHISE'
+  tenantModeCache = { tenantId, mode }
+  return mode === 'SAAS' ? '/saas/batteries' : '/franchise/batteries'
+}
+
 export type Client = {
   id: string
   fullName: string
@@ -421,7 +435,10 @@ export const api = {
     return request<Rental[]>(`${base}/active`, undefined, true)
   },
 
-  batteries: (query = '') => request<Battery[]>(`/batteries${query ? `?${query}` : ''}`, undefined, true),
+  batteries: async (query = '') => {
+    const base = await batteriesBasePath()
+    return request<Battery[]>(`${base}${query ? `?${query}` : ''}`, undefined, true)
+  },
 
   expenses: async (query = '') => {
     const base = await expensesBasePath()
@@ -451,26 +468,36 @@ export const api = {
     return request<any>(`${base}/${id}/restore`, { method: 'POST' }, true)
   },
 
-  createBattery: (payload: {
+  createBattery: async (payload: {
     code: string
     serialNumber?: string
     bikeId?: string
     status?: string
     notes?: string
-  }) =>
-    request<Battery>('/batteries', {
+  }) => {
+    const base = await batteriesBasePath()
+    return request<Battery>(base, {
       method: 'POST',
       body: JSON.stringify(payload),
-    }, true),
+    }, true)
+  },
 
-  updateBattery: (batteryId: string, payload: Partial<Battery> & { clearBike?: boolean }) =>
-    request<Battery>(`/batteries/${batteryId}`, {
+  updateBattery: async (batteryId: string, payload: Partial<Battery> & { clearBike?: boolean }) => {
+    const base = await batteriesBasePath()
+    return request<Battery>(`${base}/${batteryId}`, {
       method: 'PATCH',
       body: JSON.stringify(payload),
-    }, true),
+    }, true)
+  },
 
-  deleteBattery: (batteryId: string) => request<any>(`/batteries/${batteryId}`, { method: 'DELETE' }, true),
-  restoreBattery: (batteryId: string) => request<any>(`/batteries/${batteryId}/restore`, { method: 'POST' }, true),
+  deleteBattery: async (batteryId: string) => {
+    const base = await batteriesBasePath()
+    return request<any>(`${base}/${batteryId}`, { method: 'DELETE' }, true)
+  },
+  restoreBattery: async (batteryId: string) => {
+    const base = await batteriesBasePath()
+    return request<any>(`${base}/${batteryId}/restore`, { method: 'POST' }, true)
+  },
 
   createRental: async (payload: {
     bikeId: string
