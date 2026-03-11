@@ -16,6 +16,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
 import type { JwtUser } from '../common/decorators/current-user.decorator'
 import { PrismaService } from '../prisma/prisma.service'
+import { normalizePermissions } from '../common/tenant-permissions'
 import { AssignUserToTenantDto } from './dto/assign-user-to-tenant.dto'
 
 @Controller('tenants')
@@ -118,7 +119,10 @@ export class TenantUsersController {
       data: {
         userId: dto.userId,
         tenantId,
-      },
+        ...(user.role === 'MANAGER' || user.role === 'MECHANIC'
+          ? { permissions: normalizePermissions(undefined, user.role) as any }
+          : {}),
+      } as any,
     })
   }
 
@@ -160,7 +164,11 @@ export class TenantUsersController {
     })
 
     await this.prisma.userTenant.create({
-      data: { userId: user.id, tenantId },
+      data: {
+        userId: user.id,
+        tenantId,
+        permissions: normalizePermissions(undefined, role),
+      } as any,
     })
 
     return user
@@ -170,7 +178,7 @@ export class TenantUsersController {
   async updateTenantUser(
     @Param('tenantId') tenantId: string,
     @Param('userId') userId: string,
-    @Body() dto: { role?: 'MANAGER' | 'MECHANIC'; isActive?: boolean; password?: string; fullName?: string; phone?: string },
+    @Body() dto: { role?: 'MANAGER' | 'MECHANIC'; isActive?: boolean; password?: string; fullName?: string; phone?: string; permissions?: Record<string, boolean> },
     @CurrentUser() currentUser: JwtUser,
   ) {
     await this.resolveTenantWithAccess(tenantId, currentUser)
@@ -179,6 +187,8 @@ export class TenantUsersController {
       where: { userId_tenantId: { userId, tenantId } },
       select: { userId: true },
     })
+
+    const relationUser = await this.prisma.user.findUnique({ where: { id: userId }, select: { role: true } })
 
     if (!relation) throw new NotFoundException('UserTenant not found')
 
@@ -209,8 +219,21 @@ export class TenantUsersController {
       patch.tokenVersion = { increment: 1 }
     }
 
+    if (dto.permissions !== undefined || dto.role !== undefined) {
+      const nextRole = (dto.role || relationUser?.role || 'MANAGER') as string
+      await this.prisma.userTenant.update({
+        where: { userId_tenantId: { userId, tenantId } },
+        data: {
+          permissions: normalizePermissions(dto.permissions, nextRole) as any,
+        } as any,
+      })
+    }
+
     if (!Object.keys(patch).length) {
-      throw new BadRequestException('Нет данных для обновления')
+      return this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, email: true, role: true, fullName: true, phone: true, isActive: true, createdAt: true },
+      })
     }
 
     return this.prisma.user.update({
@@ -266,7 +289,10 @@ export class TenantUsersController {
 
     const userTenants = await this.prisma.userTenant.findMany({
       where: { tenantId },
-      include: {
+      select: {
+        userId: true,
+        tenantId: true,
+        permissions: true,
         user: {
           select: {
             id: true,

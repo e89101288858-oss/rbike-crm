@@ -6,6 +6,7 @@ import {
   Injectable,
 } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
+import { defaultPermissionsForRole, normalizePermissions, permissionKeyFromPath } from '../tenant-permissions'
 
 @Injectable()
 export class TenantGuard implements CanActivate {
@@ -43,21 +44,35 @@ export class TenantGuard implements CanActivate {
     }
 
     let accessGranted = false
+    let userTenant: { permissions?: any } | null = null
 
     if (user.role === 'OWNER') {
       accessGranted = true
     } else if (user.role === 'FRANCHISEE') {
       accessGranted = user.franchiseeId === tenant.franchiseeId
     } else if (user.role === 'SAAS_USER' || user.role === 'MANAGER' || user.role === 'MECHANIC') {
-      const userTenant = await this.prisma.userTenant.findUnique({
+      userTenant = await this.prisma.userTenant.findUnique({
         where: {
           userId_tenantId: { userId: user.userId, tenantId },
         },
-      })
+        select: { userId: true, permissions: true } as any,
+      }) as any
       accessGranted = !!userTenant
     }
 
     if (!accessGranted) throw new ForbiddenException('Forbidden')
+
+    if (user.role === 'MANAGER' || user.role === 'MECHANIC') {
+      const path: string = String(request.path || request.originalUrl || '')
+      const permissionKey = permissionKeyFromPath(path)
+      if (permissionKey) {
+        const defaults = defaultPermissionsForRole(user.role)
+        const effective = normalizePermissions((userTenant as any)?.permissions ?? defaults, user.role)
+        if (!effective[permissionKey]) {
+          throw new ForbiddenException('Недостаточно прав для этого раздела')
+        }
+      }
+    }
 
     if (tenant.mode === 'SAAS') {
       const path: string = String(request.path || request.originalUrl || '')

@@ -6,6 +6,18 @@ import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'
 import { clearTenantId, clearToken, getTenantId, getToken, setTenantId } from '@/lib/auth'
 
+const PERMISSION_LABELS: Record<string, string> = {
+  rentals: 'Аренды',
+  clients: 'Курьеры',
+  bikes: 'Велосипеды',
+  batteries: 'АКБ',
+  payments: 'Платежи/финансы',
+  expenses: 'Расходы',
+  documents: 'Документы',
+  settings: 'Настройки',
+  users: 'Пользователи',
+}
+
 export default function TenantSettingsPage() {
   const router = useRouter()
   const returnHandledRef = useRef(false)
@@ -217,7 +229,7 @@ export default function TenantSettingsPage() {
     }
   }
 
-  async function updateTenantUser(userId: string, patch: { role?: 'MANAGER' | 'MECHANIC'; isActive?: boolean; password?: string }) {
+  async function updateTenantUser(userId: string, patch: { role?: 'MANAGER' | 'MECHANIC'; isActive?: boolean; password?: string; permissions?: Record<string, boolean> }) {
     try {
       const tenantId = getTenantId()
       if (!tenantId) throw new Error('Tenant не выбран')
@@ -415,6 +427,25 @@ export default function TenantSettingsPage() {
                 />
                 <button className="btn" onClick={() => updateTenantUser(row.user.id, { password: userPwdMap[row.user.id] || '' })}>Сменить пароль</button>
                 <button className="btn border-red-500/60 text-red-300" onClick={() => removeTenantUser(row.user.id)}>Убрать из точки</button>
+              </div>
+
+              <div className="mt-2 grid gap-2 md:grid-cols-3">
+                {Object.entries(PERMISSION_LABELS).map(([key, label]) => {
+                  const checked = !!row.permissions?.[key]
+                  return (
+                    <label key={key} className="flex items-center gap-2 text-xs text-gray-300">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) => {
+                          const next = { ...(row.permissions || {}), [key]: e.target.checked }
+                          void updateTenantUser(row.user.id, { permissions: next })
+                        }}
+                      />
+                      {label}
+                    </label>
+                  )
+                })}
               </div>
             </div>
           ))}

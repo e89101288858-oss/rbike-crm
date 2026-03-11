@@ -746,7 +746,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
-  updateTenantUser: (tenantId: string, userId: string, payload: { role?: 'MANAGER' | 'MECHANIC'; isActive?: boolean; password?: string; fullName?: string; phone?: string }) =>
+  updateTenantUser: (tenantId: string, userId: string, payload: { role?: 'MANAGER' | 'MECHANIC'; isActive?: boolean; password?: string; fullName?: string; phone?: string; permissions?: Record<string, boolean> }) =>
     request<any>(`/tenants/${tenantId}/users/${userId}`, {
       method: 'PATCH',
       body: JSON.stringify(payload),

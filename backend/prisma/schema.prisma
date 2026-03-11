@@ -179,10 +179,11 @@ model Tenant {
 }
 
 model UserTenant {
-  userId   String
-  tenantId String
-  user     User   @relation(fields: [userId], references: [id])
-  tenant   Tenant @relation(fields: [tenantId], references: [id])
+  userId      String
+  tenantId    String
+  permissions Json?
+  user        User   @relation(fields: [userId], references: [id])
+  tenant      Tenant @relation(fields: [tenantId], references: [id])
 
   @@id([userId, tenantId])
 }
