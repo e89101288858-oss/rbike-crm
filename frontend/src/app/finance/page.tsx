@@ -113,6 +113,35 @@ export default function FinancePage() {
   }, [payments, expenses])
 
   const daySummaryRows = useMemo(() => {
+    if (periodMode === 'year') {
+      const byMonth = new Map<string, { date: string; income: number; expense: number }>()
+
+      for (let m = 0; m < 12; m++) {
+        const key = `${periodRange.from.getFullYear()}-${String(m + 1).padStart(2, '0')}`
+        byMonth.set(key, { date: key, income: 0, expense: 0 })
+      }
+
+      for (const p of payments || []) {
+        const d = String(p.paidAt || p.dueAt || '').slice(0, 7)
+        if (!byMonth.has(d)) continue
+        const cur = byMonth.get(d)!
+        const amount = Number(p.amount || 0)
+        if (amount >= 0) cur.income += amount
+        else cur.expense += Math.abs(amount)
+      }
+
+      for (const e of expenses || []) {
+        const d = String(e.spentAt || '').slice(0, 7)
+        if (!byMonth.has(d)) continue
+        const cur = byMonth.get(d)!
+        cur.expense += Math.abs(Number(e.amountRub || 0))
+      }
+
+      return Array.from(byMonth.values())
+        .map((r) => ({ ...r, profit: Math.round((r.income - r.expense) * 100) / 100 }))
+        .sort((a, b) => b.date.localeCompare(a.date))
+    }
+
     const map = new Map<string, { date: string; income: number; expense: number }>()
 
     for (const p of payments || []) {
@@ -147,7 +176,7 @@ export default function FinancePage() {
     }
 
     return rows.sort((a, b) => b.date.localeCompare(a.date))
-  }, [payments, expenses, periodRange])
+  }, [payments, expenses, periodRange, periodMode])
 
 
 
@@ -257,7 +286,7 @@ export default function FinancePage() {
 
 
       <section className="panel mb-6">
-        <CrmSectionTitle>Сводка по дням</CrmSectionTitle>
+        <CrmSectionTitle>{periodMode === 'year' ? 'Сводка по месяцам' : 'Сводка по дням'}</CrmSectionTitle>
         <div className="table-wrap mt-2">
           <table className="table table-sticky">
             <thead>
@@ -271,7 +300,7 @@ export default function FinancePage() {
             <tbody>
               {daySummaryRows.map((r: any) => (
                 <tr key={r.date}>
-                  <td>{formatDate(r.date)}</td>
+                  <td>{periodMode === 'year' ? new Date(`${r.date}-01`).toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' }) : formatDate(r.date)}</td>
                   <td className="text-emerald-300">{formatRub(r.income)}</td>
                   <td className="text-rose-300">{formatRub(r.expense)}</td>
                   <td className={r.profit < 0 ? 'text-rose-300' : 'text-emerald-300'}>{formatRub(r.profit)}</td>
