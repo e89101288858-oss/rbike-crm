@@ -17,15 +17,19 @@ export default function PaymentsPage() {
   const [success, setSuccess] = useState('')
   const [editId, setEditId] = useState('')
   const [editAmount, setEditAmount] = useState('')
-  const [page, setPage] = useState(1)
+  const now = new Date()
+  const [month, setMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`)
 
   async function load() {
     setLoading(true)
     setError('')
     try {
       if (!getTenantId()) throw new Error('Не выбран tenant')
-      setItems(await api.payments('status=PAID'))
-      setPage(1)
+      const [y, m] = month.split('-').map(Number)
+      const from = new Date(y, (m || 1) - 1, 1, 0, 0, 0, 0)
+      const to = new Date(y, (m || 1), 0, 23, 59, 59, 999)
+      const q = `status=PAID&dueFrom=${encodeURIComponent(from.toISOString())}&dueTo=${encodeURIComponent(to.toISOString())}`
+      setItems(await api.payments(q))
     } catch (err) {
       setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка загрузки платежей'}`)
     } finally {
@@ -79,10 +83,6 @@ export default function PaymentsPage() {
     const bd = String(b?.paidAt || b?.dueAt || b?.createdAt || '')
     return bd.localeCompare(ad)
   })
-  const pageSize = 10
-  const totalPages = Math.max(1, Math.ceil(sortedItems.length / pageSize))
-  const pageSafe = Math.min(page, totalPages)
-  const pageItems = sortedItems.slice((pageSafe - 1) * pageSize, pageSafe * pageSize)
 
   useEffect(() => {
     if (!getToken()) return router.replace('/login')
@@ -92,7 +92,7 @@ export default function PaymentsPage() {
       if (!getTenantId() && myTenants.length > 0) setTenantId(myTenants[0].id)
       await load()
     })()
-  }, [router])
+  }, [router, month])
 
   return (
     <main className="page with-sidebar">
@@ -100,24 +100,25 @@ export default function PaymentsPage() {
 
       <CrmActionRow className="mb-3">
         <button className="btn" onClick={load} disabled={loading}>{loading ? 'Обновление…' : 'Обновить'}</button>
-        <div className="ml-auto flex items-center gap-2 text-sm text-gray-400">
-          <span>Стр. {pageSafe} / {totalPages}</span>
-          <button className="btn" disabled={pageSafe <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>Назад</button>
-          <button className="btn" disabled={pageSafe >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>Вперёд</button>
-        </div>
+        <input
+          type="month"
+          className="input"
+          value={month}
+          onChange={(e) => setMonth(e.target.value)}
+        />
       </CrmActionRow>
 
       <div className="mb-3 grid gap-2 md:grid-cols-3">
         <CrmStat label="Всего записей" value={sortedItems.length} />
         <CrmStat label="Текущий статус" value="Оплаченные" />
-        <CrmStat label="Сумма на странице" value={formatRub(pageItems.reduce((acc, it) => acc + Number(it.amount || 0), 0))} />
+        <CrmStat label="Сумма за месяц" value={formatRub(sortedItems.reduce((acc, it) => acc + Number(it.amount || 0), 0))} />
       </div>
 
       {error && <p className="alert">{error}</p>}
       {success && <p className="alert-success">{success}</p>}
 
       <div className="space-y-2 md:hidden">
-        {pageItems.map((p) => (
+        {sortedItems.map((p) => (
           <div key={p.id} className="crm-card text-sm">
             <div className="font-semibold">{p.rental?.client?.fullName || '—'}</div>
             <div>Велосипед: {p.rental?.bike?.code || '—'}</div>
@@ -159,7 +160,7 @@ export default function PaymentsPage() {
             </tr>
           </thead>
           <tbody>
-            {pageItems.map((p) => (
+            {sortedItems.map((p) => (
               <tr key={p.id}>
                 <td>{p.rental?.client?.fullName || '—'}</td>
                 <td>{p.rental?.bike?.code || '—'}</td>
