@@ -6,7 +6,7 @@ import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'
 import { getTenantId, getToken, setTenantId } from '@/lib/auth'
 import { formatDate, formatRub } from '@/lib/format'
-import { CrmActionRow, CrmCard, CrmEmpty, CrmSectionTitle, CrmStat } from '@/components/crm-ui'
+import { CrmActionRow, CrmCard, CrmEmpty, CrmSectionTitle } from '@/components/crm-ui'
 
 export default function FinancePage() {
   const router = useRouter()
@@ -18,17 +18,10 @@ export default function FinancePage() {
   const [periodYear, setPeriodYear] = useState(String(now.getFullYear()))
   const [bikeId, setBikeId] = useState('')
   const [bikes, setBikes] = useState<any[]>([])
-  const [days, setDays] = useState<any[]>([])
   const [byBike, setByBike] = useState<any[]>([])
   const [expenses, setExpenses] = useState<any[]>([])
   const [payments, setPayments] = useState<any[]>([])
   const [error, setError] = useState('')
-  const [daysPage, setDaysPage] = useState(1)
-
-  const maxDayRevenue = useMemo(
-    () => Math.max(1, ...days.map((d: any) => Number(d.revenueRub ?? 0))),
-    [days],
-  )
 
   const selectedTenant = tenants.find((t: any) => t.id === getTenantId())
   const royaltyPercent = Number(selectedTenant?.royaltyPercent ?? 0)
@@ -47,16 +40,8 @@ export default function FinancePage() {
     return { from, to }
   }, [periodMode, periodMonth, periodYear])
 
-  const sortedDays = useMemo(
-    () => [...days].sort((a: any, b: any) => String(b.date || '').localeCompare(String(a.date || ''))),
-    [days],
-  )
-  const pageSize = 10
-  const totalDaysPages = Math.max(1, Math.ceil(sortedDays.length / pageSize))
-  const daysPageSafe = Math.min(daysPage, totalDaysPages)
-  const daysPageItems = sortedDays.slice((daysPageSafe - 1) * pageSize, daysPageSafe * pageSize)
 
-  const revenueTotal = days.reduce((sum: number, d: any) => sum + Number(d.revenueRub ?? 0), 0)
+  const revenueTotal = useMemo(() => (payments || []).reduce((sum: number, p: any) => sum + Number(p.amount ?? 0), 0), [payments])
   const royaltyDue = Math.round(revenueTotal * (royaltyPercent / 100) * 100) / 100
 
   const expenseByBike = useMemo(() => {
@@ -200,16 +185,13 @@ export default function FinancePage() {
       const paymentsQ = new URLSearchParams()
       paymentsQ.set('status', 'PAID')
 
-      const [bikesRes, daysRes, bikeRes, expensesRes, paymentsRes] = await Promise.all([
+      const [bikesRes, bikeRes, expensesRes, paymentsRes] = await Promise.all([
         api.bikes(),
-        api.revenueByDays(q.toString()),
         api.revenueByBike(qb.toString()),
         api.expenses(q.toString()),
         api.payments(paymentsQ.toString()),
       ])
       setBikes(bikesRes)
-      setDays(daysRes.days ?? [])
-      setDaysPage(1)
       setByBike(bikeRes.bikes ?? [])
       setExpenses(expensesRes ?? [])
       const fromMs = periodFrom.getTime()
@@ -263,12 +245,6 @@ export default function FinancePage() {
       </CrmActionRow>
 
       {error && <p className="alert">{error}</p>}
-
-      <div className="mb-4 grid gap-2 md:grid-cols-3">
-        <CrmStat label="Выручка" value={formatRub(revenueTotal)} />
-        <CrmStat label="Расходы" value={formatRub(totalExpensesRub)} />
-        <CrmStat label="Прибыль" value={<span className={netTotalRub < 0 ? 'text-rose-300' : 'text-emerald-300'}>{formatRub(netTotalRub)}</span>} />
-      </div>
 
       {role === 'FRANCHISEE' && royaltyPercent > 0 && (
         <section className="panel mb-4">
