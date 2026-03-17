@@ -6,7 +6,7 @@ import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'
 import { getTenantId, getToken, setTenantId } from '@/lib/auth'
 import { formatDate, formatRub } from '@/lib/format'
-import { CrmActionRow, CrmCard, CrmEmpty, CrmSectionTitle, CrmStat } from '@/components/crm-ui'
+import { CrmActionRow, CrmCard, CrmEmpty, CrmSectionTitle } from '@/components/crm-ui'
 
 export default function FinancePage() {
   const router = useRouter()
@@ -22,6 +22,8 @@ export default function FinancePage() {
   const [byBike, setByBike] = useState<any[]>([])
   const [expenses, setExpenses] = useState<any[]>([])
   const [payments, setPayments] = useState<any[]>([])
+  const [historyPayments, setHistoryPayments] = useState<any[]>([])
+  const [historyExpenses, setHistoryExpenses] = useState<any[]>([])
   const [error, setError] = useState('')
   const [daysPage, setDaysPage] = useState(1)
 
@@ -180,6 +182,65 @@ export default function FinancePage() {
 
 
 
+
+
+  const monthOverviewRows = useMemo(() => {
+    const y = Number(periodYear) || new Date().getFullYear()
+    const map = new Map<string, { key: string; income: number; expense: number }>()
+    for (let m = 1; m <= 12; m++) {
+      const key = `${y}-${String(m).padStart(2, '0')}`
+      map.set(key, { key, income: 0, expense: 0 })
+    }
+
+    for (const p of historyPayments || []) {
+      if (!p?.paidAt) continue
+      const d = String(p.paidAt).slice(0, 7)
+      if (!map.has(d)) continue
+      const row = map.get(d)!
+      const amount = Number(p.amount || 0)
+      if (amount >= 0) row.income += amount
+      else row.expense += Math.abs(amount)
+    }
+
+    for (const e of historyExpenses || []) {
+      const d = String(e?.spentAt || '').slice(0, 7)
+      if (!map.has(d)) continue
+      const row = map.get(d)!
+      row.expense += Math.abs(Number(e.amountRub || 0))
+    }
+
+    return Array.from(map.values())
+      .map((r) => ({ ...r, profit: Math.round((r.income - r.expense) * 100) / 100 }))
+      .sort((a, b) => b.key.localeCompare(a.key))
+  }, [historyPayments, historyExpenses, periodYear])
+
+  const yearOverviewRows = useMemo(() => {
+    const map = new Map<string, { key: string; income: number; expense: number }>()
+
+    for (const p of historyPayments || []) {
+      if (!p?.paidAt) continue
+      const y = String(p.paidAt).slice(0, 4)
+      const row = map.get(y) || { key: y, income: 0, expense: 0 }
+      const amount = Number(p.amount || 0)
+      if (amount >= 0) row.income += amount
+      else row.expense += Math.abs(amount)
+      map.set(y, row)
+    }
+
+    for (const e of historyExpenses || []) {
+      const y = String(e?.spentAt || '').slice(0, 4)
+      if (!y) continue
+      const row = map.get(y) || { key: y, income: 0, expense: 0 }
+      row.expense += Math.abs(Number(e.amountRub || 0))
+      map.set(y, row)
+    }
+
+    return Array.from(map.values())
+      .map((r) => ({ ...r, profit: Math.round((r.income - r.expense) * 100) / 100 }))
+      .sort((a, b) => b.key.localeCompare(a.key))
+  }, [historyPayments, historyExpenses])
+
+
   async function load() {
     setError('')
     try {
@@ -194,18 +255,21 @@ export default function FinancePage() {
       const paymentsQ = new URLSearchParams()
       paymentsQ.set('status', 'PAID')
 
-      const [bikesRes, daysRes, bikeRes, expensesRes, paymentsRes] = await Promise.all([
+      const [bikesRes, daysRes, bikeRes, expensesRes, paymentsRes, allExpensesRes] = await Promise.all([
         api.bikes(),
         api.revenueByDays(q.toString()),
         api.revenueByBike(qb.toString()),
         api.expenses(q.toString()),
         api.payments(paymentsQ.toString()),
+        api.expenses(),
       ])
       setBikes(bikesRes)
       setDays(daysRes.days ?? [])
       setDaysPage(1)
       setByBike(bikeRes.bikes ?? [])
       setExpenses(expensesRes ?? [])
+      setHistoryExpenses(allExpensesRes ?? [])
+      setHistoryPayments(paymentsRes ?? [])
       const fromMs = periodFrom.getTime()
       const toMs = periodTo.getTime()
       const filteredPayments = (paymentsRes ?? []).filter((p: any) => {
@@ -258,11 +322,48 @@ export default function FinancePage() {
 
       {error && <p className="alert">{error}</p>}
 
-      <div className="mb-4 grid gap-2 md:grid-cols-3">
-        <CrmStat label="Выручка" value={formatRub(revenueTotal)} />
-        <CrmStat label="Расходы" value={formatRub(totalExpensesRub)} />
-        <CrmStat label="Прибыль" value={<span className={netTotalRub < 0 ? 'text-rose-300' : 'text-emerald-300'}>{formatRub(netTotalRub)}</span>} />
-      </div>
+      <section className="panel mb-4">
+        <CrmSectionTitle>Общие показатели</CrmSectionTitle>
+        <div className="grid gap-4 lg:grid-cols-2 mt-2">
+          <div>
+            <div className="mb-2 text-sm text-gray-400">По месяцам ({periodYear})</div>
+            <div className="table-wrap">
+              <table className="table table-sticky">
+                <thead><tr><th>Месяц</th><th>Доходы</th><th>Расходы</th><th>Прибыль</th></tr></thead>
+                <tbody>
+                  {monthOverviewRows.map((r: any) => (
+                    <tr key={r.key}>
+                      <td>{new Date(`${r.key}-01`).toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })}</td>
+                      <td className="text-emerald-300">{formatRub(r.income)}</td>
+                      <td className="text-rose-300">{formatRub(r.expense)}</td>
+                      <td className={r.profit < 0 ? 'text-rose-300' : 'text-emerald-300'}>{formatRub(r.profit)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div>
+            <div className="mb-2 text-sm text-gray-400">По годам</div>
+            <div className="table-wrap">
+              <table className="table table-sticky">
+                <thead><tr><th>Год</th><th>Доходы</th><th>Расходы</th><th>Прибыль</th></tr></thead>
+                <tbody>
+                  {yearOverviewRows.map((r: any) => (
+                    <tr key={r.key}>
+                      <td>{r.key}</td>
+                      <td className="text-emerald-300">{formatRub(r.income)}</td>
+                      <td className="text-rose-300">{formatRub(r.expense)}</td>
+                      <td className={r.profit < 0 ? 'text-rose-300' : 'text-emerald-300'}>{formatRub(r.profit)}</td>
+                    </tr>
+                  ))}
+                  {!yearOverviewRows.length && <tr><td colSpan={4} className="text-center text-gray-600"><CrmEmpty title="Нет данных" /></td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {role === 'FRANCHISEE' && royaltyPercent > 0 && (
         <section className="panel mb-4">
