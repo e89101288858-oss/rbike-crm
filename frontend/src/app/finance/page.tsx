@@ -89,7 +89,7 @@ export default function FinancePage() {
   const cashflowRows = useMemo(() => {
     const income = (payments || []).map((p: any) => ({
       id: `pay-${p.id}`,
-      at: p.paidAt || p.dueAt,
+      at: p.paidAt,
       type: Number(p.amount || 0) >= 0 ? 'Поступление' : 'Корректировка',
       amount: Number(p.amount || 0),
       source: 'Платеж аренды',
@@ -122,7 +122,7 @@ export default function FinancePage() {
       }
 
       for (const p of payments || []) {
-        const d = String(p.paidAt || p.dueAt || '').slice(0, 7)
+        const d = String(p.paidAt || '').slice(0, 7)
         if (!byMonth.has(d)) continue
         const cur = byMonth.get(d)!
         const amount = Number(p.amount || 0)
@@ -145,7 +145,7 @@ export default function FinancePage() {
     const map = new Map<string, { date: string; income: number; expense: number }>()
 
     for (const p of payments || []) {
-      const d = String(p.paidAt || p.dueAt || '').slice(0, 10)
+      const d = String(p.paidAt || '').slice(0, 10)
       if (!d) continue
       const cur = map.get(d) || { date: d, income: 0, expense: 0 }
       const amount = Number(p.amount || 0)
@@ -193,8 +193,6 @@ export default function FinancePage() {
 
       const paymentsQ = new URLSearchParams()
       paymentsQ.set('status', 'PAID')
-      paymentsQ.set('dueFrom', periodFrom.toISOString())
-      paymentsQ.set('dueTo', periodTo.toISOString())
 
       const [bikesRes, daysRes, bikeRes, expensesRes, paymentsRes] = await Promise.all([
         api.bikes(),
@@ -208,7 +206,14 @@ export default function FinancePage() {
       setDaysPage(1)
       setByBike(bikeRes.bikes ?? [])
       setExpenses(expensesRes ?? [])
-      setPayments(paymentsRes ?? [])
+      const fromMs = periodFrom.getTime()
+      const toMs = periodTo.getTime()
+      const filteredPayments = (paymentsRes ?? []).filter((p: any) => {
+        if (!p?.paidAt) return false
+        const ts = new Date(p.paidAt).getTime()
+        return Number.isFinite(ts) && ts >= fromMs && ts <= toMs
+      })
+      setPayments(filteredPayments)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки финансов')
     }
