@@ -9,6 +9,7 @@ import { formatDate, formatRub } from '@/lib/format'
 import { CrmActionRow, CrmCard, CrmEmpty, CrmStat } from '@/components/crm-ui'
 
 type ScopeType = 'SINGLE' | 'MULTI' | 'ALL_BIKES'
+type PeriodMode = 'month' | 'year'
 
 export default function ExpensesPage() {
   const router = useRouter()
@@ -23,6 +24,10 @@ export default function ExpensesPage() {
   const [spentAt, setSpentAt] = useState('')
   const [scopeType, setScopeType] = useState<ScopeType>('SINGLE')
   const [bikeIds, setBikeIds] = useState<string[]>([])
+  const now = new Date()
+  const [periodMode, setPeriodMode] = useState<PeriodMode>('month')
+  const [periodMonth, setPeriodMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`)
+  const [periodYear, setPeriodYear] = useState(String(now.getFullYear()))
 
   const [query, setQuery] = useState('')
   const [includeArchived, setIncludeArchived] = useState(false)
@@ -42,6 +47,19 @@ export default function ExpensesPage() {
       const params = new URLSearchParams()
       if (query.trim()) params.set('q', query.trim())
       if (includeArchived) params.set('archivedOnly', 'true')
+      if (periodMode === 'month') {
+        const [y, m] = periodMonth.split('-').map(Number)
+        const from = new Date(y, (m || 1) - 1, 1, 0, 0, 0, 0)
+        const to = new Date(y, (m || 1), 0, 23, 59, 59, 999)
+        params.set('from', from.toISOString())
+        params.set('to', to.toISOString())
+      } else {
+        const y = Number(periodYear) || new Date().getFullYear()
+        const from = new Date(y, 0, 1, 0, 0, 0, 0)
+        const to = new Date(y, 11, 31, 23, 59, 59, 999)
+        params.set('from', from.toISOString())
+        params.set('to', to.toISOString())
+      }
       const [expensesRes, bikesRes] = await Promise.all([
         api.expenses(params.toString()),
         api.bikes(),
@@ -132,13 +150,13 @@ export default function ExpensesPage() {
     setUrlReady(true)
   }, [])
 
-  useEffect(() => { void load() }, [includeArchived])
+  useEffect(() => { void load() }, [includeArchived, periodMode, periodMonth, periodYear])
 
   useEffect(() => {
     if (!urlReady) return
     setPage(1)
     setPageInput('1')
-  }, [query, includeArchived, pageSize, urlReady])
+  }, [query, includeArchived, pageSize, periodMode, periodMonth, periodYear, urlReady])
 
   useEffect(() => {
     if (!urlReady || typeof window === 'undefined') return
@@ -198,6 +216,12 @@ export default function ExpensesPage() {
         ) : (
           <>
             <input className="input min-w-0 flex-1 max-w-[760px]" placeholder="Поиск: категория / заметка" value={query} onChange={(e) => setQuery(e.target.value)} />
+            <select className="select" value={periodMode} onChange={(e) => setPeriodMode(e.target.value as PeriodMode)}><option value="month">Месяц</option><option value="year">Год</option></select>
+            {periodMode === 'month' ? (
+              <input type="month" className="input" value={periodMonth} onChange={(e) => setPeriodMonth(e.target.value)} />
+            ) : (
+              <input type="number" className="input w-28" min={2020} max={2100} value={periodYear} onChange={(e) => setPeriodYear(e.target.value.replace(/[^0-9]/g, ''))} />
+            )}
             <label className="flex items-center gap-2 text-xs text-gray-400 whitespace-nowrap"><input type="checkbox" checked={includeArchived} onChange={(e) => setIncludeArchived(e.target.checked)} /> Показать архив</label>
             <button className="btn" onClick={load}>Найти</button>
             <button type="button" className="btn-primary" onClick={() => setCreateModalOpen(true)}>Добавить расход</button>

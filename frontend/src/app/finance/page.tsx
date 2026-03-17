@@ -12,8 +12,10 @@ export default function FinancePage() {
   const router = useRouter()
   const [tenants, setTenants] = useState<any[]>([])
   const [role, setRole] = useState('')
-  const [from, setFrom] = useState('')
-  const [to, setTo] = useState('')
+  const now = new Date()
+  const [periodMode, setPeriodMode] = useState<'month' | 'year'>('month')
+  const [periodMonth, setPeriodMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`)
+  const [periodYear, setPeriodYear] = useState(String(now.getFullYear()))
   const [bikeId, setBikeId] = useState('')
   const [bikes, setBikes] = useState<any[]>([])
   const [days, setDays] = useState<any[]>([])
@@ -73,8 +75,19 @@ export default function FinancePage() {
     setError('')
     try {
       const q = new URLSearchParams()
-      if (from) q.set('from', `${from}T00:00:00.000Z`)
-      if (to) q.set('to', `${to}T23:59:59.999Z`)
+      if (periodMode === 'month') {
+        const [y, m] = periodMonth.split('-').map(Number)
+        const from = new Date(y, (m || 1) - 1, 1, 0, 0, 0, 0)
+        const to = new Date(y, (m || 1), 0, 23, 59, 59, 999)
+        q.set('from', from.toISOString())
+        q.set('to', to.toISOString())
+      } else {
+        const y = Number(periodYear) || new Date().getFullYear()
+        const from = new Date(y, 0, 1, 0, 0, 0, 0)
+        const to = new Date(y, 11, 31, 23, 59, 59, 999)
+        q.set('from', from.toISOString())
+        q.set('to', to.toISOString())
+      }
       const qb = new URLSearchParams(q)
       if (bikeId) qb.set('bikeId', bikeId)
 
@@ -94,6 +107,12 @@ export default function FinancePage() {
     }
   }
 
+
+  useEffect(() => {
+    if (!getToken()) return
+    void load()
+  }, [periodMode, periodMonth, periodYear])
+
   useEffect(() => {
     if (!getToken()) return router.replace('/login')
     ;(async () => {
@@ -112,8 +131,12 @@ export default function FinancePage() {
       <Topbar tenants={tenants} />
 
       <CrmActionRow className="mb-3">
-        <input type="date" className="input" value={from} onChange={(e) => setFrom(e.target.value)} />
-        <input type="date" className="input" value={to} onChange={(e) => setTo(e.target.value)} />
+        <select className="select" value={periodMode} onChange={(e) => setPeriodMode(e.target.value as 'month' | 'year')}><option value="month">Месяц</option><option value="year">Год</option></select>
+        {periodMode === 'month' ? (
+          <input type="month" className="input" value={periodMonth} onChange={(e) => setPeriodMonth(e.target.value)} />
+        ) : (
+          <input type="number" className="input w-28" min={2020} max={2100} value={periodYear} onChange={(e) => setPeriodYear(e.target.value.replace(/[^0-9]/g, ''))} />
+        )}
         <select className="select" value={bikeId} onChange={(e) => setBikeId(e.target.value)}>
           <option value="">Все велосипеды</option>
           {bikes.map((b) => <option key={b.id} value={b.id}>{b.code}</option>)}
