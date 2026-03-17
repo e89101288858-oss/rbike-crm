@@ -178,6 +178,12 @@ export default function FinancePage() {
     return rows.sort((a, b) => a.date.localeCompare(b.date))
   }, [payments, expenses, periodRange, periodMode])
 
+  const summaryTotals = useMemo(() => {
+    const income = daySummaryRows.reduce((sum: number, r: any) => sum + Number(r.income || 0), 0)
+    const expense = daySummaryRows.reduce((sum: number, r: any) => sum + Number(r.expense || 0), 0)
+    const profit = Math.round((income - expense) * 100) / 100
+    return { income, expense, profit }
+  }, [daySummaryRows])
 
 
   async function load() {
@@ -313,6 +319,14 @@ export default function FinancePage() {
               ))}
               {!daySummaryRows.length && (
                 <tr><td colSpan={4} className="text-center text-gray-600"><CrmEmpty title="Нет данных за период" /></td></tr>
+              )}
+              {!!daySummaryRows.length && (
+                <tr className="border-t border-white/20 font-semibold">
+                  <td>ИТОГО</td>
+                  <td className="text-emerald-300">{formatRub(summaryTotals.income)}</td>
+                  <td className="text-rose-300">{formatRub(summaryTotals.expense)}</td>
+                  <td className={summaryTotals.profit < 0 ? 'text-rose-300' : 'text-emerald-300'}>{formatRub(summaryTotals.profit)}</td>
+                </tr>
               )}
             </tbody>
           </table>
