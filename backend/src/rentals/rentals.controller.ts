@@ -361,78 +361,22 @@ export class RentalsController {
         data: { plannedEndDate: newPlannedEndDate },
       })
 
-      await tx.payment.deleteMany({
-        where: {
+      const shortenedAmount = round2(days * (rental.weeklyRateRub / 7))
+
+      await tx.payment.create({
+        data: {
           tenantId,
           rentalId: id,
+          amount: -shortenedAmount,
           kind: PaymentKind.MANUAL,
-          periodStart: { gte: newPlannedEndDate },
-        },
-      })
-
-      const plannedBefore = await tx.payment.count({
-        where: {
-          tenantId,
-          rentalId: id,
-          kind: PaymentKind.WEEKLY_RENT,
-          status: PaymentStatus.PLANNED,
-        },
-      })
-
-      await tx.payment.deleteMany({
-        where: {
-          tenantId,
-          rentalId: id,
-          kind: PaymentKind.WEEKLY_RENT,
-          status: PaymentStatus.PLANNED,
-        },
-      })
-
-      const paidCoverage = await tx.payment.findFirst({
-        where: {
-          tenantId,
-          rentalId: id,
           status: PaymentStatus.PAID,
-          periodEnd: { not: null },
+          paidAt: new Date(),
+          dueAt: newPlannedEndDate,
+          periodStart: newPlannedEndDate,
+          periodEnd: rental.plannedEndDate,
+          markedById: user.userId,
         },
-        orderBy: { periodEnd: 'desc' },
-        select: { periodEnd: true },
       })
-
-      const nowPoint = new Date()
-      let blockStart = new Date(rental.startDate)
-      if (paidCoverage?.periodEnd && paidCoverage.periodEnd > blockStart) {
-        blockStart = new Date(paidCoverage.periodEnd)
-      }
-      if (nowPoint > blockStart) {
-        blockStart = nowPoint
-      }
-
-      let created = 0
-
-      while (plannedBefore > 0 && blockStart < newPlannedEndDate) {
-        const nominalBlockEnd = addDays(blockStart, WEEK_DAYS)
-        const blockEnd = nominalBlockEnd < newPlannedEndDate ? nominalBlockEnd : newPlannedEndDate
-
-        const daysInBlock = Math.max(1, Math.ceil((blockEnd.getTime() - blockStart.getTime()) / MS_PER_DAY))
-        const amount = round2((rental.weeklyRateRub / 7) * daysInBlock)
-
-        await tx.payment.create({
-          data: {
-            tenantId,
-            rentalId: id,
-            amount,
-            kind: PaymentKind.WEEKLY_RENT,
-            status: PaymentStatus.PLANNED,
-            dueAt: blockStart,
-            periodStart: blockStart,
-            periodEnd: blockEnd,
-          },
-        })
-
-        created += 1
-        blockStart = blockEnd
-      }
 
       await tx.rentalChange.create({
         data: {
@@ -440,18 +384,18 @@ export class RentalsController {
           rentalId: id,
           type: RentalChangeType.SHORTEN,
           daysDelta: -days,
-          reason: 'Сокращение срока аренды',
+          reason: `Сокращение срока аренды на ${days} дн. (корректировка выручки -${shortenedAmount} ₽)`,
           createdById: user.userId,
         },
       })
 
-      return { created }
+      return { shortenedAmount }
     })
 
     return {
       rentalId: id,
       plannedEndDate: newPlannedEndDate,
-      createdPlannedPayments: result.created,
+      revenueAdjustmentRub: -result.shortenedAmount,
     }
   }
 
