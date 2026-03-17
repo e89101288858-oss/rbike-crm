@@ -15,7 +15,6 @@ export default function PaymentsPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const [status, setStatus] = useState<'PLANNED' | 'PAID'>('PAID')
   const [editId, setEditId] = useState('')
   const [editAmount, setEditAmount] = useState('')
   const [page, setPage] = useState(1)
@@ -25,7 +24,7 @@ export default function PaymentsPage() {
     setError('')
     try {
       if (!getTenantId()) throw new Error('Не выбран tenant')
-      setItems(await api.payments(`status=${status}`))
+      setItems(await api.payments('status=PAID'))
       setPage(1)
     } catch (err) {
       setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка загрузки платежей'}`)
@@ -93,7 +92,7 @@ export default function PaymentsPage() {
       if (!getTenantId() && myTenants.length > 0) setTenantId(myTenants[0].id)
       await load()
     })()
-  }, [router, status])
+  }, [router])
 
   return (
     <main className="page with-sidebar">
@@ -101,10 +100,6 @@ export default function PaymentsPage() {
 
       <CrmActionRow className="mb-3">
         <button className="btn" onClick={load} disabled={loading}>{loading ? 'Обновление…' : 'Обновить'}</button>
-        <select className="select" value={status} onChange={(e) => setStatus(e.target.value as 'PLANNED' | 'PAID')}>
-          <option value="PAID">Оплаченные</option>
-          <option value="PLANNED">Плановые</option>
-        </select>
         <div className="ml-auto flex items-center gap-2 text-sm text-gray-400">
           <span>Стр. {pageSafe} / {totalPages}</span>
           <button className="btn" disabled={pageSafe <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>Назад</button>
@@ -114,7 +109,7 @@ export default function PaymentsPage() {
 
       <div className="mb-3 grid gap-2 md:grid-cols-3">
         <CrmStat label="Всего записей" value={sortedItems.length} />
-        <CrmStat label="Текущий статус" value={status === 'PAID' ? 'Оплаченные' : 'Плановые'} />
+        <CrmStat label="Текущий статус" value="Оплаченные" />
         <CrmStat label="Сумма на странице" value={formatRub(pageItems.reduce((acc, it) => acc + Number(it.amount || 0), 0))} />
       </div>
 
@@ -146,7 +141,7 @@ export default function PaymentsPage() {
             )}
           </div>
         ))}
-        {!sortedItems.length && <CrmEmpty title="Нет платежей в этом статусе" />}
+        {!sortedItems.length && <CrmEmpty title="Нет оплаченных платежей" />}
       </div>
 
       <CrmCard className="hidden md:block !p-0">
@@ -194,7 +189,7 @@ export default function PaymentsPage() {
             ))}
             {!sortedItems.length && (
               <tr>
-                <td colSpan={7} className="text-center text-gray-600"><CrmEmpty title="Нет платежей в этом статусе" /></td>
+                <td colSpan={7} className="text-center text-gray-600"><CrmEmpty title="Нет оплаченных платежей" /></td>
               </tr>
             )}
           </tbody>

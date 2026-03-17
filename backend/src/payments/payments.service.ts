@@ -20,7 +20,7 @@ export class PaymentsService {
     return this.prisma.payment.findMany({
       where: {
         tenantId,
-        ...(query.status ? { status: query.status as PaymentStatus } : {}),
+        status: PaymentStatus.PAID,
         ...(query.kind ? { kind: query.kind as PaymentKind } : {}),
         ...(query.rentalId ? { rentalId: query.rentalId } : {}),
         ...(query.clientId
@@ -187,6 +187,9 @@ export class PaymentsService {
     }
 
     const status = dto.status as PaymentStatus | undefined
+    if (status === PaymentStatus.PLANNED) {
+      throw new BadRequestException('Статус PLANNED отключен')
+    }
 
     await this.prisma.payment.updateMany({
       where: { id, tenantId },
@@ -197,7 +200,6 @@ export class PaymentsService {
         ...(periodEnd !== undefined && { periodEnd }),
         ...(status !== undefined && { status }),
         ...(paidAt !== undefined && { paidAt }),
-        ...(status === PaymentStatus.PLANNED ? { paidAt: null, markedById: null } : {}),
       },
     })
 
@@ -231,22 +233,8 @@ export class PaymentsService {
     })
   }
 
-  async markPlanned(tenantId: string, id: string) {
-    const result = await this.prisma.payment.updateMany({
-      where: { id, tenantId },
-      data: {
-        status: PaymentStatus.PLANNED,
-        paidAt: null,
-        markedById: null,
-      },
-    })
-
-    if (result.count === 0) {
-      throw new NotFoundException('Payment not found')
-    }
-
-    return this.prisma.payment.findFirst({
-      where: { id, tenantId },
-    })
+  async markPlanned(_tenantId: string, _id: string) {
+    throw new BadRequestException('Плановые платежи отключены')
   }
 }
+

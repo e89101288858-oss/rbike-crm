@@ -60,10 +60,4 @@ export class PaymentsController {
     const tenantId = req.tenantId!
     return this.paymentsService.markPaid(tenantId, id, user.userId)
   }
-
-  @Post(':id/mark-planned')
-  async markPlanned(@Req() req: Request, @Param('id') id: string) {
-    const tenantId = req.tenantId!
-    return this.paymentsService.markPlanned(tenantId, id)
-  }
 }

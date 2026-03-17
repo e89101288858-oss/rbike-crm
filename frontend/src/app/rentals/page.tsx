@@ -258,7 +258,7 @@ export default function RentalsPage() {
     }
     setError('')
     try {
-      const data = await api.payments(`rentalId=${encodeURIComponent(rentalId)}`)
+      const data = await api.payments(`status=PAID&rentalId=${encodeURIComponent(rentalId)}`)
       setPaymentsMap((prev) => ({ ...prev, [rentalId]: data }))
       setPaymentsPageMap((prev) => ({ ...prev, [rentalId]: 1 }))
     } catch (err) {
