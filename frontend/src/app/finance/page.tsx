@@ -33,6 +33,20 @@ export default function FinancePage() {
   const selectedTenant = tenants.find((t: any) => t.id === getTenantId())
   const royaltyPercent = Number(selectedTenant?.royaltyPercent ?? 0)
 
+
+  const periodRange = useMemo(() => {
+    if (periodMode === 'month') {
+      const [y, m] = periodMonth.split('-').map(Number)
+      const from = new Date(y, (m || 1) - 1, 1, 0, 0, 0, 0)
+      const to = new Date(y, (m || 1), 0, 23, 59, 59, 999)
+      return { from, to }
+    }
+    const y = Number(periodYear) || new Date().getFullYear()
+    const from = new Date(y, 0, 1, 0, 0, 0, 0)
+    const to = new Date(y, 11, 31, 23, 59, 59, 999)
+    return { from, to }
+  }, [periodMode, periodMonth, periodYear])
+
   const sortedDays = useMemo(
     () => [...days].sort((a: any, b: any) => String(b.date || '').localeCompare(String(a.date || ''))),
     [days],
@@ -119,10 +133,21 @@ export default function FinancePage() {
       map.set(d, cur)
     }
 
-    return Array.from(map.values())
-      .map((r) => ({ ...r, profit: Math.round((r.income - r.expense) * 100) / 100 }))
-      .sort((a, b) => b.date.localeCompare(a.date))
-  }, [payments, expenses])
+    const rows: Array<{ date: string; income: number; expense: number; profit: number }> = []
+    const cur = new Date(periodRange.from)
+    cur.setHours(0, 0, 0, 0)
+    const end = new Date(periodRange.to)
+    end.setHours(0, 0, 0, 0)
+
+    while (cur <= end) {
+      const key = cur.toISOString().slice(0, 10)
+      const day = map.get(key) || { date: key, income: 0, expense: 0 }
+      rows.push({ ...day, profit: Math.round((day.income - day.expense) * 100) / 100 })
+      cur.setDate(cur.getDate() + 1)
+    }
+
+    return rows.sort((a, b) => b.date.localeCompare(a.date))
+  }, [payments, expenses, periodRange])
 
 
 
@@ -130,17 +155,8 @@ export default function FinancePage() {
     setError('')
     try {
       const q = new URLSearchParams()
-      let periodFrom: Date
-      let periodTo: Date
-      if (periodMode === 'month') {
-        const [y, m] = periodMonth.split('-').map(Number)
-        periodFrom = new Date(y, (m || 1) - 1, 1, 0, 0, 0, 0)
-        periodTo = new Date(y, (m || 1), 0, 23, 59, 59, 999)
-      } else {
-        const y = Number(periodYear) || new Date().getFullYear()
-        periodFrom = new Date(y, 0, 1, 0, 0, 0, 0)
-        periodTo = new Date(y, 11, 31, 23, 59, 59, 999)
-      }
+      const periodFrom = periodRange.from
+      const periodTo = periodRange.to
       q.set('from', periodFrom.toISOString())
       q.set('to', periodTo.toISOString())
       const qb = new URLSearchParams(q)
