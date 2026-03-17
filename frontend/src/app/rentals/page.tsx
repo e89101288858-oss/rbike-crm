@@ -48,6 +48,8 @@ export default function RentalsPage() {
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const [extendModalRentalId, setExtendModalRentalId] = useState<string | null>(null)
   const [extendDays, setExtendDays] = useState('')
+  const [shortenModalRentalId, setShortenModalRentalId] = useState<string | null>(null)
+  const [shortenDays, setShortenDays] = useState('')
   const [closeModalRentalId, setCloseModalRentalId] = useState<string | null>(null)
   const [closeReason, setCloseReason] = useState('')
   const [deleteModalRentalId, setDeleteModalRentalId] = useState<string | null>(null)
@@ -149,6 +151,23 @@ export default function RentalsPage() {
       setSuccess(`Аренда продлена на ${days} дн.`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка продления аренды')
+    }
+  }
+
+  async function shortenRental(rentalId: string, daysRaw: string) {
+    setError('')
+    setSuccess('')
+    try {
+      const days = Number(daysRaw || 0)
+      if (!Number.isInteger(days) || days <= 0) throw new Error('Введите дни сокращения (целое > 0)')
+      await api.shortenRental(rentalId, days)
+      await loadAll()
+      await loadJournal(rentalId)
+      setShortenModalRentalId(null)
+      setShortenDays('')
+      setSuccess(`Срок аренды сокращен на ${days} дн.`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка сокращения аренды')
     }
   }
 
@@ -528,6 +547,7 @@ export default function RentalsPage() {
                   <input type="number" className="input w-44" min={1} step={10} placeholder="Ставка ₽/сутки" value={dailyRateMap[r.id] ?? Math.round((Number(r.weeklyRateRub || 0) / 7) * 100) / 100} onChange={(e) => setDailyRateMap((prev) => ({ ...prev, [r.id]: e.target.value }))} />
                   <button className="btn" onClick={() => setRentalDailyRate(r.id, Number(r.weeklyRateRub || 0))}>Обновить ставку</button>
                   <button className="btn-primary" onClick={() => { setExtendModalRentalId(r.id); setExtendDays('') }}>Продлить</button>
+                  <button className="btn" onClick={() => { setShortenModalRentalId(r.id); setShortenDays('') }}>Сократить срок</button>
                 </>
               )}
               <button className="btn" onClick={() => generateContract(r.id)}>Сформировать договор</button>
@@ -674,6 +694,27 @@ export default function RentalsPage() {
             <div className="mt-3 flex justify-end gap-2">
               <button type="button" className="btn" onClick={() => setExtendModalRentalId(null)}>Отмена</button>
               <button type="button" className="btn-primary" onClick={() => extendRental(extendModalRentalId, extendDays)}>Продлить</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {shortenModalRentalId && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4" onClick={() => setShortenModalRentalId(null)}>
+          <div className="panel w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <h3 className="mb-2 text-base font-semibold">Сократить срок аренды</h3>
+            <p className="mb-2 text-xs text-gray-400">Укажи, на сколько дней сократить аренду</p>
+            <input
+              type="number"
+              min={1}
+              className="input w-full"
+              placeholder="Дней сокращения"
+              value={shortenDays}
+              onChange={(e) => setShortenDays(e.target.value)}
+            />
+            <div className="mt-3 flex justify-end gap-2">
+              <button type="button" className="btn" onClick={() => setShortenModalRentalId(null)}>Отмена</button>
+              <button type="button" className="btn border-orange-500/60 text-orange-300" onClick={() => shortenRental(shortenModalRentalId, shortenDays)}>Сократить</button>
             </div>
           </div>
         </div>
