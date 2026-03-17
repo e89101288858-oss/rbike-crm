@@ -370,6 +370,15 @@ export class RentalsController {
         },
       })
 
+      const plannedBefore = await tx.payment.count({
+        where: {
+          tenantId,
+          rentalId: id,
+          kind: PaymentKind.WEEKLY_RENT,
+          status: PaymentStatus.PLANNED,
+        },
+      })
+
       await tx.payment.deleteMany({
         where: {
           tenantId,
@@ -401,7 +410,7 @@ export class RentalsController {
 
       let created = 0
 
-      while (blockStart < newPlannedEndDate) {
+      while (plannedBefore > 0 && blockStart < newPlannedEndDate) {
         const nominalBlockEnd = addDays(blockStart, WEEK_DAYS)
         const blockEnd = nominalBlockEnd < newPlannedEndDate ? nominalBlockEnd : newPlannedEndDate
 
