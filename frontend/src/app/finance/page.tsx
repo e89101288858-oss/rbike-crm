@@ -103,24 +103,26 @@ export default function FinancePage() {
     setError('')
     try {
       const q = new URLSearchParams()
+      let periodFrom: Date
+      let periodTo: Date
       if (periodMode === 'month') {
         const [y, m] = periodMonth.split('-').map(Number)
-        const from = new Date(y, (m || 1) - 1, 1, 0, 0, 0, 0)
-        const to = new Date(y, (m || 1), 0, 23, 59, 59, 999)
-        q.set('from', from.toISOString())
-        q.set('to', to.toISOString())
+        periodFrom = new Date(y, (m || 1) - 1, 1, 0, 0, 0, 0)
+        periodTo = new Date(y, (m || 1), 0, 23, 59, 59, 999)
       } else {
         const y = Number(periodYear) || new Date().getFullYear()
-        const from = new Date(y, 0, 1, 0, 0, 0, 0)
-        const to = new Date(y, 11, 31, 23, 59, 59, 999)
-        q.set('from', from.toISOString())
-        q.set('to', to.toISOString())
+        periodFrom = new Date(y, 0, 1, 0, 0, 0, 0)
+        periodTo = new Date(y, 11, 31, 23, 59, 59, 999)
       }
+      q.set('from', periodFrom.toISOString())
+      q.set('to', periodTo.toISOString())
       const qb = new URLSearchParams(q)
       if (bikeId) qb.set('bikeId', bikeId)
 
-      const paymentsQ = new URLSearchParams(q)
+      const paymentsQ = new URLSearchParams()
       paymentsQ.set('status', 'PAID')
+      paymentsQ.set('dueFrom', periodFrom.toISOString())
+      paymentsQ.set('dueTo', periodTo.toISOString())
 
       const [bikesRes, daysRes, bikeRes, expensesRes, paymentsRes] = await Promise.all([
         api.bikes(),
