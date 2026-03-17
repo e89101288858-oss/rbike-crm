@@ -339,6 +339,7 @@ export default function RentalsPage() {
     setSearch(urlQuery)
     setPage(Number.isFinite(urlPage) && urlPage > 0 ? Math.floor(urlPage) : 1)
     if ([25, 50, 100].includes(urlPageSize)) setPageSize(urlPageSize)
+    if (params.get('create') === '1') setCreateModalOpen(true)
   }, [])
 
   useEffect(() => {

@@ -105,10 +105,6 @@ export default function DashboardPage() {
   const [endingIn2to3, setEndingIn2to3] = useState(0)
   const [endingIn4plus, setEndingIn4plus] = useState(0)
   const [overdueActive, setOverdueActive] = useState(0)
-  const [extensionsCount, setExtensionsCount] = useState(0)
-  const [extensionsRate, setExtensionsRate] = useState(0)
-  const [earlyClosuresCount, setEarlyClosuresCount] = useState(0)
-  const [earlyClosuresRate, setEarlyClosuresRate] = useState(0)
 
   const [error, setError] = useState('')
   const [permissions, setPermissions] = useState<Record<string, boolean> | null>(null)
@@ -245,22 +241,6 @@ export default function DashboardPage() {
         setEndingIn2to3(c23)
         setEndingIn4plus(c4)
         setOverdueActive(overdue)
-        const selectedTenant = tenants.find((t: any) => t.id === getTenantId())
-        const baseMinDays = Math.max(1, Number(selectedTenant?.minRentalDays || 7))
-        const extCount = newRentals.filter((r) => {
-          const plannedDays = Math.max(1, diffDays(r.startDate, r.plannedEndDate))
-          return plannedDays > baseMinDays
-        }).length
-        setExtensionsCount(extCount)
-        setExtensionsRate(newRentals.length ? (extCount / newRentals.length) * 100 : 0)
-
-        const earlyCount = closedInPeriod.filter((r) => {
-          if (r.closeReason) return true
-          if (!r.actualEndDate) return false
-          return new Date(r.actualEndDate) < new Date(r.plannedEndDate)
-        }).length
-        setEarlyClosuresCount(earlyCount)
-        setEarlyClosuresRate(closedInPeriod.length ? (earlyCount / closedInPeriod.length) * 100 : 0)
       } catch (err) {
         const msg = err instanceof Error ? err.message : ''
         if (!cancelled && !(msg.includes('403') || msg.toLowerCase().includes('forbidden'))) {
@@ -288,20 +268,27 @@ export default function DashboardPage() {
 
   const rentalsCount = allRentals.length
 
-  const rangeDays = Math.max(1, Math.floor((chartRange.to.getTime() - chartRange.from.getTime()) / (24 * 60 * 60 * 1000)) + 1)
+  const parkLoadTo = useMemo(() => {
+    if (chartMode !== 'month') return chartRange.to
+    const now = new Date()
+    const isCurrentMonth = chartRange.from.getFullYear() === now.getFullYear() && chartRange.from.getMonth() === now.getMonth()
+    return isCurrentMonth ? atEndOfDay(now) : chartRange.to
+  }, [chartMode, chartRange])
+
+  const rangeDays = Math.max(1, Math.floor((parkLoadTo.getTime() - chartRange.from.getTime()) / (24 * 60 * 60 * 1000)) + 1)
   const occupiedBikeDays = useMemo(() => {
     let total = 0
     for (const r of allRentals) {
       const start = new Date(r.startDate)
       const rawEnd = r.actualEndDate ? new Date(r.actualEndDate) : new Date(r.plannedEndDate)
       const from = start > chartRange.from ? start : chartRange.from
-      const to = rawEnd < chartRange.to ? rawEnd : chartRange.to
+      const to = rawEnd < parkLoadTo ? rawEnd : parkLoadTo
       if (to < from) continue
       const days = Math.floor((atEndOfDay(to).getTime() - atStartOfDay(from).getTime()) / (24 * 60 * 60 * 1000)) + 1
       total += Math.max(0, days)
     }
     return total
-  }, [allRentals, chartRange])
+  }, [allRentals, chartRange, parkLoadTo])
 
   const parkLoadPercent = useMemo(() => {
     const possible = Math.max(1, allBikesCount * rangeDays)
@@ -321,17 +308,17 @@ export default function DashboardPage() {
                 <div className={`kpi flex flex-col ${clientsCount > 0 ? 'border-emerald-500/40 bg-emerald-500/10' : ''}`}>
                   <div className="text-xs text-gray-300">Курьеры</div>
                   <div className="mt-1 text-2xl font-semibold">{formatInt(clientsCount)}</div>
-                  <button className="btn-primary mt-3 w-full" onClick={() => router.push('/clients')}>Добавить курьера</button>
+                  <button className="btn-primary mt-3 w-full" onClick={() => router.push('/clients?create=1')}>Добавить курьера</button>
                 </div>
                 <div className={`kpi flex flex-col ${allBikesCount > 0 ? 'border-emerald-500/40 bg-emerald-500/10' : ''}`}>
                   <div className="text-xs text-gray-300">Велосипеды</div>
                   <div className="mt-1 text-2xl font-semibold">{formatInt(allBikesCount)}</div>
-                  <button className="btn-primary mt-3 w-full" onClick={() => router.push('/bikes')}>Добавить велосипед</button>
+                  <button className="btn-primary mt-3 w-full" onClick={() => router.push('/bikes?create=1')}>Добавить велосипед</button>
                 </div>
                 <div className={`kpi flex flex-col ${rentalsCount > 0 ? 'border-emerald-500/40 bg-emerald-500/10' : ''}`}>
                   <div className="text-xs text-gray-300">Аренды</div>
                   <div className="mt-1 text-2xl font-semibold">{formatInt(rentalsCount)}</div>
-                  <button className="btn-primary mt-3 w-full" onClick={() => router.push('/rentals')}>Добавить аренду</button>
+                  <button className="btn-primary mt-3 w-full" onClick={() => router.push('/rentals?create=1')}>Добавить аренду</button>
                 </div>
               </div>
             </section>
@@ -432,21 +419,6 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="rounded-lg border border-white/10 bg-[#1f2126] p-4 shadow-xl">
-              <h2 className="mb-3 text-lg font-semibold text-white">Дисциплина аренд</h2>
-              <div className="grid gap-2 sm:grid-cols-2">
-                <div className="rounded-md border border-white/10 bg-white/5 p-3 text-sm text-gray-200">
-                  <div className="text-xs text-gray-400">Продления</div>
-                  <div className="mt-1 text-2xl font-semibold text-white">{formatInt(extensionsCount)}</div>
-                  <div className="mt-1 text-xs text-gray-500">{formatPercent(extensionsRate)} от новых аренд</div>
-                </div>
-                <div className="rounded-md border border-white/10 bg-white/5 p-3 text-sm text-gray-200">
-                  <div className="text-xs text-gray-400">Досрочные завершения</div>
-                  <div className="mt-1 text-2xl font-semibold text-white">{formatInt(earlyClosuresCount)}</div>
-                  <div className="mt-1 text-xs text-gray-500">{formatPercent(earlyClosuresRate)} от закрытых аренд</div>
-                </div>
-              </div>
-            </div>
           </section>
 
       </>

@@ -165,6 +165,7 @@ export default function ClientsPage() {
     setPage(Number.isFinite(p) && p > 0 ? Math.floor(p) : 1)
     const ps = Number(params.get('pageSize') || 50)
     if ([25, 50, 100].includes(ps)) setPageSize(ps)
+    if (params.get('create') === '1') setCreateModalOpen(true)
     setUrlReady(true)
   }, [])
 
