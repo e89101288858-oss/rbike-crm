@@ -141,7 +141,7 @@ export default function FinancePage() {
 
       return Array.from(byMonth.values())
         .map((r) => ({ ...r, profit: Math.round((r.income - r.expense) * 100) / 100 }))
-        .sort((a, b) => b.date.localeCompare(a.date))
+        .sort((a, b) => a.date.localeCompare(b.date))
     }
 
     const map = new Map<string, { date: string; income: number; expense: number }>()
@@ -177,7 +177,7 @@ export default function FinancePage() {
       cur.setDate(cur.getDate() + 1)
     }
 
-    return rows.sort((a, b) => b.date.localeCompare(a.date))
+    return rows.sort((a, b) => a.date.localeCompare(b.date))
   }, [payments, expenses, periodRange, periodMode])
 
 
@@ -211,7 +211,7 @@ export default function FinancePage() {
 
     return Array.from(map.values())
       .map((r) => ({ ...r, profit: Math.round((r.income - r.expense) * 100) / 100 }))
-      .sort((a, b) => b.key.localeCompare(a.key))
+      .sort((a, b) => a.key.localeCompare(b.key))
   }, [historyPayments, historyExpenses, periodYear])
 
   const yearOverviewRows = useMemo(() => {
@@ -237,7 +237,7 @@ export default function FinancePage() {
 
     return Array.from(map.values())
       .map((r) => ({ ...r, profit: Math.round((r.income - r.expense) * 100) / 100 }))
-      .sort((a, b) => b.key.localeCompare(a.key))
+      .sort((a, b) => a.key.localeCompare(b.key))
   }, [historyPayments, historyExpenses])
 
 
