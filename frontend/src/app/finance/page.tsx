@@ -21,6 +21,7 @@ export default function FinancePage() {
   const [days, setDays] = useState<any[]>([])
   const [byBike, setByBike] = useState<any[]>([])
   const [expenses, setExpenses] = useState<any[]>([])
+  const [payments, setPayments] = useState<any[]>([])
   const [error, setError] = useState('')
   const [daysPage, setDaysPage] = useState(1)
 
@@ -71,6 +72,33 @@ export default function FinancePage() {
   const totalExpensesRub = Math.round(expenses.reduce((sum: number, e: any) => sum + Number(e.amountRub ?? 0), 0) * 100) / 100
   const netTotalRub = Math.round((revenueTotal - totalExpensesRub) * 100) / 100
 
+  const cashflowRows = useMemo(() => {
+    const income = (payments || []).map((p: any) => ({
+      id: `pay-${p.id}`,
+      at: p.paidAt || p.dueAt,
+      type: Number(p.amount || 0) >= 0 ? 'Поступление' : 'Корректировка',
+      amount: Number(p.amount || 0),
+      source: p.kind === 'MANUAL' ? 'Ручная операция' : 'Оплата аренды',
+      counterparty: p.rental?.client?.fullName || '—',
+      bike: p.rental?.bike?.code || '—',
+      category: p.kind || '—',
+    }))
+
+    const out = (expenses || []).map((e: any) => ({
+      id: `exp-${e.id}`,
+      at: e.spentAt,
+      type: 'Списание',
+      amount: -Math.abs(Number(e.amountRub || 0)),
+      source: 'Расход',
+      counterparty: e.notes || '—',
+      bike: (e.bikes || []).map((x: any) => x?.bike?.code).filter(Boolean).join(', ') || (e.scopeType === 'ALL_BIKES' ? 'Все велосипеды' : '—'),
+      category: e.category || '—',
+    }))
+
+    return [...income, ...out].sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')))
+  }, [payments, expenses])
+
+
   async function load() {
     setError('')
     try {
@@ -91,17 +119,22 @@ export default function FinancePage() {
       const qb = new URLSearchParams(q)
       if (bikeId) qb.set('bikeId', bikeId)
 
-      const [bikesRes, daysRes, bikeRes, expensesRes] = await Promise.all([
+      const paymentsQ = new URLSearchParams(q)
+      paymentsQ.set('status', 'PAID')
+
+      const [bikesRes, daysRes, bikeRes, expensesRes, paymentsRes] = await Promise.all([
         api.bikes(),
         api.revenueByDays(q.toString()),
         api.revenueByBike(qb.toString()),
         api.expenses(q.toString()),
+        api.payments(paymentsQ.toString()),
       ])
       setBikes(bikesRes)
       setDays(daysRes.days ?? [])
       setDaysPage(1)
       setByBike(bikeRes.bikes ?? [])
       setExpenses(expensesRes ?? [])
+      setPayments(paymentsRes ?? [])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки финансов')
     }
@@ -178,34 +211,38 @@ export default function FinancePage() {
       )}
 
       <section className="panel mb-6">
-        <h2 className="mb-3 text-lg font-semibold">Выручка по дням</h2>
-        <div className="space-y-2 text-sm">
-          {daysPageItems.map((d: any) => {
-            const width = `${Math.max(6, Math.round((Number(d.revenueRub) / maxDayRevenue) * 100))}%`
-            return (
-              <div key={d.date} className="rounded-xl border border-gray-200 p-2">
-                <div className="mb-1 flex items-center justify-between">
-                  <span>{formatDate(d.date)}</span>
-                  <span className="font-semibold">{formatRub(d.revenueRub)}</span>
-                </div>
-                <div className="h-2 rounded bg-gray-100">
-                  <div className="h-2 rounded bg-blue-500" style={{ width }} />
-                </div>
-              </div>
-            )
-          })}
-          {!days.length && <CrmEmpty title="Нет данных за период" />}
+        <CrmSectionTitle>Движение денежных средств</CrmSectionTitle>
+        <div className="table-wrap mt-2">
+          <table className="table table-sticky">
+            <thead>
+              <tr>
+                <th>Дата</th>
+                <th>Тип</th>
+                <th>Сумма</th>
+                <th>Источник</th>
+                <th>Курьер/Комментарий</th>
+                <th>Велосипед</th>
+                <th>Категория</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cashflowRows.map((r: any) => (
+                <tr key={r.id}>
+                  <td>{formatDate(r.at)}</td>
+                  <td>{r.type}</td>
+                  <td className={r.amount < 0 ? 'text-rose-300' : 'text-emerald-300'}>{formatRub(r.amount)}</td>
+                  <td>{r.source}</td>
+                  <td>{r.counterparty}</td>
+                  <td>{r.bike}</td>
+                  <td>{r.category}</td>
+                </tr>
+              ))}
+              {!cashflowRows.length && (
+                <tr><td colSpan={7} className="text-center text-gray-600"><CrmEmpty title="Нет операций за период" /></td></tr>
+              )}
+            </tbody>
+          </table>
         </div>
-
-        {sortedDays.length > 0 && (
-          <div className="mt-3 flex items-center justify-between text-sm">
-            <div className="text-gray-500">Страница {daysPageSafe} из {totalDaysPages}</div>
-            <div className="flex gap-2">
-              <button className="btn" disabled={daysPageSafe <= 1} onClick={() => setDaysPage((p) => Math.max(1, p - 1))}>Назад</button>
-              <button className="btn" disabled={daysPageSafe >= totalDaysPages} onClick={() => setDaysPage((p) => Math.min(totalDaysPages, p + 1))}>Вперёд</button>
-            </div>
-          </div>
-        )}
       </section>
 
       <section className="panel">
