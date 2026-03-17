@@ -379,7 +379,26 @@ export class RentalsController {
         },
       })
 
+      const paidCoverage = await tx.payment.findFirst({
+        where: {
+          tenantId,
+          rentalId: id,
+          status: PaymentStatus.PAID,
+          periodEnd: { not: null },
+        },
+        orderBy: { periodEnd: 'desc' },
+        select: { periodEnd: true },
+      })
+
+      const nowPoint = new Date()
       let blockStart = new Date(rental.startDate)
+      if (paidCoverage?.periodEnd && paidCoverage.periodEnd > blockStart) {
+        blockStart = new Date(paidCoverage.periodEnd)
+      }
+      if (nowPoint > blockStart) {
+        blockStart = nowPoint
+      }
+
       let created = 0
 
       while (blockStart < newPlannedEndDate) {
@@ -757,7 +776,26 @@ export class RentalsController {
         },
       })
 
+      const paidCoverage = await tx.payment.findFirst({
+        where: {
+          tenantId,
+          rentalId: rental.id,
+          status: PaymentStatus.PAID,
+          periodEnd: { not: null },
+        },
+        orderBy: { periodEnd: 'desc' },
+        select: { periodEnd: true },
+      })
+
+      const nowPoint = new Date()
       let blockStart = new Date(rental.startDate)
+      if (paidCoverage?.periodEnd && paidCoverage.periodEnd > blockStart) {
+        blockStart = new Date(paidCoverage.periodEnd)
+      }
+      if (nowPoint > blockStart) {
+        blockStart = nowPoint
+      }
+
       let created = 0
 
       while (blockStart < rentalStop) {
