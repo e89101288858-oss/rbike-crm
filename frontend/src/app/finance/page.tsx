@@ -78,10 +78,10 @@ export default function FinancePage() {
       at: p.paidAt || p.dueAt,
       type: Number(p.amount || 0) >= 0 ? 'Поступление' : 'Корректировка',
       amount: Number(p.amount || 0),
-      source: p.kind === 'MANUAL' ? 'Ручная операция' : 'Оплата аренды',
+      source: 'Платеж аренды',
       counterparty: p.rental?.client?.fullName || '—',
       bike: p.rental?.bike?.code || '—',
-      category: p.kind || '—',
+      category: Number(p.amount || 0) < 0 ? 'Корректировка' : 'Платеж',
     }))
 
     const out = (expenses || []).map((e: any) => ({
@@ -97,6 +97,33 @@ export default function FinancePage() {
 
     return [...income, ...out].sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')))
   }, [payments, expenses])
+
+  const daySummaryRows = useMemo(() => {
+    const map = new Map<string, { date: string; income: number; expense: number }>()
+
+    for (const p of payments || []) {
+      const d = String(p.paidAt || p.dueAt || '').slice(0, 10)
+      if (!d) continue
+      const cur = map.get(d) || { date: d, income: 0, expense: 0 }
+      const amount = Number(p.amount || 0)
+      if (amount >= 0) cur.income += amount
+      else cur.expense += Math.abs(amount)
+      map.set(d, cur)
+    }
+
+    for (const e of expenses || []) {
+      const d = String(e.spentAt || '').slice(0, 10)
+      if (!d) continue
+      const cur = map.get(d) || { date: d, income: 0, expense: 0 }
+      cur.expense += Math.abs(Number(e.amountRub || 0))
+      map.set(d, cur)
+    }
+
+    return Array.from(map.values())
+      .map((r) => ({ ...r, profit: Math.round((r.income - r.expense) * 100) / 100 }))
+      .sort((a, b) => b.date.localeCompare(a.date))
+  }, [payments, expenses])
+
 
 
   async function load() {
@@ -211,6 +238,36 @@ export default function FinancePage() {
           </div>
         </section>
       )}
+
+
+      <section className="panel mb-6">
+        <CrmSectionTitle>Сводка по дням</CrmSectionTitle>
+        <div className="table-wrap mt-2">
+          <table className="table table-sticky">
+            <thead>
+              <tr>
+                <th>Дата</th>
+                <th>Доходы</th>
+                <th>Расходы</th>
+                <th>Прибыль</th>
+              </tr>
+            </thead>
+            <tbody>
+              {daySummaryRows.map((r: any) => (
+                <tr key={r.date}>
+                  <td>{formatDate(r.date)}</td>
+                  <td className="text-emerald-300">{formatRub(r.income)}</td>
+                  <td className="text-rose-300">{formatRub(r.expense)}</td>
+                  <td className={r.profit < 0 ? 'text-rose-300' : 'text-emerald-300'}>{formatRub(r.profit)}</td>
+                </tr>
+              ))}
+              {!daySummaryRows.length && (
+                <tr><td colSpan={4} className="text-center text-gray-600"><CrmEmpty title="Нет данных за период" /></td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       <section className="panel mb-6">
         <CrmSectionTitle>Движение денежных средств</CrmSectionTitle>
