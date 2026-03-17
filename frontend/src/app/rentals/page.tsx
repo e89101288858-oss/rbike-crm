@@ -233,13 +233,22 @@ export default function RentalsPage() {
   }
 
   async function loadRentalPayments(rentalId: string) {
+    if (permissions?.payments === false) {
+      setPaymentsMap((prev) => ({ ...prev, [rentalId]: [] }))
+      return
+    }
     setError('')
     try {
       const data = await api.payments(`rentalId=${encodeURIComponent(rentalId)}`)
       setPaymentsMap((prev) => ({ ...prev, [rentalId]: data }))
       setPaymentsPageMap((prev) => ({ ...prev, [rentalId]: 1 }))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка загрузки истории платежей')
+      const msg = err instanceof Error ? err.message : ''
+      if (msg.includes('403') || msg.toLowerCase().includes('forbidden')) {
+        setPaymentsMap((prev) => ({ ...prev, [rentalId]: [] }))
+        return
+      }
+      setError(msg || 'Ошибка загрузки истории платежей')
     }
   }
 
@@ -336,9 +345,15 @@ export default function RentalsPage() {
 
   useEffect(() => {
     if (!selectedRentalId) return
+    if (permissions?.payments === false) {
+      if (!paymentsMap[selectedRentalId]) {
+        setPaymentsMap((prev) => ({ ...prev, [selectedRentalId]: [] }))
+      }
+      return
+    }
     if (paymentsMap[selectedRentalId]) return
     void loadRentalPayments(selectedRentalId)
-  }, [selectedRentalId, paymentsMap])
+  }, [selectedRentalId, paymentsMap, permissions])
   useEffect(() => {
     if (!selectedRentalId) return
     if (journalMap[selectedRentalId]) return

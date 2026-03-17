@@ -29,6 +29,7 @@ import { CloseRentalDto } from './dto/close-rental.dto'
 import { CreateRentalDto } from './dto/create-rental.dto'
 import { ExtendRentalDto } from './dto/extend-rental.dto'
 import { ReplaceRentalBatteryDto } from './dto/replace-rental-battery.dto'
+import { ShortenRentalDto } from './dto/shorten-rental.dto'
 import { UpdateWeeklyRateDto } from './dto/update-weekly-rate.dto'
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24
@@ -322,6 +323,110 @@ export class SaasRentalsController {
       where: { id, tenantId },
       select: { id: true, status: true, plannedEndDate: true },
     })
+  }
+
+
+  @Post(':id/shorten')
+  async shorten(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @CurrentUser() user: JwtUser,
+    @Body() dto: ShortenRentalDto,
+  ) {
+    const tenantId = req.tenantId!
+
+    const rental = await this.prisma.rental.findFirst({
+      where: { id, tenantId },
+      select: { id: true, status: true, startDate: true, plannedEndDate: true, actualEndDate: true, weeklyRateRub: true },
+    })
+
+    if (!rental) throw new NotFoundException('Rental not found')
+    if (rental.status !== RentalStatus.ACTIVE) {
+      throw new BadRequestException('Only ACTIVE rental can be shortened')
+    }
+
+    const days = dto.days
+    const newPlannedEndDate = addDays(rental.plannedEndDate, -days)
+
+    if (newPlannedEndDate <= rental.startDate) {
+      throw new BadRequestException('Нельзя сократить аренду до даты начала или раньше')
+    }
+
+    const now = new Date()
+    if (newPlannedEndDate <= now) {
+      throw new BadRequestException('Слишком сильное сокращение. Для завершения сегодня используйте досрочное завершение аренды')
+    }
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      await tx.rental.updateMany({
+        where: { id, tenantId },
+        data: { plannedEndDate: newPlannedEndDate },
+      })
+
+      await tx.payment.deleteMany({
+        where: {
+          tenantId,
+          rentalId: id,
+          kind: PaymentKind.MANUAL,
+          periodStart: { gte: newPlannedEndDate },
+        },
+      })
+
+      await tx.payment.deleteMany({
+        where: {
+          tenantId,
+          rentalId: id,
+          kind: PaymentKind.WEEKLY_RENT,
+          status: PaymentStatus.PLANNED,
+        },
+      })
+
+      let blockStart = new Date(rental.startDate)
+      let created = 0
+
+      while (blockStart < newPlannedEndDate) {
+        const nominalBlockEnd = addDays(blockStart, WEEK_DAYS)
+        const blockEnd = nominalBlockEnd < newPlannedEndDate ? nominalBlockEnd : newPlannedEndDate
+
+        const daysInBlock = Math.max(1, Math.ceil((blockEnd.getTime() - blockStart.getTime()) / MS_PER_DAY))
+        const amount = round2((rental.weeklyRateRub / 7) * daysInBlock)
+
+        await tx.payment.create({
+          data: {
+            tenantId,
+            rentalId: id,
+            amount,
+            kind: PaymentKind.WEEKLY_RENT,
+            status: PaymentStatus.PLANNED,
+            dueAt: blockStart,
+            periodStart: blockStart,
+            periodEnd: blockEnd,
+          },
+        })
+
+        created += 1
+        blockStart = blockEnd
+      }
+
+      await tx.rentalChange.create({
+        data: {
+          tenantId,
+          rentalId: id,
+          type: RentalChangeType.SHORTEN,
+          daysDelta: -days,
+          reason: 'Сокращение срока аренды',
+          createdById: user.userId,
+        },
+      })
+
+      return { created }
+    })
+
+    return {
+      rentalId: id,
+      plannedEndDate: newPlannedEndDate,
+      createdPlannedPayments: result.created,
+    }
   }
 
   @Post(':id/batteries')

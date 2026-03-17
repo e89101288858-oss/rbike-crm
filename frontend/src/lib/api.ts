@@ -530,6 +530,14 @@ export const api = {
     }, true)
   },
 
+  shortenRental: async (rentalId: string, days: number) => {
+    const base = await rentalsBasePath()
+    return request<any>(`${base}/${rentalId}/shorten`, {
+      method: 'POST',
+      body: JSON.stringify({ days }),
+    }, true)
+  },
+
   closeRental: async (rentalId: string, reason: string) => {
     const base = await rentalsBasePath()
     return request<any>(`${base}/${rentalId}/close`, {
