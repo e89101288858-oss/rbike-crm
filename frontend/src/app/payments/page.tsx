@@ -28,8 +28,13 @@ export default function PaymentsPage() {
       const [y, m] = month.split('-').map(Number)
       const from = new Date(y, (m || 1) - 1, 1, 0, 0, 0, 0)
       const to = new Date(y, (m || 1), 0, 23, 59, 59, 999)
-      const q = `status=PAID&dueFrom=${encodeURIComponent(from.toISOString())}&dueTo=${encodeURIComponent(to.toISOString())}`
-      setItems(await api.payments(q))
+      const allPaid = await api.payments('status=PAID')
+      const filtered = (allPaid || []).filter((p: any) => {
+        if (!p?.paidAt) return false
+        const ts = new Date(p.paidAt).getTime()
+        return Number.isFinite(ts) && ts >= from.getTime() && ts <= to.getTime()
+      })
+      setItems(filtered)
     } catch (err) {
       setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка загрузки платежей'}`)
     } finally {
