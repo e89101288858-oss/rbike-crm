@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { PrismaService } from '../prisma/prisma.service'
+import { EmailService } from '../notifications/email.service'
 
 const PLAN_PRICES_RUB: Record<string, number> = {
   STARTER: 1,
@@ -19,6 +20,7 @@ export class SaasBillingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
+    private readonly email: EmailService,
   ) {}
 
   private getYooAuthHeader() {
@@ -153,10 +155,15 @@ export class SaasBillingService {
     }
   }
 
-  private async markInvoicePaid(invoice: { id: string; tenantId: string; plan: 'STARTER' | 'PRO' | 'ENTERPRISE'; durationMonths: number }, payload: any) {
+  private async markInvoicePaid(invoice: { id: string; tenantId: string; plan: 'STARTER' | 'PRO' | 'ENTERPRISE'; durationMonths: number; amountRub?: number }, payload: any) {
+    let paidNow = false
+    let paidUntil: Date | null = null
+
     await this.prisma.$transaction(async (tx) => {
       const current = await tx.saaSInvoice.findUnique({ where: { id: invoice.id }, select: { status: true } })
       if (!current || current.status === 'PAID') return
+
+      paidNow = true
 
       await tx.saaSInvoice.update({
         where: { id: invoice.id },
@@ -173,7 +180,7 @@ export class SaasBillingService {
       })
       const now = new Date()
       const base = currentTenant?.saasPaidUntil && currentTenant.saasPaidUntil > now ? currentTenant.saasPaidUntil : now
-      const paidUntil = new Date(base)
+      paidUntil = new Date(base)
       paidUntil.setUTCMonth(paidUntil.getUTCMonth() + Number(invoice.durationMonths || 1))
 
       await tx.tenant.update({
@@ -185,6 +192,27 @@ export class SaasBillingService {
         },
       })
     })
+
+    if (paidNow) {
+      try {
+        const userTenant = await (this.prisma as any).userTenant?.findFirst?.({
+          where: { tenantId: invoice.tenantId },
+          include: { user: { select: { email: true } } },
+          orderBy: { createdAt: 'asc' },
+        })
+
+        const email = (userTenant as any)?.user?.email as string | undefined
+        if (email) {
+          await this.email.sendBillingSuccess(email, {
+            plan: invoice.plan,
+            amountRub: Number(invoice.amountRub || 0),
+            paidUntil,
+          })
+        }
+      } catch {
+        // email notification is best-effort and must not break billing flow
+      }
+    }
   }
 
   private async syncPendingInvoices(tenantId: string) {
@@ -192,7 +220,7 @@ export class SaasBillingService {
       where: { tenantId, status: 'PENDING' },
       orderBy: { createdAt: 'desc' },
       take: 30,
-      select: { id: true, tenantId: true, plan: true, durationMonths: true, providerPaymentId: true, createdAt: true },
+      select: { id: true, tenantId: true, plan: true, durationMonths: true, amountRub: true, providerPaymentId: true, createdAt: true },
     })
 
     for (const inv of pending) {
@@ -224,7 +252,7 @@ export class SaasBillingService {
         const status = String(body?.status || '').toLowerCase()
 
         if (status === 'succeeded') {
-          await this.markInvoicePaid({ id: inv.id, tenantId: inv.tenantId, plan: inv.plan as any, durationMonths: inv.durationMonths }, body)
+          await this.markInvoicePaid({ id: inv.id, tenantId: inv.tenantId, plan: inv.plan as any, durationMonths: inv.durationMonths, amountRub: inv.amountRub }, body)
         } else if (status === 'canceled') {
           await this.prisma.saaSInvoice.update({
             where: { id: inv.id },
@@ -309,7 +337,7 @@ export class SaasBillingService {
 
     const status = String(payment?.status || '').toLowerCase()
     if (status === 'succeeded') {
-      await this.markInvoicePaid({ id: invoice.id, tenantId: invoice.tenantId, plan: invoice.plan as any, durationMonths: invoice.durationMonths || 1 }, payment)
+      await this.markInvoicePaid({ id: invoice.id, tenantId: invoice.tenantId, plan: invoice.plan as any, durationMonths: invoice.durationMonths || 1, amountRub: invoice.amountRub }, payment)
     } else if (status === 'canceled') {
       await this.prisma.saaSInvoice.update({
         where: { id: invoice.id },

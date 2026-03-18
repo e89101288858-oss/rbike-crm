@@ -14,6 +14,7 @@ import { PaymentsModule } from './payments/payments.module'
 import { DocumentsModule } from './documents/documents.module'
 import { ExpensesModule } from './expenses/expenses.module'
 import { SaasBillingModule } from './saas-billing/saas-billing.module'
+import { EmailModule } from './notifications/email.module'
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { SaasBillingModule } from './saas-billing/saas-billing.module'
       isGlobal: true,
     }),
     PrismaModule,
+    EmailModule,
     AuthModule,
     AdminModule,
     UsersModule,

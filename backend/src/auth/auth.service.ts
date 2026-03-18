@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt'
 import * as bcrypt from 'bcrypt'
 import { createHash, randomBytes } from 'crypto'
 import { PrismaService } from '../prisma/prisma.service'
+import { EmailService } from '../notifications/email.service'
 import { RegisterSaasDto } from './dto/register-saas.dto'
 
 type MonthPattern = {
@@ -16,6 +17,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
+    private readonly email: EmailService,
   ) {}
 
   private async clearExpiredResetTokens() {
@@ -207,8 +209,11 @@ export class AuthService {
     await this.audit(undefined, 'PASSWORD_RESET_REQUEST', 'USER', user.id, {
       email: user.email,
       expiresAt,
-      // NOTE: without SMTP integration this token is returned for frontend flow.
     })
+
+    if (user.email) {
+      await this.email.sendPasswordReset(user.email, token)
+    }
 
     return { ok: true, resetToken: token }
   }
