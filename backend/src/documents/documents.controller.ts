@@ -93,7 +93,7 @@ export class DocumentsController {
   @Get('template/docx')
   async downloadTemplateDocx(@Req() req: Request, @Res() res: Response) {
     const tenantId = req.tenantId!
-    const absolute = await this.getTenantTemplatePath(tenantId)
+    const absolute = await this.getTenantTemplatePath(tenantId, req.tenantMode)
     return res.download(absolute, `contract-template-${tenantId}.docx`)
   }
 
@@ -318,7 +318,7 @@ export class DocumentsController {
     const absolute = path.join(baseDir, fileName)
     const relative = path.join('storage', 'documents', tenantId, fileName)
 
-    const templatePath = await this.getTenantTemplatePath(tenantId)
+    const templatePath = await this.getTenantTemplatePath(tenantId, req.tenantMode)
     const tplBuffer = await fs.readFile(templatePath)
     const zip = new PizZip(tplBuffer)
     const docx = new Docxtemplater(zip, {
@@ -395,14 +395,40 @@ export class DocumentsController {
     return { ...doc, html }
   }
 
-  private async getTenantTemplatePath(tenantId: string) {
+  private async getTenantTemplatePath(tenantId: string, mode?: string) {
     const custom = path.join(process.cwd(), 'storage', 'contract-templates', `${tenantId}.docx`)
     try {
       await fs.access(custom)
       return custom
     } catch {}
 
-    return path.join(process.cwd(), 'templates', 'contract-template.docx')
+    return this.getModeDefaultTemplatePath(mode)
+  }
+
+  private async getModeDefaultTemplatePath(mode?: string) {
+    const base = path.join(process.cwd(), 'templates', 'contract-template.docx')
+    if (mode !== 'SAAS') return base
+
+    const dir = path.join(process.cwd(), 'storage', 'contract-templates', '_defaults')
+    const saasPath = path.join(dir, 'saas-template.docx')
+
+    try {
+      await fs.access(saasPath)
+      return saasPath
+    } catch {}
+
+    const buf = await fs.readFile(base)
+    const zip = new PizZip(buf)
+    const docXmlPath = 'word/document.xml'
+    const docXml = zip.file(docXmlPath)?.asText() || ''
+    const converted = this.toSaasTags(docXml)
+    zip.file(docXmlPath, converted)
+
+    await fs.mkdir(dir, { recursive: true })
+    const out = zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' })
+    await fs.writeFile(saasPath, out)
+
+    return saasPath
   }
 
   private applyTemplate(template: string, data: Record<string, string>) {
