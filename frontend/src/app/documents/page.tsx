@@ -51,7 +51,7 @@ function bodyFromHtml(templateHtml: string) {
   return (match?.[1] || templateHtml || '').trim()
 }
 
-function buildFullHtml(contentHtml: string, fontSize: number, lineHeight: number, pageMarginMm: number) {
+function buildFullHtml(contentHtml: string, fontSize: number, headingSize: number, lineHeight: number, pageMarginMm: number) {
   return `<!doctype html>
 <html lang="ru">
 <head>
@@ -61,11 +61,12 @@ function buildFullHtml(contentHtml: string, fontSize: number, lineHeight: number
   @page { size: A4; margin: ${pageMarginMm}mm; }
   html, body { background: #fff; }
   body { font-family: Arial, sans-serif; margin: 0; color: #111; font-size: ${fontSize}px; line-height: ${lineHeight}; }
-  h1,h2,h3 { margin: 0 0 12px; }
+  h1 { margin: 0 0 12px; font-size: ${headingSize}px; line-height: 1.2; }
+  h2,h3 { margin: 0 0 12px; }
   p { margin: 0 0 10px; }
   table { width: 100%; border-collapse: collapse; margin: 8px 0 12px; }
   td, th { border: 1px solid #666; padding: 6px; vertical-align: top; }
-  .page-break { page-break-before: always; break-before: page; border-top: 2px dashed #999; margin: 16px 0; height: 0; }
+  .page-break { display:block; page-break-before: always; break-before: page; margin: 0; padding: 0; height: 0; border: 0; }
 </style>
 </head>
 <body>${contentHtml}</body>
@@ -94,6 +95,7 @@ export default function DocumentsPage() {
   const [permissions, setPermissions] = useState<Record<string, boolean> | null>(null)
 
   const [fontSize, setFontSize] = useState(14)
+  const [headingSize, setHeadingSize] = useState(22)
   const [lineHeight, setLineHeight] = useState(1.45)
   const [pageMarginMm, setPageMarginMm] = useState(16)
   const [editorHtml, setEditorHtml] = useState(DEFAULT_EDITOR_HTML)
@@ -110,7 +112,7 @@ export default function DocumentsPage() {
     return [...BASE_TAGS.slice(0, 4), ...companyTags, ...BASE_TAGS.slice(4)]
   }, [mode])
 
-  const previewHtml = useMemo(() => buildFullHtml(editorHtml, fontSize, lineHeight, pageMarginMm), [editorHtml, fontSize, lineHeight, pageMarginMm])
+  const previewHtml = useMemo(() => buildFullHtml(editorHtml, fontSize, headingSize, lineHeight, pageMarginMm), [editorHtml, fontSize, headingSize, lineHeight, pageMarginMm])
 
   function saveSelection() {
     const sel = window.getSelection()
@@ -195,7 +197,7 @@ export default function DocumentsPage() {
 
 
   function insertPageBreak() {
-    insertAtCursor('<div class="page-break"></div><p></p>', true)
+    insertAtCursor('<div class="page-break"></div>', true)
   }
 
 
@@ -289,7 +291,7 @@ export default function DocumentsPage() {
     setError('')
     setSuccess('')
     try {
-      const html = buildFullHtml(editorRef.current?.innerHTML || editorHtml, fontSize, lineHeight, pageMarginMm)
+      const html = buildFullHtml(editorRef.current?.innerHTML || editorHtml, fontSize, headingSize, lineHeight, pageMarginMm)
       await api.updateContractTemplate(html)
       setSuccess('Шаблон договора сохранен')
       await load()
@@ -369,10 +371,14 @@ export default function DocumentsPage() {
             </div>
           </div>
 
-          <div className="mb-2 grid grid-cols-3 gap-2">
+          <div className="mb-2 grid grid-cols-4 gap-2">
             <div>
               <label className="label">Шрифт, px</label>
               <input type="number" min={10} max={22} className="input w-full" value={fontSize} onChange={(e) => setFontSize(Number(e.target.value || 14))} />
+            </div>
+            <div>
+              <label className="label">Заголовок, px</label>
+              <input type="number" min={14} max={48} className="input w-full" value={headingSize} onChange={(e) => setHeadingSize(Number(e.target.value || 22))} />
             </div>
             <div>
               <label className="label">Интервал</label>
