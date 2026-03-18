@@ -167,11 +167,65 @@ export default function DocumentsPage() {
   }
 
   function previewTemplate() {
-    const html = editorMode === 'simple' ? plainTextToHtml(plainTemplate) : templateHtml
+    const sourceHtml = editorMode === 'simple' ? plainTextToHtml(plainTemplate) : templateHtml
+    const bodyMatch = sourceHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i)
+    const contentHtml = bodyMatch?.[1] || sourceHtml
+    const styleBlocks = (sourceHtml.match(/<style[\s\S]*?<\/style>/gi) || []).join('\n')
+
     const w = window.open('', '_blank')
     if (!w) return
+
+    const printShell = `<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Предпросмотр печати договора</title>
+    <style>
+      @page { size: A4; margin: 16mm; }
+      html, body { background: #fff; margin: 0; padding: 0; }
+      .print-toolbar {
+        position: sticky;
+        top: 0;
+        display: flex;
+        gap: 8px;
+        padding: 10px 12px;
+        background: #f3f4f6;
+        border-bottom: 1px solid #e5e7eb;
+        z-index: 10;
+      }
+      .print-toolbar button {
+        border: 1px solid #d1d5db;
+        background: #fff;
+        border-radius: 8px;
+        padding: 6px 10px;
+        cursor: pointer;
+      }
+      .print-page {
+        max-width: 210mm;
+        min-height: 297mm;
+        margin: 0 auto;
+        padding: 16mm;
+        box-sizing: border-box;
+        background: #fff;
+      }
+      @media print {
+        .print-toolbar { display: none !important; }
+        .print-page { max-width: none; min-height: auto; margin: 0; padding: 0; }
+      }
+    </style>
+    ${styleBlocks}
+  </head>
+  <body>
+    <div class="print-toolbar">
+      <button onclick="window.print()">Печать</button>
+      <button onclick="window.close()">Закрыть</button>
+    </div>
+    <div class="print-page">${contentHtml || '<p>Пустой шаблон</p>'}</div>
+  </body>
+</html>`
+
     w.document.open()
-    w.document.write(html || '<html><body><p>Пустой шаблон</p></body></html>')
+    w.document.write(printShell)
     w.document.close()
   }
 
