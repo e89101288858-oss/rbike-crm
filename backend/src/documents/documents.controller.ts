@@ -413,16 +413,22 @@ export class DocumentsController {
     const saasPath = path.join(dir, 'saas-template.docx')
 
     try {
-      await fs.access(saasPath)
-      return saasPath
+      const existing = await fs.readFile(saasPath)
+      const existingZip = new PizZip(existing)
+      const existingXml = existingZip.file('word/document.xml')?.asText() || ''
+      if (existingXml.includes('{{company.') && !existingXml.includes('{{franchisee.')) {
+        return saasPath
+      }
     } catch {}
 
     const buf = await fs.readFile(base)
     const zip = new PizZip(buf)
-    const docXmlPath = 'word/document.xml'
-    const docXml = zip.file(docXmlPath)?.asText() || ''
-    const converted = this.toSaasTags(docXml)
-    zip.file(docXmlPath, converted)
+    const xmlFiles = Object.keys((zip as any).files || {}).filter((k) => k.startsWith('word/') && k.endsWith('.xml'))
+    for (const f of xmlFiles) {
+      const txt = zip.file(f)?.asText()
+      if (!txt) continue
+      zip.file(f, this.toSaasTags(txt))
+    }
 
     await fs.mkdir(dir, { recursive: true })
     const out = zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' })
