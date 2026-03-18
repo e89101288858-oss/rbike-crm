@@ -60,7 +60,7 @@ function normalizeContentForSave(contentHtml: string, headingSize: number) {
     .replace(/<p(?![^>]*style=)([^>]*)>/gi, '<p$1 style="margin:0 0 10px;">')
     .replace(/<table(?![^>]*style=)([^>]*)>/gi, '<table$1 style="width:100%; border-collapse:collapse; margin:8px 0 12px;">')
     .replace(/<(td|th)(?![^>]*style=)([^>]*)>/gi, '<$1$2 style="border:1px solid #666; padding:6px; vertical-align:top;">')
-    .replace(/<div\s+class=["']page-break["'][^>]*><\/div>/gi, '<div style="page-break-before: always; break-before: page; height:0; margin:0; padding:0;"></div>')
+    .replace(/<div\s+class=["']page-break["'][^>]*><\/div>/gi, '<p style="page-break-after: always; margin:0; padding:0; line-height:0;">&nbsp;</p>')
 }
 
 function buildFullHtml(contentHtml: string, fontSize: number, headingSize: number, lineHeight: number, pageMarginMm: number) {
@@ -78,7 +78,7 @@ function buildFullHtml(contentHtml: string, fontSize: number, headingSize: numbe
   p { margin: 0 0 10px; }
   table { width: 100%; border-collapse: collapse; margin: 8px 0 12px; }
   td, th { border: 1px solid #666; padding: 6px; vertical-align: top; }
-  .page-break { display:block; page-break-before: always; break-before: page; margin: 0; padding: 0; height: 0; border: 0; }
+  .page-break { display:block; page-break-after: always; break-after: page; margin: 0; padding: 0; height: 0; border: 0; line-height: 0; }
 </style>
 </head>
 <body><div style="font-family:Arial, sans-serif; color:#111; font-size:${fontSize}px; line-height:${lineHeight};">${normalizeContentForSave(contentHtml, headingSize)}</div></body>
@@ -209,7 +209,7 @@ export default function DocumentsPage() {
 
 
   function insertPageBreak() {
-    insertAtCursor('<div class="page-break"></div>', true)
+    insertAtCursor('<p class="page-break">&nbsp;</p>', true)
   }
 
 

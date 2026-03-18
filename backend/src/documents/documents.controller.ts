@@ -282,7 +282,7 @@ export class DocumentsController {
   private prepareHtmlForDocx(html: string) {
     return html
       .replace(/break-before\s*:\s*page\s*;?/gi, 'page-break-before: always;')
-      .replace(/<div\s+class=["']page-break["'][^>]*><\/div>/gi, '<div style="page-break-before: always; break-before: page; height:0; margin:0; padding:0;"></div>')
+      .replace(/<div\s+class=["']page-break["'][^>]*><\/div>/gi, '<p style="page-break-after: always; margin:0; padding:0; line-height:0;">&nbsp;</p>')
       .replace(/position\s*:\s*sticky\s*;?/gi, '')
   }
 
@@ -294,7 +294,7 @@ export class DocumentsController {
       .replace(/<colgroup[\s\S]*?<\/colgroup>/gi, '')
       .replace(/\scontenteditable=("[^"]*"|'[^']*')/gi, '')
       .replace(/\sdata-[a-z0-9_-]+=("[^"]*"|'[^']*')/gi, '')
-      .replace(/<div\s+class=["']page-break["'][^>]*><\/div>/gi, '<div style="page-break-before: always; break-before: page; height:0; margin:0; padding:0;\"></div>')
+      .replace(/<div\s+class=["']page-break["'][^>]*><\/div>/gi, '<p style="page-break-after: always; margin:0; padding:0; line-height:0;">&nbsp;</p>')
       .replace(/<table([^>]*)>/gi, '<table style="width:100%; border-collapse:collapse; margin:8px 0 12px;">')
       .replace(/<(td|th)([^>]*)>/gi, '<$1 style="border:1px solid #666; padding:6px; vertical-align:top;">')
       .replace(/<(td|th)([^>]*)>\s*<\/(td|th)>/gi, (_m, tag) => `<${tag} style="border:1px solid #666; padding:6px; vertical-align:top;">&nbsp;</${tag}>`)
