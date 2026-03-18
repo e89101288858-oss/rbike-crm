@@ -202,7 +202,16 @@ export class DocumentsController {
         pageNumber: false,
       })
     } catch {
-      throw new BadRequestException('Ошибка шаблона договора: не удалось собрать DOCX. Проверьте последний блок/таблицу и повторите.')
+      const stricterHtml = this.prepareHtmlForDocxStrict(docxSafeHtml)
+      try {
+        docxBuffer = await HTMLtoDOCX(stricterHtml, null, {
+          table: { row: { cantSplit: true } },
+          footer: false,
+          pageNumber: false,
+        })
+      } catch {
+        throw new BadRequestException('Ошибка шаблона договора: не удалось собрать DOCX. Упростите последний добавленный блок (обычно таблица/разрыв страницы) и повторите.')
+      }
     }
 
     await fs.writeFile(absolute, Buffer.from(docxBuffer as any))
@@ -275,6 +284,18 @@ export class DocumentsController {
       .replace(/break-before\s*:\s*page\s*;?/gi, 'page-break-before: always;')
       .replace(/<div\s+class=["']page-break["'][^>]*><\/div>/gi, '<p style="page-break-before: always;">&nbsp;</p>')
       .replace(/position\s*:\s*sticky\s*;?/gi, '')
+  }
+
+  private prepareHtmlForDocxStrict(html: string) {
+    return html
+      .replace(/<colgroup[\s\S]*?<\/colgroup>/gi, '')
+      .replace(/\scontenteditable=("[^"]*"|'[^']*')/gi, '')
+      .replace(/\sdata-[a-z0-9_-]+=("[^"]*"|'[^']*')/gi, '')
+      .replace(/<div\s+class=["']page-break["'][^>]*><\/div>/gi, '<p style="page-break-before: always;">&nbsp;</p>')
+      .replace(/<table([^>]*)>/gi, '<table style="width:100%; border-collapse:collapse; margin:8px 0 12px;">')
+      .replace(/<(td|th)([^>]*)>/gi, '<$1 style="border:1px solid #666; padding:6px; vertical-align:top;">')
+      .replace(/<(td|th)([^>]*)>\s*<\/(td|th)>/gi, (_m, tag) => `<${tag} style="border:1px solid #666; padding:6px; vertical-align:top;">&nbsp;</${tag}>`)
+      .replace(/style=("|')[\s\S]*?(display\s*:\s*grid|display\s*:\s*flex|position\s*:\s*sticky)[\s\S]*?("|')/gi, '')
   }
 
   private toSaasTags(templateHtml: string) {
