@@ -187,7 +187,7 @@ export class DocumentsController {
     const baseDir = path.join(process.cwd(), 'storage', 'documents', tenantId)
     await fs.mkdir(baseDir, { recursive: true })
 
-    const fileName = `contract-${rental.id}-${Date.now()}.html`
+    const fileName = `contract-${rental.id}-${Date.now()}.doc`
     const absolute = path.join(baseDir, fileName)
     const relative = path.join('storage', 'documents', tenantId, fileName)
 

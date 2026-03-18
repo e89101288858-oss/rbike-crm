@@ -645,9 +645,7 @@ export default function RentalsPage() {
                         <div key={d.id} className="rounded border border-white/10 bg-[#111318] p-2">
                           <div className="mb-1 text-xs text-gray-500">{d.type} · {formatDateTime(d.createdAt)}</div>
                           <div className="flex gap-2">
-                            <button className="btn" onClick={() => downloadDocument(d.id)}>
-                              {d.filePath?.endsWith('.docx') ? 'Скачать DOCX' : 'Скачать договор'}
-                            </button>
+                            <button className="btn" onClick={() => downloadDocument(d.id)}>Скачать WORD</button>
                           </div>
                         </div>
                       ))}
