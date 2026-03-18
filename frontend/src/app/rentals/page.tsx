@@ -645,16 +645,10 @@ export default function RentalsPage() {
                         <div key={d.id} className="rounded border border-white/10 bg-[#111318] p-2">
                           <div className="mb-1 text-xs text-gray-500">{d.type} · {formatDateTime(d.createdAt)}</div>
                           <div className="flex gap-2">
-                            {d.filePath?.endsWith('.docx') ? (
-                              <button className="btn" onClick={() => downloadDocument(d.id)}>Скачать DOCX</button>
-                            ) : (
-                              <>
-                                <button className="btn" onClick={() => openDocument(d.id)}>Показать</button>
-                                <button className="btn" onClick={() => printDocument(d.id)} disabled={!docHtmlMap[d.id]}>Печать / PDF</button>
-                              </>
-                            )}
+                            <button className="btn" onClick={() => downloadDocument(d.id)}>
+                              {d.filePath?.endsWith('.docx') ? 'Скачать DOCX' : 'Скачать договор'}
+                            </button>
                           </div>
-                          {!!docHtmlMap[d.id] && <div className="mt-2 rounded border bg-white p-2" dangerouslySetInnerHTML={{ __html: docHtmlMap[d.id] }} />}
                         </div>
                       ))}
                     </div>
