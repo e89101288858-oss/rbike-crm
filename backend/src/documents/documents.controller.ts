@@ -40,8 +40,17 @@ export class DocumentsController {
       select: { templateHtml: true, updatedAt: true, createdAt: true },
     })
 
+    let templateHtml = existing?.templateHtml ?? this.defaultTemplate(req.tenantMode)
+    if (req.tenantMode === 'SAAS' && existing?.templateHtml && this.isLegacySaasTemplate(existing.templateHtml)) {
+      templateHtml = this.defaultTemplate()
+      await this.prisma.contractTemplate.update({
+        where: { tenantId },
+        data: { templateHtml },
+      })
+    }
+
     return {
-      templateHtml: existing?.templateHtml ?? this.defaultTemplate(req.tenantMode),
+      templateHtml,
       updatedAt: existing?.updatedAt ?? null,
       createdAt: existing?.createdAt ?? null,
     }
@@ -187,7 +196,13 @@ export class DocumentsController {
       select: { templateHtml: true },
     })
 
-    const templateHtml = existingTemplate?.templateHtml ?? this.defaultTemplate(req.tenantMode)
+    const templateHtml = (() => {
+      const current = existingTemplate?.templateHtml ?? this.defaultTemplate(req.tenantMode)
+      if (req.tenantMode === 'SAAS' && this.isLegacySaasTemplate(current)) {
+        return this.defaultTemplate()
+      }
+      return current
+    })()
     const renderedHtml = this.applyTemplate(templateHtml, data)
 
     await fs.writeFile(absolute, renderedHtml, 'utf-8')
@@ -253,6 +268,10 @@ export class DocumentsController {
 
   private applyTemplate(template: string, data: Record<string, string>) {
     return template.replace(/\{\{\s*([a-zA-Z0-9._-]+)\s*\}\}/g, (_, key: string) => data[key] ?? '—')
+  }
+
+  private isLegacySaasTemplate(templateHtml: string) {
+    return /\{\{\s*company\./i.test(templateHtml)
   }
 
   private fmt(d: Date | string) {
