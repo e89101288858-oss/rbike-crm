@@ -51,6 +51,18 @@ function bodyFromHtml(templateHtml: string) {
   return (match?.[1] || templateHtml || '').trim()
 }
 
+
+function normalizeContentForSave(contentHtml: string, headingSize: number) {
+  return contentHtml
+    .replace(/<h1(?![^>]*style=)([^>]*)>/gi, `<h1$1 style="font-size:${headingSize}px; line-height:1.2; margin:0 0 12px;">`)
+    .replace(/<h2(?![^>]*style=)([^>]*)>/gi, '<h2$1 style="margin:0 0 10px;">')
+    .replace(/<h3(?![^>]*style=)([^>]*)>/gi, '<h3$1 style="margin:0 0 8px;">')
+    .replace(/<p(?![^>]*style=)([^>]*)>/gi, '<p$1 style="margin:0 0 10px;">')
+    .replace(/<table(?![^>]*style=)([^>]*)>/gi, '<table$1 style="width:100%; border-collapse:collapse; margin:8px 0 12px;">')
+    .replace(/<(td|th)(?![^>]*style=)([^>]*)>/gi, '<$1$2 style="border:1px solid #666; padding:6px; vertical-align:top;">')
+    .replace(/<div\s+class=["']page-break["'][^>]*><\/div>/gi, '<div style="page-break-before: always; break-before: page; height:0; margin:0; padding:0;"></div>')
+}
+
 function buildFullHtml(contentHtml: string, fontSize: number, headingSize: number, lineHeight: number, pageMarginMm: number) {
   return `<!doctype html>
 <html lang="ru">
@@ -69,7 +81,7 @@ function buildFullHtml(contentHtml: string, fontSize: number, headingSize: numbe
   .page-break { display:block; page-break-before: always; break-before: page; margin: 0; padding: 0; height: 0; border: 0; }
 </style>
 </head>
-<body>${contentHtml}</body>
+<body><div style="font-family:Arial, sans-serif; color:#111; font-size:${fontSize}px; line-height:${lineHeight};">${normalizeContentForSave(contentHtml, headingSize)}</div></body>
 </html>`
 }
 
