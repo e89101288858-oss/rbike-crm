@@ -123,6 +123,39 @@ export class DocumentsController {
     return { ok: true }
   }
 
+  @Post('template/docx/json')
+  async uploadTemplateDocxJson(
+    @Req() req: Request,
+    @CurrentUser() user: JwtUser,
+    @Body() body: { filename?: string; dataBase64?: string },
+  ) {
+    const tenantId = req.tenantId!
+
+    if (user.role === UserRole.MECHANIC) {
+      throw new BadRequestException('MECHANIC cannot update contract template')
+    }
+
+    const filename = String(body?.filename || '').toLowerCase()
+    const dataBase64 = String(body?.dataBase64 || '')
+    if (!filename.endsWith('.docx') || !dataBase64) {
+      throw new BadRequestException('Нужен файл формата .docx')
+    }
+
+    let buffer: Buffer
+    try {
+      buffer = Buffer.from(dataBase64, 'base64')
+    } catch {
+      throw new BadRequestException('Некорректный base64 файла')
+    }
+
+    const dir = path.join(process.cwd(), 'storage', 'contract-templates')
+    await fs.mkdir(dir, { recursive: true })
+    const target = path.join(dir, `${tenantId}.docx`)
+    await fs.writeFile(target, buffer)
+
+    return { ok: true }
+  }
+
   @Post('template/docx/reset')
   async resetTemplateDocx(@Req() req: Request, @CurrentUser() user: JwtUser) {
     const tenantId = req.tenantId!

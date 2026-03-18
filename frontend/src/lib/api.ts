@@ -613,22 +613,23 @@ export const api = {
   },
 
   uploadContractTemplateDocx: async (file: File) => {
-    const token = getToken()
-    const tenantId = getTenantId()
-    const headers: Record<string, string> = {}
-    if (token) headers.Authorization = `Bearer ${token}`
-    if (tenantId) headers['X-Tenant-Id'] = tenantId
+    const toBase64 = (f: File) =>
+      new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => {
+          const res = String(reader.result || '')
+          const b64 = res.includes(',') ? res.split(',')[1] : ''
+          resolve(b64)
+        }
+        reader.onerror = () => reject(new Error('Ошибка чтения файла'))
+        reader.readAsDataURL(f)
+      })
 
-    const form = new FormData()
-    form.append('file', file)
-
-    const res = await fetch(`${API_BASE}/documents/template/docx`, {
+    const dataBase64 = await toBase64(file)
+    return request<any>('/documents/template/docx/json', {
       method: 'POST',
-      headers,
-      body: form,
-    })
-    if (!res.ok) throw new Error(await res.text())
-    return res.json()
+      body: JSON.stringify({ filename: file.name, dataBase64 }),
+    }, true)
   },
 
   resetContractTemplateDocx: () =>
