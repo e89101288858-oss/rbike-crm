@@ -215,7 +215,7 @@ export class AuthService {
       void this.email.sendPasswordReset(user.email, token)
     }
 
-    return { ok: true, resetToken: token }
+    return { ok: true }
   }
 
   async confirmPasswordReset(token: string, newPassword: string) {
