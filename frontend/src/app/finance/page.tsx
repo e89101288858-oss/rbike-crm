@@ -200,6 +200,8 @@ export default function FinancePage() {
 
       const paymentsQ = new URLSearchParams()
       paymentsQ.set('status', 'PAID')
+      paymentsQ.set('paidFrom', periodFrom.toISOString())
+      paymentsQ.set('paidTo', periodTo.toISOString())
 
       const [bikesRes, bikeRes, expensesRes, paymentsRes] = await Promise.all([
         api.bikes(),
@@ -210,14 +212,7 @@ export default function FinancePage() {
       setBikes(bikesRes)
       setByBike(bikeRes.bikes ?? [])
       setExpenses(expensesRes ?? [])
-      const fromKey = localDateKey(periodFrom)
-      const toKey = localDateKey(periodTo)
-      const filteredPayments = (paymentsRes ?? []).filter((p: any) => {
-        if (!p?.paidAt) return false
-        const k = localDateKey(p.paidAt)
-        return k >= fromKey && k <= toKey
-      })
-      setPayments(filteredPayments)
+      setPayments(paymentsRes ?? [])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки финансов')
     }

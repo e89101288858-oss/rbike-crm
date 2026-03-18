@@ -6,14 +6,6 @@ import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'
 import { getTenantId, getToken, setTenantId } from '@/lib/auth'
 import { formatDate, formatDateTime, formatRub, statusLabel } from '@/lib/format'
-
-function localDateKey(value: string | Date) {
-  const d = new Date(value)
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
 import { CrmActionRow, CrmCard, CrmEmpty, CrmStat } from '@/components/crm-ui'
 
 export default function PaymentsPage() {
@@ -36,15 +28,8 @@ export default function PaymentsPage() {
       const [y, m] = month.split('-').map(Number)
       const from = new Date(y, (m || 1) - 1, 1, 0, 0, 0, 0)
       const to = new Date(y, (m || 1), 0, 23, 59, 59, 999)
-      const fromKey = localDateKey(from)
-      const toKey = localDateKey(to)
-      const allPaid = await api.payments('status=PAID')
-      const filtered = (allPaid || []).filter((p: any) => {
-        if (!p?.paidAt) return false
-        const k = localDateKey(p.paidAt)
-        return k >= fromKey && k <= toKey
-      })
-      setItems(filtered)
+      const q = `status=PAID&paidFrom=${encodeURIComponent(from.toISOString())}&paidTo=${encodeURIComponent(to.toISOString())}`
+      setItems(await api.payments(q))
     } catch (err) {
       setError(`Ошибка: ${err instanceof Error ? err.message : 'Ошибка загрузки платежей'}`)
     } finally {
