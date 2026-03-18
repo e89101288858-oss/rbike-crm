@@ -6,16 +6,11 @@ import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'
 import { getTenantId, getToken, setTenantId } from '@/lib/auth'
 
-const CONTRACT_TAGS: Array<{ tag: string; description: string }> = [
+const BASE_TAGS: Array<{ tag: string; description: string }> = [
   { tag: 'contract.number', description: 'Номер договора' },
   { tag: 'contract.date', description: 'Дата формирования договора' },
   { tag: 'tenant.name', description: 'Название точки' },
   { tag: 'tenant.address', description: 'Адрес точки' },
-  { tag: 'franchisee.name', description: 'Название франчайзи/компании' },
-  { tag: 'franchisee.companyName', description: 'Юридическое название компании' },
-  { tag: 'franchisee.signerFullName', description: 'ФИО подписанта со стороны компании' },
-  { tag: 'franchisee.bankDetails', description: 'Банковские реквизиты' },
-  { tag: 'franchisee.city', description: 'Город компании' },
   { tag: 'client.fullName', description: 'ФИО курьера' },
   { tag: 'client.phone', description: 'Телефон курьера' },
   { tag: 'client.birthDate', description: 'Дата рождения курьера' },
@@ -33,6 +28,22 @@ const CONTRACT_TAGS: Array<{ tag: string; description: string }> = [
   { tag: 'rental.days', description: 'Срок аренды в днях' },
   { tag: 'rental.dailyRateRub', description: 'Ставка в рублях за день' },
   { tag: 'rental.totalRub', description: 'Итоговая сумма аренды' },
+]
+
+const FRANCHISE_TAGS: Array<{ tag: string; description: string }> = [
+  { tag: 'franchisee.name', description: 'Название франчайзи/компании' },
+  { tag: 'franchisee.companyName', description: 'Юридическое название компании' },
+  { tag: 'franchisee.signerFullName', description: 'ФИО подписанта со стороны компании' },
+  { tag: 'franchisee.bankDetails', description: 'Банковские реквизиты' },
+  { tag: 'franchisee.city', description: 'Город компании' },
+]
+
+const SAAS_COMPANY_TAGS: Array<{ tag: string; description: string }> = [
+  { tag: 'company.name', description: 'Название компании арендодателя' },
+  { tag: 'company.legalName', description: 'Юридическое название компании' },
+  { tag: 'company.signerFullName', description: 'ФИО подписанта со стороны компании' },
+  { tag: 'company.bankDetails', description: 'Банковские реквизиты' },
+  { tag: 'company.city', description: 'Город компании' },
 ]
 
 function htmlToPlainText(html: string) {
@@ -106,6 +117,10 @@ export default function DocumentsPage() {
   const [success, setSuccess] = useState('')
 
   const canEdit = useMemo(() => permissions?.documents !== false, [permissions])
+  const contractTags = useMemo(() => {
+    const companyTags = mode === 'SAAS' ? SAAS_COMPANY_TAGS : FRANCHISE_TAGS
+    return [...BASE_TAGS.slice(0, 4), ...companyTags, ...BASE_TAGS.slice(4)]
+  }, [mode])
 
   async function load() {
     setLoading(true)
@@ -316,7 +331,7 @@ export default function DocumentsPage() {
           <h3 className="mb-2 text-base font-semibold">Теги и пояснения</h3>
           <p className="mb-2 text-xs text-gray-400">Нажми на тег, чтобы вставить его в шаблон.</p>
           <div className="max-h-[560px] space-y-1 overflow-auto rounded border border-white/10 bg-[#111318] p-2 text-xs">
-            {CONTRACT_TAGS.map((item) => (
+            {contractTags.map((item) => (
               <button
                 type="button"
                 key={item.tag}
