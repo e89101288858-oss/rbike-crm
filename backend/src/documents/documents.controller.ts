@@ -41,14 +41,7 @@ export class DocumentsController {
       select: { templateHtml: true, updatedAt: true, createdAt: true },
     })
 
-    let templateHtml = existing?.templateHtml ?? (await this.standardTemplate(req.tenantMode))
-    if (req.tenantMode === 'SAAS' && existing?.templateHtml && this.isOldSaasDefaultTemplate(existing.templateHtml)) {
-      templateHtml = await this.standardTemplate('SAAS')
-      await this.prisma.contractTemplate.update({
-        where: { tenantId },
-        data: { templateHtml },
-      })
-    }
+    const templateHtml = existing?.templateHtml ?? (await this.standardTemplate(req.tenantMode))
 
     return {
       templateHtml,
@@ -197,12 +190,7 @@ export class DocumentsController {
       select: { templateHtml: true },
     })
 
-    const templateHtml = (() => {
-      const current = existingTemplate?.templateHtml
-      if (!current) return null
-      if (req.tenantMode === 'SAAS' && this.isOldSaasDefaultTemplate(current)) return null
-      return current
-    })() ?? (await this.standardTemplate(req.tenantMode))
+    const templateHtml = existingTemplate?.templateHtml ?? (await this.standardTemplate(req.tenantMode))
     const renderedHtml = this.applyTemplate(templateHtml, data)
     const docxSafeHtml = this.prepareHtmlForDocx(renderedHtml)
 
@@ -214,12 +202,7 @@ export class DocumentsController {
         pageNumber: false,
       })
     } catch {
-      const fallbackHtml = this.prepareHtmlForDocx(this.defaultTemplate())
-      docxBuffer = await HTMLtoDOCX(fallbackHtml, null, {
-        table: { row: { cantSplit: true } },
-        footer: false,
-        pageNumber: false,
-      })
+      throw new BadRequestException('Ошибка шаблона договора: не удалось собрать DOCX. Проверьте последний блок/таблицу и повторите.')
     }
 
     await fs.writeFile(absolute, Buffer.from(docxBuffer as any))
@@ -285,10 +268,6 @@ export class DocumentsController {
 
   private applyTemplate(template: string, data: Record<string, string>) {
     return template.replace(/\{\{\s*([a-zA-Z0-9._-]+)\s*\}\}/g, (_, key: string) => data[key] ?? '—')
-  }
-
-  private isOldSaasDefaultTemplate(templateHtml: string) {
-    return /(Арендодатель:|Подписант со стороны арендодателя|Город арендодателя)/i.test(templateHtml)
   }
 
   private prepareHtmlForDocx(html: string) {
