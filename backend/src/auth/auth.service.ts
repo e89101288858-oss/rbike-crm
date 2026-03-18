@@ -212,7 +212,7 @@ export class AuthService {
     })
 
     if (user.email) {
-      await this.email.sendPasswordReset(user.email, token)
+      void this.email.sendPasswordReset(user.email, token)
     }
 
     return { ok: true, resetToken: token }
