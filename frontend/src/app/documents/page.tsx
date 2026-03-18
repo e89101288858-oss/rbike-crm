@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
 import { api } from '@/lib/api'
@@ -46,92 +46,57 @@ const SAAS_COMPANY_TAGS: Array<{ tag: string; description: string }> = [
   { tag: 'company.city', description: 'Город компании' },
 ]
 
-function htmlToPlainText(html: string) {
-  return html
-    .replace(/<head[\s\S]*?<\/head>/gi, '')
-    .replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<\/?h1[^>]*>/gi, '\n')
-    .replace(/<\/?h2[^>]*>/gi, '\n')
-    .replace(/<\/?h3[^>]*>/gi, '\n')
-    .replace(/<\/?p[^>]*>/gi, '\n')
-    .replace(/<\/?div[^>]*>/gi, '\n')
-    .replace(/<br\s*\/?\s*>/gi, '\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
+function bodyFromHtml(templateHtml: string) {
+  const match = templateHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i)
+  return (match?.[1] || templateHtml || '').trim()
 }
 
-function escapeHtml(text: string) {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-}
-
-function renderParagraphs(text: string) {
-  return text
-    .split(/\n\n+/)
-    .map((x) => x.trim())
-    .filter(Boolean)
-    .map((x) => `<p>${escapeHtml(x).replace(/\n/g, '<br/>')}</p>`)
-    .join('')
-}
-
-function buildTemplateHtml(params: {
-  title: string
-  bodyText: string
-  signerLeft: string
-  signerRight: string
-  fontSize: number
-  lineHeight: number
-  pageMarginMm: number
-}) {
-  const title = escapeHtml(params.title || 'ДОГОВОР АРЕНДЫ ЭЛЕКТРОВЕЛОСИПЕДА')
-  const signerLeft = escapeHtml(params.signerLeft || 'Подпись арендодателя: ____________________')
-  const signerRight = escapeHtml(params.signerRight || 'Подпись арендатора: ______________________')
-
+function buildFullHtml(contentHtml: string, fontSize: number, lineHeight: number, pageMarginMm: number) {
   return `<!doctype html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
 <title>Договор аренды {{contract.number}}</title>
 <style>
-  @page { size: A4; margin: ${params.pageMarginMm}mm; }
-  body { font-family: Arial, sans-serif; margin: 0; color: #111; font-size: ${params.fontSize}px; line-height: ${params.lineHeight}; }
-  h1 { font-size: ${Math.max(params.fontSize + 6, 18)}px; margin: 0 0 14px; text-align: center; }
-  p { margin: 0 0 10px; text-align: justify; }
-  .signatures { margin-top: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @page { size: A4; margin: ${pageMarginMm}mm; }
+  html, body { background: #fff; }
+  body { font-family: Arial, sans-serif; margin: 0; color: #111; font-size: ${fontSize}px; line-height: ${lineHeight}; }
+  h1,h2,h3 { margin: 0 0 12px; }
+  p { margin: 0 0 10px; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 12px; }
+  td, th { border: 1px solid #666; padding: 6px; vertical-align: top; }
 </style>
 </head>
-<body>
-  <h1>${title}</h1>
-  ${renderParagraphs(params.bodyText)}
-  <div class="signatures">
-    <p>${signerLeft}</p>
-    <p>${signerRight}</p>
-  </div>
-</body>
+<body>${contentHtml}</body>
 </html>`
 }
 
+const DEFAULT_EDITOR_HTML = `
+<h1 style="text-align:center;">ДОГОВОР АРЕНДЫ ЭЛЕКТРОВЕЛОСИПЕДА</h1>
+<p>№ {{contract.number}} · дата: {{contract.date}}</p>
+<p><b>Франчайзи:</b> {{franchisee.name}}</p>
+<p><b>Название компании:</b> {{franchisee.companyName}}</p>
+<p><b>Подписант:</b> {{franchisee.signerFullName}}</p>
+<p><b>Арендатор:</b> {{client.fullName}}, телефон: {{client.phone}}</p>
+<p><b>Транспорт:</b> {{bike.code}} ({{bike.model}}), АКБ: {{batteries.numbers}}</p>
+<p><b>Срок аренды:</b> {{rental.startDate}} — {{rental.plannedEndDate}} ({{rental.days}} дн.)</p>
+<p><b>Тариф:</b> {{rental.dailyRateRub}} RUB/сутки. <b>Итого:</b> {{rental.totalRub}} RUB</p>
+<p style="margin-top:24px;">Подпись арендодателя: ____________________</p>
+<p>Подпись арендатора: ______________________</p>
+`.trim()
+
 export default function DocumentsPage() {
   const router = useRouter()
+  const editorRef = useRef<HTMLDivElement | null>(null)
+
   const [tenants, setTenants] = useState<any[]>([])
   const [mode, setMode] = useState<'FRANCHISE' | 'SAAS' | ''>('')
   const [permissions, setPermissions] = useState<Record<string, boolean> | null>(null)
 
-  const [title, setTitle] = useState('ДОГОВОР АРЕНДЫ ЭЛЕКТРОВЕЛОСИПЕДА')
-  const [bodyText, setBodyText] = useState('')
-  const [signerLeft, setSignerLeft] = useState('Подпись арендодателя: ____________________')
-  const [signerRight, setSignerRight] = useState('Подпись арендатора: ______________________')
   const [fontSize, setFontSize] = useState(14)
   const [lineHeight, setLineHeight] = useState(1.45)
   const [pageMarginMm, setPageMarginMm] = useState(16)
+  const [editorHtml, setEditorHtml] = useState(DEFAULT_EDITOR_HTML)
 
   const [updatedAt, setUpdatedAt] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -145,15 +110,36 @@ export default function DocumentsPage() {
     return [...BASE_TAGS.slice(0, 4), ...companyTags, ...BASE_TAGS.slice(4)]
   }, [mode])
 
-  const previewHtml = useMemo(() => buildTemplateHtml({
-    title,
-    bodyText,
-    signerLeft,
-    signerRight,
-    fontSize,
-    lineHeight,
-    pageMarginMm,
-  }), [title, bodyText, signerLeft, signerRight, fontSize, lineHeight, pageMarginMm])
+  const previewHtml = useMemo(() => buildFullHtml(editorHtml, fontSize, lineHeight, pageMarginMm), [editorHtml, fontSize, lineHeight, pageMarginMm])
+
+  function syncFromEditor() {
+    if (!editorRef.current) return
+    setEditorHtml(editorRef.current.innerHTML)
+  }
+
+  function execCommand(cmd: string, value?: string) {
+    editorRef.current?.focus()
+    document.execCommand(cmd, false, value)
+    syncFromEditor()
+  }
+
+  function insertAtCursor(textOrHtml: string, asHtml = false) {
+    editorRef.current?.focus()
+    if (asHtml) {
+      document.execCommand('insertHTML', false, textOrHtml)
+    } else {
+      document.execCommand('insertText', false, textOrHtml)
+    }
+    syncFromEditor()
+  }
+
+  function insertTag(tag: string) {
+    insertAtCursor(`{{${tag}}}`)
+  }
+
+  function insertTable() {
+    insertAtCursor('<table><tr><th>Колонка 1</th><th>Колонка 2</th></tr><tr><td>Текст</td><td>Текст</td></tr></table>', true)
+  }
 
   async function load() {
     setLoading(true)
@@ -168,12 +154,8 @@ export default function DocumentsPage() {
       if (!getTenantId() && myTenants.length > 0) setTenantId(myTenants[0].id)
       setMode((acc?.tenant?.mode as 'FRANCHISE' | 'SAAS') || '')
       setPermissions((acc?.permissions || null) as Record<string, boolean> | null)
-
-      const plain = htmlToPlainText(tpl?.templateHtml || '')
-      const lines = plain.split('\n').map((x) => x.trim()).filter(Boolean)
-      const maybeTitle = lines[0]
-      if (maybeTitle) setTitle(maybeTitle)
-      setBodyText(lines.slice(1).join('\n'))
+      const body = bodyFromHtml(tpl?.templateHtml || '') || DEFAULT_EDITOR_HTML
+      setEditorHtml(body)
       setUpdatedAt(tpl?.updatedAt || null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки шаблона договора')
@@ -188,7 +170,8 @@ export default function DocumentsPage() {
     setError('')
     setSuccess('')
     try {
-      await api.updateContractTemplate(previewHtml)
+      const html = buildFullHtml(editorRef.current?.innerHTML || editorHtml, fontSize, lineHeight, pageMarginMm)
+      await api.updateContractTemplate(html)
       setSuccess('Шаблон договора сохранен')
       await load()
     } catch (err) {
@@ -202,7 +185,6 @@ export default function DocumentsPage() {
     if (!canEdit) return
     const ok = window.confirm('Восстановить шаблон договора по умолчанию для этой точки?')
     if (!ok) return
-
     setSaving(true)
     setError('')
     setSuccess('')
@@ -217,7 +199,7 @@ export default function DocumentsPage() {
     }
   }
 
-  function previewPrint() {
+  function previewInWindow() {
     const w = window.open('', '_blank')
     if (!w) return
     w.document.open()
@@ -225,15 +207,15 @@ export default function DocumentsPage() {
     w.document.close()
   }
 
-  function insertTag(tag: string) {
-    const val = `{{${tag}}}`
-    setBodyText((prev) => `${prev}${prev.endsWith('\n') || prev.length === 0 ? '' : ' '}${val}`)
-  }
-
   useEffect(() => {
     if (!getToken()) return router.replace('/login')
     void load()
   }, [router])
+
+  useEffect(() => {
+    if (!editorRef.current) return
+    if (editorRef.current.innerHTML !== editorHtml) editorRef.current.innerHTML = editorHtml
+  }, [editorHtml])
 
   useEffect(() => {
     if (!error && !success) return
@@ -258,64 +240,55 @@ export default function DocumentsPage() {
       {success && <div className="alert-success">{success}</div>}
 
       <section className="grid gap-3 lg:grid-cols-3">
-        <div className="crm-card lg:col-span-2 space-y-3">
-          <div className="flex flex-wrap gap-2 justify-between items-center">
+        <div className="crm-card lg:col-span-2">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-base font-semibold">Конструктор договора</h3>
             <div className="flex flex-wrap gap-2">
-              <button className="btn" disabled={loading} onClick={previewPrint}>Открыть предпросмотр</button>
+              <button className="btn" onClick={previewInWindow}>Открыть предпросмотр</button>
               <button className="btn" disabled={saving || loading || !canEdit} onClick={resetTemplate}>Восстановить по умолчанию</button>
-              <button className="btn-primary" disabled={saving || loading || !canEdit} onClick={saveTemplate}>
-                {saving ? 'Сохранение…' : 'Сохранить шаблон'}
-              </button>
+              <button className="btn-primary" disabled={saving || loading || !canEdit} onClick={saveTemplate}>{saving ? 'Сохранение…' : 'Сохранить шаблон'}</button>
             </div>
           </div>
 
-          <div className="grid gap-2 md:grid-cols-2">
+          <div className="mb-2 grid grid-cols-3 gap-2">
             <div>
-              <label className="label">Заголовок</label>
-              <input className="input w-full" value={title} onChange={(e) => setTitle(e.target.value)} disabled={!canEdit || loading} />
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              <div>
-                <label className="label">Шрифт, px</label>
-                <input type="number" min={10} max={20} className="input w-full" value={fontSize} onChange={(e) => setFontSize(Number(e.target.value || 14))} disabled={!canEdit || loading} />
-              </div>
-              <div>
-                <label className="label">Интервал</label>
-                <input type="number" min={1.1} max={2} step={0.05} className="input w-full" value={lineHeight} onChange={(e) => setLineHeight(Number(e.target.value || 1.45))} disabled={!canEdit || loading} />
-              </div>
-              <div>
-                <label className="label">Поля, мм</label>
-                <input type="number" min={8} max={30} className="input w-full" value={pageMarginMm} onChange={(e) => setPageMarginMm(Number(e.target.value || 16))} disabled={!canEdit || loading} />
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label className="label">Текст договора</label>
-            <textarea className="input min-h-[360px] w-full text-sm" value={bodyText} onChange={(e) => setBodyText(e.target.value)} disabled={!canEdit || loading} />
-          </div>
-
-          <div className="grid gap-2 md:grid-cols-2">
-            <div>
-              <label className="label">Подпись слева</label>
-              <input className="input w-full" value={signerLeft} onChange={(e) => setSignerLeft(e.target.value)} disabled={!canEdit || loading} />
+              <label className="label">Шрифт, px</label>
+              <input type="number" min={10} max={22} className="input w-full" value={fontSize} onChange={(e) => setFontSize(Number(e.target.value || 14))} />
             </div>
             <div>
-              <label className="label">Подпись справа</label>
-              <input className="input w-full" value={signerRight} onChange={(e) => setSignerRight(e.target.value)} disabled={!canEdit || loading} />
+              <label className="label">Интервал</label>
+              <input type="number" min={1.1} max={2} step={0.05} className="input w-full" value={lineHeight} onChange={(e) => setLineHeight(Number(e.target.value || 1.45))} />
+            </div>
+            <div>
+              <label className="label">Поля, мм</label>
+              <input type="number" min={8} max={30} className="input w-full" value={pageMarginMm} onChange={(e) => setPageMarginMm(Number(e.target.value || 16))} />
             </div>
           </div>
 
-          <div>
-            <label className="label">Предпросмотр печатного вида (A4)</label>
-            <iframe title="print-preview" className="w-full h-[560px] rounded border border-white/10 bg-white" srcDoc={previewHtml} />
+          <div className="mb-2 flex flex-wrap gap-2">
+            <button className="btn" onClick={() => execCommand('bold')}><b>B</b></button>
+            <button className="btn" onClick={() => execCommand('italic')}><i>I</i></button>
+            <button className="btn" onClick={() => execCommand('underline')}><u>U</u></button>
+            <button className="btn" onClick={() => execCommand('insertUnorderedList')}>• Список</button>
+            <button className="btn" onClick={() => execCommand('insertOrderedList')}>1. Список</button>
+            <button className="btn" onClick={insertTable}>Таблица</button>
           </div>
+
+          <div
+            ref={editorRef}
+            className="min-h-[360px] rounded border border-white/10 bg-white p-3 text-black"
+            contentEditable={canEdit && !loading}
+            suppressContentEditableWarning
+            onInput={syncFromEditor}
+          />
+
+          <label className="label mt-3">Предпросмотр печатного вида (A4)</label>
+          <iframe title="print-preview" className="h-[520px] w-full rounded border border-white/10 bg-white" srcDoc={previewHtml} />
         </div>
 
         <div className="crm-card">
           <h3 className="mb-2 text-base font-semibold">Теги и пояснения</h3>
-          <p className="mb-2 text-xs text-gray-400">Нажми на тег, чтобы вставить его в текст договора.</p>
+          <p className="mb-2 text-xs text-gray-400">Тег вставится в текущее место курсора.</p>
           <div className="max-h-[760px] space-y-1 overflow-auto rounded border border-white/10 bg-[#111318] p-2 text-xs">
             {contractTags.map((item) => (
               <button
