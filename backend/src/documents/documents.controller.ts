@@ -352,10 +352,6 @@ export class DocumentsController {
     <div class="row"><b>Итого к оплате:</b> {{rental.totalRub}} RUB</div>
   </div>
 
-  <div class="box">
-    <div class="row">Подпись арендодателя: ____________________</div>
-    <div class="row">Подпись арендатора: ______________________</div>
-  </div>
 </body>
 </html>`
   }

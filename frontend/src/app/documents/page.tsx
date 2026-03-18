@@ -81,8 +81,6 @@ const DEFAULT_EDITOR_HTML = `
 <p><b>Транспорт:</b> {{bike.code}} ({{bike.model}}), АКБ: {{batteries.numbers}}</p>
 <p><b>Срок аренды:</b> {{rental.startDate}} — {{rental.plannedEndDate}} ({{rental.days}} дн.)</p>
 <p><b>Тариф:</b> {{rental.dailyRateRub}} RUB/сутки. <b>Итого:</b> {{rental.totalRub}} RUB</p>
-<p style="margin-top:24px;">Подпись арендодателя: ____________________</p>
-<p>Подпись арендатора: ______________________</p>
 `.trim()
 
 export default function DocumentsPage() {
