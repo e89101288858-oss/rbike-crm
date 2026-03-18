@@ -53,6 +53,7 @@ const franchiseOpsNav: NavGroup[] = [
     title: 'Инструменты',
     items: [
       { href: '/import', label: 'Импорт CSV', roles: ['FRANCHISEE', 'MANAGER'], permission: 'settings' },
+      { href: '/documents', label: 'Документы', roles: ['FRANCHISEE', 'MANAGER'], permission: 'documents' },
       { href: '/settings', label: 'Настройки', roles: ['FRANCHISEE', 'MANAGER'], permission: 'settings' },
     ],
   },
@@ -86,6 +87,7 @@ const saasOpsNav: NavGroup[] = [
     title: 'Инструменты',
     items: [
       { href: '/import', label: 'Импорт CSV', roles: ['SAAS_USER', 'MANAGER'], permission: 'settings' },
+      { href: '/documents', label: 'Документы', roles: ['SAAS_USER', 'MANAGER'], permission: 'documents' },
       { href: '/billing', label: 'Биллинг', roles: ['SAAS_USER'] },
       { href: '/settings', label: 'Настройки', roles: ['SAAS_USER', 'MANAGER'], permission: 'settings' },
     ],
