@@ -67,6 +67,24 @@ export class DocumentsController {
     return { ok: true, ...updated }
   }
 
+  @Post('template/reset')
+  async resetTemplate(@Req() req: Request, @CurrentUser() user: JwtUser) {
+    const tenantId = req.tenantId!
+
+    if (user.role === UserRole.MECHANIC) {
+      throw new BadRequestException('MECHANIC cannot update contract template')
+    }
+
+    const updated = await this.prisma.contractTemplate.upsert({
+      where: { tenantId },
+      create: { tenantId, templateHtml: this.defaultTemplate(), updatedById: user.userId },
+      update: { templateHtml: this.defaultTemplate(), updatedById: user.userId },
+      select: { tenantId: true, updatedAt: true },
+    })
+
+    return { ok: true, ...updated }
+  }
+
   @Post('contracts/:rentalId/generate')
   async generateContract(
     @Req() req: Request,

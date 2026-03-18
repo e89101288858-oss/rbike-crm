@@ -587,6 +587,11 @@ export const api = {
       body: JSON.stringify({ templateHtml }),
     }, true),
 
+  resetContractTemplate: () =>
+    request<any>('/documents/template/reset', {
+      method: 'POST',
+    }, true),
+
   downloadDocument: async (documentId: string) => {
     const token = getToken()
     const tenantId = getTenantId()
