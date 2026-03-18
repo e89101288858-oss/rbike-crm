@@ -399,10 +399,38 @@ export class DocumentsController {
     const custom = path.join(process.cwd(), 'storage', 'contract-templates', `${tenantId}.docx`)
     try {
       await fs.access(custom)
+      if (mode === 'SAAS') {
+        await this.ensureSaasDocxTags(custom)
+      }
       return custom
     } catch {}
 
     return this.getModeDefaultTemplatePath(mode)
+  }
+
+  private async ensureSaasDocxTags(docxPath: string) {
+    const raw = await fs.readFile(docxPath)
+    const zip = new PizZip(raw)
+    const xmlFiles = Object.keys((zip as any).files || {}).filter((k) => k.startsWith('word/') && k.endsWith('.xml'))
+
+    let hasFranchise = false
+    let hasCompany = false
+    for (const f of xmlFiles) {
+      const txt = zip.file(f)?.asText() || ''
+      if (txt.includes('{{franchisee.')) hasFranchise = true
+      if (txt.includes('{{company.')) hasCompany = true
+    }
+
+    if (!hasFranchise || hasCompany) return
+
+    for (const f of xmlFiles) {
+      const txt = zip.file(f)?.asText()
+      if (!txt) continue
+      zip.file(f, this.toSaasTags(txt))
+    }
+
+    const out = zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' })
+    await fs.writeFile(docxPath, out)
   }
 
   private async getModeDefaultTemplatePath(mode?: string) {
