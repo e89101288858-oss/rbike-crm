@@ -606,10 +606,17 @@ export const api = {
     }
 
     const blob = await res.blob()
+    const cd = res.headers.get('content-disposition') || ''
+    const match = cd.match(/filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i)
+    const serverFileName = decodeURIComponent(match?.[1] || match?.[2] || '')
+
+    const fallbackExt = blob.type.includes('html') ? 'html' : 'docx'
+    const downloadName = serverFileName || `contract-${documentId}.${fallbackExt}`
+
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `contract-${documentId}.docx`
+    a.download = downloadName
     document.body.appendChild(a)
     a.click()
     a.remove()
