@@ -592,6 +592,50 @@ export const api = {
       method: 'POST',
     }, true),
 
+  downloadContractTemplateDocx: async () => {
+    const token = getToken()
+    const tenantId = getTenantId()
+    const headers: Record<string, string> = {}
+    if (token) headers.Authorization = `Bearer ${token}`
+    if (tenantId) headers['X-Tenant-Id'] = tenantId
+
+    const res = await fetch(`${API_BASE}/documents/template/docx`, { headers })
+    if (!res.ok) throw new Error(await res.text())
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'contract-template.docx'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  },
+
+  uploadContractTemplateDocx: async (file: File) => {
+    const token = getToken()
+    const tenantId = getTenantId()
+    const headers: Record<string, string> = {}
+    if (token) headers.Authorization = `Bearer ${token}`
+    if (tenantId) headers['X-Tenant-Id'] = tenantId
+
+    const form = new FormData()
+    form.append('file', file)
+
+    const res = await fetch(`${API_BASE}/documents/template/docx`, {
+      method: 'POST',
+      headers,
+      body: form,
+    })
+    if (!res.ok) throw new Error(await res.text())
+    return res.json()
+  },
+
+  resetContractTemplateDocx: () =>
+    request<any>('/documents/template/docx/reset', {
+      method: 'POST',
+    }, true),
+
   downloadDocument: async (documentId: string) => {
     const token = getToken()
     const tenantId = getTenantId()

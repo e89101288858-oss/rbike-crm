@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  UploadedFile,
   NotFoundException,
   Param,
   Patch,
@@ -10,12 +11,15 @@ import {
   Req,
   Res,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common'
 import { DocumentType, UserRole } from '@prisma/client'
 import { promises as fs } from 'fs'
 import * as path from 'path'
 import type { Request, Response } from 'express'
-import HTMLtoDOCX from 'html-to-docx'
+import Docxtemplater from 'docxtemplater'
+import PizZip from 'pizzip'
+import { FileInterceptor } from '@nestjs/platform-express'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
 import type { JwtUser } from '../common/decorators/current-user.decorator'
@@ -84,6 +88,55 @@ export class DocumentsController {
     })
 
     return { ok: true, ...updated }
+  }
+
+  @Get('template/docx')
+  async downloadTemplateDocx(@Req() req: Request, @Res() res: Response) {
+    const tenantId = req.tenantId!
+    const absolute = await this.getTenantTemplatePath(tenantId)
+    return res.download(absolute, `contract-template-${tenantId}.docx`)
+  }
+
+  @Post('template/docx')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadTemplateDocx(@Req() req: Request, @CurrentUser() user: JwtUser, @UploadedFile() file?: any) {
+    const tenantId = req.tenantId!
+
+    if (user.role === UserRole.MECHANIC) {
+      throw new BadRequestException('MECHANIC cannot update contract template')
+    }
+    if (!file?.buffer) {
+      throw new BadRequestException('Файл шаблона не передан')
+    }
+
+    const fileName = String(file.originalname || '').toLowerCase()
+    const contentType = String(file.mimetype || '').toLowerCase()
+    if (!fileName.endsWith('.docx') && !contentType.includes('officedocument.wordprocessingml.document')) {
+      throw new BadRequestException('Нужен файл формата .docx')
+    }
+
+    const dir = path.join(process.cwd(), 'storage', 'contract-templates')
+    await fs.mkdir(dir, { recursive: true })
+    const target = path.join(dir, `${tenantId}.docx`)
+    await fs.writeFile(target, file.buffer)
+
+    return { ok: true }
+  }
+
+  @Post('template/docx/reset')
+  async resetTemplateDocx(@Req() req: Request, @CurrentUser() user: JwtUser) {
+    const tenantId = req.tenantId!
+
+    if (user.role === UserRole.MECHANIC) {
+      throw new BadRequestException('MECHANIC cannot update contract template')
+    }
+
+    const target = path.join(process.cwd(), 'storage', 'contract-templates', `${tenantId}.docx`)
+    try {
+      await fs.unlink(target)
+    } catch {}
+
+    return { ok: true }
   }
 
   @Post('contracts/:rentalId/generate')
@@ -185,36 +238,23 @@ export class DocumentsController {
     const absolute = path.join(baseDir, fileName)
     const relative = path.join('storage', 'documents', tenantId, fileName)
 
-    const existingTemplate = await this.prisma.contractTemplate.findUnique({
-      where: { tenantId },
-      select: { templateHtml: true },
+    const templatePath = await this.getTenantTemplatePath(tenantId)
+    const tplBuffer = await fs.readFile(templatePath)
+    const zip = new PizZip(tplBuffer)
+    const docx = new Docxtemplater(zip, {
+      delimiters: { start: '{{', end: '}}' },
+      paragraphLoop: true,
+      linebreaks: true,
     })
 
-    const templateHtml = existingTemplate?.templateHtml ?? (await this.standardTemplate(req.tenantMode))
-    const renderedHtml = this.applyTemplate(templateHtml, data)
-    const docxSafeHtml = this.prepareHtmlForDocx(renderedHtml)
-
-    let docxBuffer: Buffer | Uint8Array | ArrayBuffer | string
     try {
-      docxBuffer = await HTMLtoDOCX(docxSafeHtml, null, {
-        table: { row: { cantSplit: true } },
-        footer: false,
-        pageNumber: false,
-      })
+      docx.render(data)
     } catch {
-      const stricterHtml = this.prepareHtmlForDocxStrict(docxSafeHtml)
-      try {
-        docxBuffer = await HTMLtoDOCX(stricterHtml, null, {
-          table: { row: { cantSplit: true } },
-          footer: false,
-          pageNumber: false,
-        })
-      } catch {
-        throw new BadRequestException('Ошибка шаблона договора: не удалось собрать DOCX. Упростите последний добавленный блок (обычно таблица/разрыв страницы) и повторите.')
-      }
+      throw new BadRequestException('Ошибка шаблона DOCX: проверьте теги и структуру документа')
     }
 
-    await fs.writeFile(absolute, Buffer.from(docxBuffer as any))
+    const out = docx.getZip().generate({ type: 'nodebuffer', compression: 'DEFLATE' })
+    await fs.writeFile(absolute, out)
 
     const doc = await this.prisma.document.create({
       data: {
@@ -273,6 +313,16 @@ export class DocumentsController {
     const html = await fs.readFile(absolute, 'utf-8')
 
     return { ...doc, html }
+  }
+
+  private async getTenantTemplatePath(tenantId: string) {
+    const custom = path.join(process.cwd(), 'storage', 'contract-templates', `${tenantId}.docx`)
+    try {
+      await fs.access(custom)
+      return custom
+    } catch {}
+
+    return path.join(process.cwd(), 'templates', 'contract-template.docx')
   }
 
   private applyTemplate(template: string, data: Record<string, string>) {
