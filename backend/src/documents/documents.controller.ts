@@ -192,7 +192,7 @@ export class DocumentsController {
 
     const templateHtml = existingTemplate?.templateHtml ?? (await this.standardTemplate(req.tenantMode))
     const renderedHtml = this.applyTemplate(templateHtml, data)
-    const docxSafeHtml = this.prepareHtmlForDocxStrict(this.prepareHtmlForDocx(renderedHtml))
+    const docxSafeHtml = this.prepareHtmlForDocx(renderedHtml)
 
     let docxBuffer: Buffer | Uint8Array | ArrayBuffer | string
     try {
