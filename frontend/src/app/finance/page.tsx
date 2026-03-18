@@ -8,6 +8,22 @@ import { getTenantId, getToken, setTenantId } from '@/lib/auth'
 import { formatDate, formatRub } from '@/lib/format'
 import { CrmActionRow, CrmCard, CrmEmpty, CrmSectionTitle } from '@/components/crm-ui'
 
+
+function localDateKey(value: string | Date) {
+  const d = new Date(value)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function localMonthKey(value: string | Date) {
+  const d = new Date(value)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  return `${y}-${m}`
+}
+
 export default function FinancePage() {
   const router = useRouter()
   const [tenants, setTenants] = useState<any[]>([])
@@ -104,7 +120,7 @@ export default function FinancePage() {
       }
 
       for (const p of payments || []) {
-        const d = String(p.paidAt || '').slice(0, 7)
+        const d = localMonthKey(p.paidAt || '')
         if (!byMonth.has(d)) continue
         const cur = byMonth.get(d)!
         const amount = Number(p.amount || 0)
@@ -113,7 +129,7 @@ export default function FinancePage() {
       }
 
       for (const e of expenses || []) {
-        const d = String(e.spentAt || '').slice(0, 7)
+        const d = localMonthKey(e.spentAt || '')
         if (!byMonth.has(d)) continue
         const cur = byMonth.get(d)!
         cur.expense += Math.abs(Number(e.amountRub || 0))
@@ -127,7 +143,7 @@ export default function FinancePage() {
     const map = new Map<string, { date: string; income: number; expense: number }>()
 
     for (const p of payments || []) {
-      const d = String(p.paidAt || '').slice(0, 10)
+      const d = localDateKey(p.paidAt || '')
       if (!d) continue
       const cur = map.get(d) || { date: d, income: 0, expense: 0 }
       const amount = Number(p.amount || 0)
@@ -137,7 +153,7 @@ export default function FinancePage() {
     }
 
     for (const e of expenses || []) {
-      const d = String(e.spentAt || '').slice(0, 10)
+      const d = localDateKey(e.spentAt || '')
       if (!d) continue
       const cur = map.get(d) || { date: d, income: 0, expense: 0 }
       cur.expense += Math.abs(Number(e.amountRub || 0))
@@ -151,7 +167,7 @@ export default function FinancePage() {
     end.setHours(0, 0, 0, 0)
 
     while (cur <= end) {
-      const key = cur.toISOString().slice(0, 10)
+      const key = localDateKey(cur)
       const day = map.get(key) || { date: key, income: 0, expense: 0 }
       rows.push({ ...day, profit: Math.round((day.income - day.expense) * 100) / 100 })
       cur.setDate(cur.getDate() + 1)
