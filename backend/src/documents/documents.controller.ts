@@ -468,32 +468,6 @@ export class DocumentsController {
     return neutralPath
   }
 
-  private applyTemplate(template: string, data: Record<string, string>) {
-    return template.replace(/\{\{\s*([a-zA-Z0-9._-]+)\s*\}\}/g, (_, key: string) => data[key] ?? '—')
-  }
-
-  private prepareHtmlForDocx(html: string) {
-    return html
-      .replace(/break-before\s*:\s*page\s*;?/gi, 'page-break-before: always;')
-      .replace(/<div\s+class=["']page-break["'][^>]*><\/div>/gi, '<p style="page-break-after: always; margin:0; padding:0; line-height:0;">&nbsp;</p>')
-      .replace(/position\s*:\s*sticky\s*;?/gi, '')
-  }
-
-  private prepareHtmlForDocxStrict(html: string) {
-    return html
-      .replace(/<!--[\s\S]*?-->/g, '')
-      .replace(/<li[^>]*>\s*(<h[1-3][\s\S]*?<\/h[1-3]>)\s*<\/li>/gi, '$1')
-      .replace(/<p[^>]*>\s*&nbsp;\s*<\/p>/gi, '')
-      .replace(/<colgroup[\s\S]*?<\/colgroup>/gi, '')
-      .replace(/\scontenteditable=("[^"]*"|'[^']*')/gi, '')
-      .replace(/\sdata-[a-z0-9_-]+=("[^"]*"|'[^']*')/gi, '')
-      .replace(/<div\s+class=["']page-break["'][^>]*><\/div>/gi, '<p style="page-break-after: always; margin:0; padding:0; line-height:0;">&nbsp;</p>')
-      .replace(/<table([^>]*)>/gi, '<table style="width:100%; border-collapse:collapse; margin:8px 0 12px;">')
-      .replace(/<(td|th)([^>]*)>/gi, '<$1 style="border:1px solid #666; padding:6px; vertical-align:top;">')
-      .replace(/<(td|th)([^>]*)>\s*<\/(td|th)>/gi, (_m, tag) => `<${tag} style="border:1px solid #666; padding:6px; vertical-align:top;">&nbsp;</${tag}>`)
-      .replace(/style=("|')[\s\S]*?(display\s*:\s*grid|display\s*:\s*flex|position\s*:\s*sticky|min-height\s*:|height\s*:|margin-top\s*:\s*\d{2,}px)[\s\S]*?("|')/gi, '')
-  }
-
   private toNeutralTags(templateText: string) {
     return templateText
       .replace(/franchisee\.companyName/g, 'org.legalName')
