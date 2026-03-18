@@ -438,19 +438,17 @@ export class DocumentsController {
     await fs.writeFile(docxPath, out)
   }
 
-  private async getModeDefaultTemplatePath(mode?: string) {
+  private async getModeDefaultTemplatePath(_mode?: string) {
     const base = path.join(process.cwd(), 'templates', 'contract-template.docx')
-    if (mode !== 'SAAS') return base
-
     const dir = path.join(process.cwd(), 'storage', 'contract-templates', '_defaults')
-    const saasPath = path.join(dir, 'saas-template.docx')
+    const neutralPath = path.join(dir, 'neutral-template.docx')
 
     try {
-      const existing = await fs.readFile(saasPath)
+      const existing = await fs.readFile(neutralPath)
       const existingZip = new PizZip(existing)
       const existingXml = existingZip.file('word/document.xml')?.asText() || ''
-      if (existingXml.includes('{{org.') && !existingXml.includes('{{franchisee.') && !existingXml.includes('{{company.')) {
-        return saasPath
+      if (existingXml.includes('org.') && !existingXml.includes('franchisee.') && !existingXml.includes('company.')) {
+        return neutralPath
       }
     } catch {}
 
@@ -465,9 +463,9 @@ export class DocumentsController {
 
     await fs.mkdir(dir, { recursive: true })
     const out = zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' })
-    await fs.writeFile(saasPath, out)
+    await fs.writeFile(neutralPath, out)
 
-    return saasPath
+    return neutralPath
   }
 
   private applyTemplate(template: string, data: Record<string, string>) {
