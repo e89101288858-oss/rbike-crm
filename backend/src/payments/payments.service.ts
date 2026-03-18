@@ -16,6 +16,8 @@ export class PaymentsService {
   async list(tenantId: string, query: ListPaymentsQueryDto) {
     const dueFrom = toDate(query.dueFrom)
     const dueTo = toDate(query.dueTo)
+    const paidFrom = toDate(query.paidFrom)
+    const paidTo = toDate(query.paidTo)
 
     return this.prisma.payment.findMany({
       where: {
@@ -35,6 +37,14 @@ export class PaymentsService {
               dueAt: {
                 ...(dueFrom ? { gte: dueFrom } : {}),
                 ...(dueTo ? { lte: dueTo } : {}),
+              },
+            }
+          : {}),
+        ...(paidFrom || paidTo
+          ? {
+              paidAt: {
+                ...(paidFrom ? { gte: paidFrom } : {}),
+                ...(paidTo ? { lte: paidTo } : {}),
               },
             }
           : {}),

@@ -27,4 +27,12 @@ export class ListPaymentsQueryDto {
   @IsOptional()
   @IsDateString()
   dueTo?: string
+
+  @IsOptional()
+  @IsDateString()
+  paidFrom?: string
+
+  @IsOptional()
+  @IsDateString()
+  paidTo?: string
 }

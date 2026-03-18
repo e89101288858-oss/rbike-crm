@@ -200,6 +200,8 @@ export default function FinancePage() {
 
       const paymentsQ = new URLSearchParams()
       paymentsQ.set('status', 'PAID')
+      paymentsQ.set('paidFrom', periodFrom.toISOString())
+      paymentsQ.set('paidTo', periodTo.toISOString())
 
       const [bikesRes, bikeRes, expensesRes, paymentsRes] = await Promise.all([
         api.bikes(),
@@ -210,14 +212,7 @@ export default function FinancePage() {
       setBikes(bikesRes)
       setByBike(bikeRes.bikes ?? [])
       setExpenses(expensesRes ?? [])
-      const fromMs = periodFrom.getTime()
-      const toMs = periodTo.getTime()
-      const filteredPayments = (paymentsRes ?? []).filter((p: any) => {
-        if (!p?.paidAt) return false
-        const ts = new Date(p.paidAt).getTime()
-        return Number.isFinite(ts) && ts >= fromMs && ts <= toMs
-      })
-      setPayments(filteredPayments)
+      setPayments(paymentsRes ?? [])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки финансов')
     }
@@ -303,7 +298,10 @@ export default function FinancePage() {
             <tbody>
               {daySummaryRows.map((r: any) => (
                 <tr key={r.date}>
-                  <td>{periodMode === 'year' ? new Date(`${r.date}-01`).toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' }) : formatDate(r.date)}</td>
+                  <td>{periodMode === 'year' ? new Date(`${r.date}-01`).toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' }) : (() => {
+                    const [yy, mm, dd] = String(r.date).split('-')
+                    return `${dd}.${mm}.${yy}`
+                  })()}</td>
                   <td className="text-emerald-300">{formatRub(r.income)}</td>
                   <td className="text-rose-300">{formatRub(r.expense)}</td>
                   <td className={r.profit < 0 ? 'text-rose-300' : 'text-emerald-300'}>{formatRub(r.profit)}</td>
