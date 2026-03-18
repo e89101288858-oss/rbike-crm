@@ -41,11 +41,6 @@ export default function FinancePage() {
   }, [periodMode, periodMonth, periodYear])
 
 
-  const revenueTotal = useMemo(() => (payments || []).reduce((sum: number, p: any) => {
-    const amount = Number(p.amount ?? 0)
-    return sum + (amount > 0 ? amount : 0)
-  }, 0), [payments])
-  const royaltyDue = Math.round(revenueTotal * (royaltyPercent / 100) * 100) / 100
 
   const expenseByBike = useMemo(() => {
     const map = new Map<string, number>()
@@ -72,7 +67,6 @@ export default function FinancePage() {
   }, [expenses, bikes])
 
   const totalExpensesRub = Math.round(expenses.reduce((sum: number, e: any) => sum + Number(e.amountRub ?? 0), 0) * 100) / 100
-  const netTotalRub = Math.round((revenueTotal - totalExpensesRub) * 100) / 100
 
   const cashflowRows = useMemo(() => {
     const income = (payments || []).map((p: any) => ({
@@ -172,6 +166,9 @@ export default function FinancePage() {
     const profit = Math.round((income - expense) * 100) / 100
     return { income, expense, profit }
   }, [daySummaryRows])
+
+  const revenueTotal = Math.round(summaryTotals.income * 100) / 100
+  const royaltyDue = Math.round(revenueTotal * (royaltyPercent / 100) * 100) / 100
 
 
   async function load() {
