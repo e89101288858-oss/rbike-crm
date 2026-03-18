@@ -289,6 +289,12 @@ export class DocumentsController {
       'company.bankDetails': rental.tenant.franchisee?.bankDetails ?? '—',
       'company.city': rental.tenant.franchisee?.city ?? '—',
 
+      'org.name': rental.tenant.franchisee?.name ?? rental.tenant.name,
+      'org.legalName': rental.tenant.franchisee?.companyName ?? rental.tenant.name,
+      'org.signerFullName': rental.tenant.franchisee?.signerFullName ?? '—',
+      'org.bankDetails': rental.tenant.franchisee?.bankDetails ?? '—',
+      'org.city': rental.tenant.franchisee?.city ?? '—',
+
       'client.fullName': rental.client.fullName,
       'client.phone': rental.client.phone ?? '—',
       'client.birthDate': rental.client.birthDate ? this.fmt(rental.client.birthDate) : '—',
@@ -399,34 +405,33 @@ export class DocumentsController {
     const custom = path.join(process.cwd(), 'storage', 'contract-templates', `${tenantId}.docx`)
     try {
       await fs.access(custom)
-      if (mode === 'SAAS') {
-        await this.ensureSaasDocxTags(custom)
-      }
+      await this.ensureNeutralDocxTags(custom)
       return custom
     } catch {}
 
     return this.getModeDefaultTemplatePath(mode)
   }
 
-  private async ensureSaasDocxTags(docxPath: string) {
+  private async ensureNeutralDocxTags(docxPath: string) {
     const raw = await fs.readFile(docxPath)
     const zip = new PizZip(raw)
     const xmlFiles = Object.keys((zip as any).files || {}).filter((k) => k.startsWith('word/') && k.endsWith('.xml'))
 
-    let hasFranchise = false
-    let hasCompany = false
+    let needsConvert = false
     for (const f of xmlFiles) {
       const txt = zip.file(f)?.asText() || ''
-      if (txt.includes('{{franchisee.')) hasFranchise = true
-      if (txt.includes('{{company.')) hasCompany = true
+      if (txt.includes('{{franchisee.') || txt.includes('{{company.')) {
+        needsConvert = true
+        break
+      }
     }
 
-    if (!hasFranchise || hasCompany) return
+    if (!needsConvert) return
 
     for (const f of xmlFiles) {
       const txt = zip.file(f)?.asText()
       if (!txt) continue
-      zip.file(f, this.toSaasTags(txt))
+      zip.file(f, this.toNeutralTags(txt))
     }
 
     const out = zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' })
@@ -444,7 +449,7 @@ export class DocumentsController {
       const existing = await fs.readFile(saasPath)
       const existingZip = new PizZip(existing)
       const existingXml = existingZip.file('word/document.xml')?.asText() || ''
-      if (existingXml.includes('{{company.') && !existingXml.includes('{{franchisee.')) {
+      if (existingXml.includes('{{org.') && !existingXml.includes('{{franchisee.') && !existingXml.includes('{{company.')) {
         return saasPath
       }
     } catch {}
@@ -455,7 +460,7 @@ export class DocumentsController {
     for (const f of xmlFiles) {
       const txt = zip.file(f)?.asText()
       if (!txt) continue
-      zip.file(f, this.toSaasTags(txt))
+      zip.file(f, this.toNeutralTags(txt))
     }
 
     await fs.mkdir(dir, { recursive: true })
@@ -491,13 +496,18 @@ export class DocumentsController {
       .replace(/style=("|')[\s\S]*?(display\s*:\s*grid|display\s*:\s*flex|position\s*:\s*sticky|min-height\s*:|height\s*:|margin-top\s*:\s*\d{2,}px)[\s\S]*?("|')/gi, '')
   }
 
-  private toSaasTags(templateHtml: string) {
+  private toNeutralTags(templateHtml: string) {
     return templateHtml
-      .replace(/\{\{\s*franchisee\.name\s*\}\}/g, '{{company.name}}')
-      .replace(/\{\{\s*franchisee\.companyName\s*\}\}/g, '{{company.legalName}}')
-      .replace(/\{\{\s*franchisee\.signerFullName\s*\}\}/g, '{{company.signerFullName}}')
-      .replace(/\{\{\s*franchisee\.bankDetails\s*\}\}/g, '{{company.bankDetails}}')
-      .replace(/\{\{\s*franchisee\.city\s*\}\}/g, '{{company.city}}')
+      .replace(/\{\{\s*franchisee\.name\s*\}\}/g, '{{org.name}}')
+      .replace(/\{\{\s*franchisee\.companyName\s*\}\}/g, '{{org.legalName}}')
+      .replace(/\{\{\s*franchisee\.signerFullName\s*\}\}/g, '{{org.signerFullName}}')
+      .replace(/\{\{\s*franchisee\.bankDetails\s*\}\}/g, '{{org.bankDetails}}')
+      .replace(/\{\{\s*franchisee\.city\s*\}\}/g, '{{org.city}}')
+      .replace(/\{\{\s*company\.name\s*\}\}/g, '{{org.name}}')
+      .replace(/\{\{\s*company\.legalName\s*\}\}/g, '{{org.legalName}}')
+      .replace(/\{\{\s*company\.signerFullName\s*\}\}/g, '{{org.signerFullName}}')
+      .replace(/\{\{\s*company\.bankDetails\s*\}\}/g, '{{org.bankDetails}}')
+      .replace(/\{\{\s*company\.city\s*\}\}/g, '{{org.city}}')
   }
 
   private async standardTemplate(mode?: string) {
@@ -508,7 +518,7 @@ export class DocumentsController {
         select: { templateHtml: true },
       })
       const base = franchiseSeed?.templateHtml ?? this.defaultTemplate()
-      return this.toSaasTags(base)
+      return this.toNeutralTags(base)
     }
     return this.defaultTemplate()
   }

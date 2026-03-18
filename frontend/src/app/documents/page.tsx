@@ -30,20 +30,12 @@ const BASE_TAGS: Array<{ tag: string; description: string }> = [
   { tag: 'rental.totalRub', description: 'Итоговая сумма аренды' },
 ]
 
-const FRANCHISE_TAGS: Array<{ tag: string; description: string }> = [
-  { tag: 'franchisee.name', description: 'Название франчайзи/компании' },
-  { tag: 'franchisee.companyName', description: 'Юридическое название компании' },
-  { tag: 'franchisee.signerFullName', description: 'ФИО подписанта со стороны компании' },
-  { tag: 'franchisee.bankDetails', description: 'Банковские реквизиты' },
-  { tag: 'franchisee.city', description: 'Город компании' },
-]
-
-const SAAS_COMPANY_TAGS: Array<{ tag: string; description: string }> = [
-  { tag: 'company.name', description: 'Название компании арендодателя' },
-  { tag: 'company.legalName', description: 'Юридическое название компании' },
-  { tag: 'company.signerFullName', description: 'ФИО подписанта со стороны компании' },
-  { tag: 'company.bankDetails', description: 'Банковские реквизиты' },
-  { tag: 'company.city', description: 'Город компании' },
+const ORG_TAGS: Array<{ tag: string; description: string }> = [
+  { tag: 'org.name', description: 'Название организации' },
+  { tag: 'org.legalName', description: 'Юридическое название организации' },
+  { tag: 'org.signerFullName', description: 'ФИО подписанта со стороны организации' },
+  { tag: 'org.bankDetails', description: 'Банковские реквизиты' },
+  { tag: 'org.city', description: 'Город организации' },
 ]
 
 export default function DocumentsPage() {
@@ -57,10 +49,7 @@ export default function DocumentsPage() {
   const [success, setSuccess] = useState('')
 
   const canEdit = useMemo(() => permissions?.documents !== false, [permissions])
-  const contractTags = useMemo(() => {
-    const companyTags = mode === 'SAAS' ? SAAS_COMPANY_TAGS : FRANCHISE_TAGS
-    return [...BASE_TAGS.slice(0, 4), ...companyTags, ...BASE_TAGS.slice(4)]
-  }, [mode])
+  const contractTags = useMemo(() => [...BASE_TAGS.slice(0, 4), ...ORG_TAGS, ...BASE_TAGS.slice(4)], [])
 
   useEffect(() => {
     if (!getToken()) return router.replace('/login')
