@@ -116,7 +116,10 @@ export default function PaymentsPage() {
       <div className="mb-3 grid gap-2 md:grid-cols-3">
         <CrmStat label="Всего записей" value={sortedItems.length} />
         <CrmStat label="Текущий статус" value="Оплаченные" />
-        <CrmStat label="Сумма за месяц" value={formatRub(sortedItems.reduce((acc, it) => acc + Number(it.amount || 0), 0))} />
+        <CrmStat label="Получено за месяц" value={formatRub(sortedItems.reduce((acc, it) => {
+          const amount = Number(it.amount || 0)
+          return acc + (amount > 0 ? amount : 0)
+        }, 0))} />
       </div>
 
       {error && <p className="alert">{error}</p>}
