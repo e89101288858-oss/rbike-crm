@@ -166,6 +166,15 @@ export default function DocumentsPage() {
     }
   }
 
+  function previewTemplate() {
+    const html = editorMode === 'simple' ? plainTextToHtml(plainTemplate) : templateHtml
+    const w = window.open('', '_blank')
+    if (!w) return
+    w.document.open()
+    w.document.write(html || '<html><body><p>Пустой шаблон</p></body></html>')
+    w.document.close()
+  }
+
   function insertTag(tag: string) {
     const val = `{{${tag}}}`
     if (editorMode === 'simple') {
@@ -196,7 +205,7 @@ export default function DocumentsPage() {
       <section className="crm-card mb-3">
         <h2 className="text-lg font-semibold">Документы</h2>
         <p className="mt-1 text-sm text-gray-400">
-          Редактор шаблона договора аренды для текущей точки. Изменения применяются только в этой точке.
+          Редактор шаблона договора аренды
         </p>
         {mode === 'SAAS' && <p className="mt-1 text-xs text-orange-300">Режим подписки: доступно редактирование шаблона договора.</p>}
         {updatedAt && <p className="mt-1 text-xs text-gray-500">Последнее обновление: {new Date(updatedAt).toLocaleString('ru-RU')}</p>}
@@ -214,6 +223,7 @@ export default function DocumentsPage() {
                 <option value="simple">Понятный редактор</option>
                 <option value="html">HTML-редактор</option>
               </select>
+              <button className="btn" disabled={loading} onClick={previewTemplate}>Предпросмотр</button>
               <button className="btn" disabled={saving || loading || !canEdit} onClick={() => setPlainTemplate((prev) => sanitizePlainTemplate(prev))}>Очистить код</button>
               <button className="btn" disabled={saving || loading || !canEdit} onClick={resetTemplate}>Восстановить по умолчанию</button>
               <button className="btn-primary" disabled={saving || loading || !canEdit} onClick={saveTemplate}>
