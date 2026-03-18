@@ -65,6 +65,7 @@ function buildFullHtml(contentHtml: string, fontSize: number, lineHeight: number
   p { margin: 0 0 10px; }
   table { width: 100%; border-collapse: collapse; margin: 8px 0 12px; }
   td, th { border: 1px solid #666; padding: 6px; vertical-align: top; }
+  .page-break { page-break-before: always; break-before: page; border-top: 2px dashed #999; margin: 16px 0; height: 0; }
 </style>
 </head>
 <body>${contentHtml}</body>
@@ -190,6 +191,11 @@ export default function DocumentsPage() {
       </table>
     `
     insertAtCursor(html, true)
+  }
+
+
+  function insertPageBreak() {
+    insertAtCursor('<div class="page-break"></div><p></p>', true)
   }
 
 
@@ -395,6 +401,7 @@ export default function DocumentsPage() {
             <button className="btn" onClick={addColRight}>+ столбец</button>
             <button className="btn" onClick={deleteRow}>− строка</button>
             <button className="btn" onClick={deleteCol}>− столбец</button>
+            <button className="btn" onClick={insertPageBreak}>Разрыв страницы</button>
             <button className="btn" onClick={insertTwoColumns}>2 колонки</button>
           </div>
 
