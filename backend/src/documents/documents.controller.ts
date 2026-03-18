@@ -269,18 +269,7 @@ export class DocumentsController {
     return new Date(d).toLocaleDateString('ru-RU')
   }
 
-  private defaultTemplate(mode?: string) {
-    const isSaas = mode === 'SAAS'
-    const companyTitle = isSaas ? 'Арендодатель' : 'Франчайзи'
-    const signerTitle = isSaas ? 'Подписант со стороны арендодателя' : 'Подписант со стороны франчайзи'
-    const cityTitle = isSaas ? 'Город арендодателя' : 'Город франчайзи'
-
-    const companyNameTag = isSaas ? '{{company.name}}' : '{{franchisee.name}}'
-    const companyLegalTag = isSaas ? '{{company.legalName}}' : '{{franchisee.companyName}}'
-    const companySignerTag = isSaas ? '{{company.signerFullName}}' : '{{franchisee.signerFullName}}'
-    const companyBankTag = isSaas ? '{{company.bankDetails}}' : '{{franchisee.bankDetails}}'
-    const companyCityTag = isSaas ? '{{company.city}}' : '{{franchisee.city}}'
-
+  private defaultTemplate(_mode?: string) {
     return `<!doctype html>
 <html lang="ru">
 <head>
@@ -299,11 +288,11 @@ export class DocumentsController {
   <div class="muted">№ {{contract.number}} · дата: {{contract.date}}</div>
 
   <div class="box">
-    <div class="row"><b>${companyTitle}:</b> ${companyNameTag}</div>
-    <div class="row"><b>Название компании:</b> ${companyLegalTag}</div>
-    <div class="row"><b>${signerTitle}:</b> ${companySignerTag}</div>
-    <div class="row"><b>Банковские реквизиты:</b> ${companyBankTag}</div>
-    <div class="row"><b>${cityTitle}:</b> ${companyCityTag}</div>
+    <div class="row"><b>Франчайзи:</b> {{franchisee.name}}</div>
+    <div class="row"><b>Название компании:</b> {{franchisee.companyName}}</div>
+    <div class="row"><b>Подписант со стороны франчайзи:</b> {{franchisee.signerFullName}}</div>
+    <div class="row"><b>Банковские реквизиты:</b> {{franchisee.bankDetails}}</div>
+    <div class="row"><b>Город франчайзи:</b> {{franchisee.city}}</div>
     <div class="row"><b>Точка выдачи:</b> {{tenant.name}}</div>
     <div class="row"><b>Адрес возврата электровелосипеда:</b> {{tenant.address}}</div>
   </div>
