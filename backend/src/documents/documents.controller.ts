@@ -204,13 +204,25 @@ export class DocumentsController {
       return current
     })() ?? (await this.standardTemplate(req.tenantMode))
     const renderedHtml = this.applyTemplate(templateHtml, data)
-    const docxBuffer = await HTMLtoDOCX(renderedHtml, null, {
-      table: { row: { cantSplit: true } },
-      footer: false,
-      pageNumber: false,
-    })
+    const docxSafeHtml = this.prepareHtmlForDocx(renderedHtml)
 
-    await fs.writeFile(absolute, Buffer.from(docxBuffer))
+    let docxBuffer: Buffer | Uint8Array | ArrayBuffer | string
+    try {
+      docxBuffer = await HTMLtoDOCX(docxSafeHtml, null, {
+        table: { row: { cantSplit: true } },
+        footer: false,
+        pageNumber: false,
+      })
+    } catch {
+      const fallbackHtml = this.prepareHtmlForDocx(this.defaultTemplate())
+      docxBuffer = await HTMLtoDOCX(fallbackHtml, null, {
+        table: { row: { cantSplit: true } },
+        footer: false,
+        pageNumber: false,
+      })
+    }
+
+    await fs.writeFile(absolute, Buffer.from(docxBuffer as any))
 
     const doc = await this.prisma.document.create({
       data: {
@@ -277,6 +289,13 @@ export class DocumentsController {
 
   private isOldSaasDefaultTemplate(templateHtml: string) {
     return /(Арендодатель:|Подписант со стороны арендодателя|Город арендодателя)/i.test(templateHtml)
+  }
+
+  private prepareHtmlForDocx(html: string) {
+    return html
+      .replace(/break-before\s*:\s*page\s*;?/gi, 'page-break-before: always;')
+      .replace(/<div\s+class=["']page-break["'][^>]*><\/div>/gi, '<p style="page-break-before: always;">&nbsp;</p>')
+      .replace(/position\s*:\s*sticky\s*;?/gi, '')
   }
 
   private toSaasTags(templateHtml: string) {
