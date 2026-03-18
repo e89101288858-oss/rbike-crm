@@ -156,6 +156,53 @@ export class DocumentsController {
     return { ok: true }
   }
 
+  @Post('template/docx/chunk')
+  async uploadTemplateDocxChunk(
+    @Req() req: Request,
+    @CurrentUser() user: JwtUser,
+    @Body() body: { filename?: string; chunkBase64?: string; chunkIndex?: number; totalChunks?: number },
+  ) {
+    const tenantId = req.tenantId!
+
+    if (user.role === UserRole.MECHANIC) {
+      throw new BadRequestException('MECHANIC cannot update contract template')
+    }
+
+    const filename = String(body?.filename || '').toLowerCase()
+    const chunkBase64 = String(body?.chunkBase64 || '')
+    const chunkIndex = Number(body?.chunkIndex ?? -1)
+    const totalChunks = Number(body?.totalChunks ?? 0)
+
+    if (!filename.endsWith('.docx') || !chunkBase64 || chunkIndex < 0 || totalChunks <= 0) {
+      throw new BadRequestException('Некорректные параметры загрузки')
+    }
+
+    const dir = path.join(process.cwd(), 'storage', 'contract-templates')
+    await fs.mkdir(dir, { recursive: true })
+
+    const tmpPath = path.join(dir, `${tenantId}.upload.tmp`)
+    const target = path.join(dir, `${tenantId}.docx`)
+
+    if (chunkIndex === 0) {
+      try { await fs.unlink(tmpPath) } catch {}
+    }
+
+    let buf: Buffer
+    try {
+      buf = Buffer.from(chunkBase64, 'base64')
+    } catch {
+      throw new BadRequestException('Некорректный base64 блока')
+    }
+
+    await fs.appendFile(tmpPath, buf)
+
+    if (chunkIndex === totalChunks - 1) {
+      await fs.rename(tmpPath, target)
+    }
+
+    return { ok: true, done: chunkIndex === totalChunks - 1 }
+  }
+
   @Post('template/docx/reset')
   async resetTemplateDocx(@Req() req: Request, @CurrentUser() user: JwtUser) {
     const tenantId = req.tenantId!

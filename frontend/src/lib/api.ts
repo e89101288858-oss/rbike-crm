@@ -613,7 +613,10 @@ export const api = {
   },
 
   uploadContractTemplateDocx: async (file: File) => {
-    const toBase64 = (f: File) =>
+    const chunkSize = 256 * 1024
+    const totalChunks = Math.ceil(file.size / chunkSize)
+
+    const blobToBase64 = (blob: Blob) =>
       new Promise<string>((resolve, reject) => {
         const reader = new FileReader()
         reader.onload = () => {
@@ -622,14 +625,27 @@ export const api = {
           resolve(b64)
         }
         reader.onerror = () => reject(new Error('Ошибка чтения файла'))
-        reader.readAsDataURL(f)
+        reader.readAsDataURL(blob)
       })
 
-    const dataBase64 = await toBase64(file)
-    return request<any>('/documents/template/docx/json', {
-      method: 'POST',
-      body: JSON.stringify({ filename: file.name, dataBase64 }),
-    }, true)
+    for (let i = 0; i < totalChunks; i++) {
+      const start = i * chunkSize
+      const end = Math.min(file.size, start + chunkSize)
+      const chunk = file.slice(start, end)
+      const chunkBase64 = await blobToBase64(chunk)
+
+      await request<any>('/documents/template/docx/chunk', {
+        method: 'POST',
+        body: JSON.stringify({
+          filename: file.name,
+          chunkBase64,
+          chunkIndex: i,
+          totalChunks,
+        }),
+      }, true)
+    }
+
+    return { ok: true }
   },
 
   resetContractTemplateDocx: () =>
