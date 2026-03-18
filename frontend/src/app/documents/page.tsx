@@ -55,6 +55,7 @@ function htmlToPlainText(html: string) {
     .replace(/<\/?h2[^>]*>/gi, '\n')
     .replace(/<\/?h3[^>]*>/gi, '\n')
     .replace(/<\/?p[^>]*>/gi, '\n')
+    .replace(/<\/?div[^>]*>/gi, '\n')
     .replace(/<br\s*\/?\s*>/gi, '\n')
     .replace(/<[^>]+>/g, '')
     .replace(/&nbsp;/g, ' ')
@@ -65,41 +66,57 @@ function htmlToPlainText(html: string) {
     .trim()
 }
 
-
-function sanitizePlainTemplate(text: string) {
+function escapeHtml(text: string) {
   return text
-    .split('\n')
-    .filter((line) => {
-      const v = line.trim()
-      if (!v) return true
-      if (/^(@page|@media|body\{|html\{|h1\{|h2\{|h3\{|p\{|\.\w+\{|#\w+\{|\*\{|\})/i.test(v)) return false
-      if (/[{};]/.test(v) && !/\{\{[^}]+\}\}/.test(v) && !/[А-Яа-яA-Za-z0-9]/.test(v.replace(/[{}:;,#.\-]/g, ''))) return false
-      if (/^(font-|line-height|margin|padding|display|color|background|text-|align-items|justify-content|gap|max-width|min-height|border|position)/i.test(v)) return false
-      return true
-    })
-    .join('\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
-}
-
-function plainTextToHtml(text: string) {
-  const escaped = text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
+}
 
-  const blocks = escaped
+function renderParagraphs(text: string) {
+  return text
     .split(/\n\n+/)
-    .map((b) => b.trim())
+    .map((x) => x.trim())
     .filter(Boolean)
+    .map((x) => `<p>${escapeHtml(x).replace(/\n/g, '<br/>')}</p>`)
+    .join('')
+}
 
-  const htmlBlocks = blocks.map((b, idx) => {
-    const withBreaks = b.replace(/\n/g, '<br/>')
-    if (idx === 0) return `<h1>${withBreaks}</h1>`
-    return `<p>${withBreaks}</p>`
-  })
+function buildTemplateHtml(params: {
+  title: string
+  bodyText: string
+  signerLeft: string
+  signerRight: string
+  fontSize: number
+  lineHeight: number
+  pageMarginMm: number
+}) {
+  const title = escapeHtml(params.title || 'ДОГОВОР АРЕНДЫ ЭЛЕКТРОВЕЛОСИПЕДА')
+  const signerLeft = escapeHtml(params.signerLeft || 'Подпись арендодателя: ____________________')
+  const signerRight = escapeHtml(params.signerRight || 'Подпись арендатора: ______________________')
 
-  return `<!doctype html><html lang="ru"><head><meta charset="UTF-8" /><title>Договор</title></head><body>${htmlBlocks.join('')}<\/body><\/html>`
+  return `<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<title>Договор аренды {{contract.number}}</title>
+<style>
+  @page { size: A4; margin: ${params.pageMarginMm}mm; }
+  body { font-family: Arial, sans-serif; margin: 0; color: #111; font-size: ${params.fontSize}px; line-height: ${params.lineHeight}; }
+  h1 { font-size: ${Math.max(params.fontSize + 6, 18)}px; margin: 0 0 14px; text-align: center; }
+  p { margin: 0 0 10px; text-align: justify; }
+  .signatures { margin-top: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+</style>
+</head>
+<body>
+  <h1>${title}</h1>
+  ${renderParagraphs(params.bodyText)}
+  <div class="signatures">
+    <p>${signerLeft}</p>
+    <p>${signerRight}</p>
+  </div>
+</body>
+</html>`
 }
 
 export default function DocumentsPage() {
@@ -107,9 +124,15 @@ export default function DocumentsPage() {
   const [tenants, setTenants] = useState<any[]>([])
   const [mode, setMode] = useState<'FRANCHISE' | 'SAAS' | ''>('')
   const [permissions, setPermissions] = useState<Record<string, boolean> | null>(null)
-  const [templateHtml, setTemplateHtml] = useState('')
-  const [plainTemplate, setPlainTemplate] = useState('')
-  const [editorMode, setEditorMode] = useState<'simple' | 'html'>('simple')
+
+  const [title, setTitle] = useState('ДОГОВОР АРЕНДЫ ЭЛЕКТРОВЕЛОСИПЕДА')
+  const [bodyText, setBodyText] = useState('')
+  const [signerLeft, setSignerLeft] = useState('Подпись арендодателя: ____________________')
+  const [signerRight, setSignerRight] = useState('Подпись арендатора: ______________________')
+  const [fontSize, setFontSize] = useState(14)
+  const [lineHeight, setLineHeight] = useState(1.45)
+  const [pageMarginMm, setPageMarginMm] = useState(16)
+
   const [updatedAt, setUpdatedAt] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -121,6 +144,16 @@ export default function DocumentsPage() {
     const companyTags = mode === 'SAAS' ? SAAS_COMPANY_TAGS : FRANCHISE_TAGS
     return [...BASE_TAGS.slice(0, 4), ...companyTags, ...BASE_TAGS.slice(4)]
   }, [mode])
+
+  const previewHtml = useMemo(() => buildTemplateHtml({
+    title,
+    bodyText,
+    signerLeft,
+    signerRight,
+    fontSize,
+    lineHeight,
+    pageMarginMm,
+  }), [title, bodyText, signerLeft, signerRight, fontSize, lineHeight, pageMarginMm])
 
   async function load() {
     setLoading(true)
@@ -135,8 +168,12 @@ export default function DocumentsPage() {
       if (!getTenantId() && myTenants.length > 0) setTenantId(myTenants[0].id)
       setMode((acc?.tenant?.mode as 'FRANCHISE' | 'SAAS') || '')
       setPermissions((acc?.permissions || null) as Record<string, boolean> | null)
-      setTemplateHtml(tpl?.templateHtml || '')
-      setPlainTemplate(sanitizePlainTemplate(htmlToPlainText(tpl?.templateHtml || '')))
+
+      const plain = htmlToPlainText(tpl?.templateHtml || '')
+      const lines = plain.split('\n').map((x) => x.trim()).filter(Boolean)
+      const maybeTitle = lines[0]
+      if (maybeTitle) setTitle(maybeTitle)
+      setBodyText(lines.slice(1).join('\n'))
       setUpdatedAt(tpl?.updatedAt || null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки шаблона договора')
@@ -151,8 +188,7 @@ export default function DocumentsPage() {
     setError('')
     setSuccess('')
     try {
-      const htmlToSave = editorMode === 'simple' ? plainTextToHtml(plainTemplate) : templateHtml
-      await api.updateContractTemplate(htmlToSave)
+      await api.updateContractTemplate(previewHtml)
       setSuccess('Шаблон договора сохранен')
       await load()
     } catch (err) {
@@ -181,76 +217,17 @@ export default function DocumentsPage() {
     }
   }
 
-  function previewTemplate() {
-    const sourceHtml = editorMode === 'simple' ? plainTextToHtml(plainTemplate) : templateHtml
-    const bodyMatch = sourceHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i)
-    const contentHtml = bodyMatch?.[1] || sourceHtml
-    const styleBlocks = (sourceHtml.match(/<style[\s\S]*?<\/style>/gi) || []).join('\n')
-
+  function previewPrint() {
     const w = window.open('', '_blank')
     if (!w) return
-
-    const printShell = `<!doctype html>
-<html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Предпросмотр печати договора</title>
-    <style>
-      @page { size: A4; margin: 16mm; }
-      html, body { background: #fff; margin: 0; padding: 0; }
-      .print-toolbar {
-        position: sticky;
-        top: 0;
-        display: flex;
-        gap: 8px;
-        padding: 10px 12px;
-        background: #f3f4f6;
-        border-bottom: 1px solid #e5e7eb;
-        z-index: 10;
-      }
-      .print-toolbar button {
-        border: 1px solid #d1d5db;
-        background: #fff;
-        border-radius: 8px;
-        padding: 6px 10px;
-        cursor: pointer;
-      }
-      .print-page {
-        max-width: 210mm;
-        min-height: 297mm;
-        margin: 0 auto;
-        padding: 16mm;
-        box-sizing: border-box;
-        background: #fff;
-      }
-      @media print {
-        .print-toolbar { display: none !important; }
-        .print-page { max-width: none; min-height: auto; margin: 0; padding: 0; }
-      }
-    </style>
-    ${styleBlocks}
-  </head>
-  <body>
-    <div class="print-toolbar">
-      <button onclick="window.print()">Печать</button>
-      <button onclick="window.close()">Закрыть</button>
-    </div>
-    <div class="print-page">${contentHtml || '<p>Пустой шаблон</p>'}</div>
-  </body>
-</html>`
-
     w.document.open()
-    w.document.write(printShell)
+    w.document.write(previewHtml)
     w.document.close()
   }
 
   function insertTag(tag: string) {
     const val = `{{${tag}}}`
-    if (editorMode === 'simple') {
-      setPlainTemplate((prev) => `${prev}${prev.endsWith('\n') || prev.length === 0 ? '' : ' '}${val}`)
-    } else {
-      setTemplateHtml((prev) => `${prev}${prev.endsWith('\n') || prev.length === 0 ? '' : ' '}${val}`)
-    }
+    setBodyText((prev) => `${prev}${prev.endsWith('\n') || prev.length === 0 ? '' : ' '}${val}`)
   }
 
   useEffect(() => {
@@ -273,10 +250,7 @@ export default function DocumentsPage() {
 
       <section className="crm-card mb-3">
         <h2 className="text-lg font-semibold">Документы</h2>
-        <p className="mt-1 text-sm text-gray-400">
-          Редактор шаблона договора аренды
-        </p>
-        {mode === 'SAAS' && <p className="mt-1 text-xs text-orange-300">Режим подписки: доступно редактирование шаблона договора.</p>}
+        <p className="mt-1 text-sm text-gray-400">Визуальный редактор шаблона договора аренды</p>
         {updatedAt && <p className="mt-1 text-xs text-gray-500">Последнее обновление: {new Date(updatedAt).toLocaleString('ru-RU')}</p>}
       </section>
 
@@ -284,16 +258,11 @@ export default function DocumentsPage() {
       {success && <div className="alert-success">{success}</div>}
 
       <section className="grid gap-3 lg:grid-cols-3">
-        <div className="crm-card lg:col-span-2">
-          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-base font-semibold">Шаблон договора</h3>
+        <div className="crm-card lg:col-span-2 space-y-3">
+          <div className="flex flex-wrap gap-2 justify-between items-center">
+            <h3 className="text-base font-semibold">Конструктор договора</h3>
             <div className="flex flex-wrap gap-2">
-              <select className="select" value={editorMode} onChange={(e) => setEditorMode(e.target.value as 'simple' | 'html')}>
-                <option value="simple">Понятный редактор</option>
-                <option value="html">HTML-редактор</option>
-              </select>
-              <button className="btn" disabled={loading} onClick={previewTemplate}>Предпросмотр</button>
-              <button className="btn" disabled={saving || loading || !canEdit} onClick={() => setPlainTemplate((prev) => sanitizePlainTemplate(prev))}>Очистить код</button>
+              <button className="btn" disabled={loading} onClick={previewPrint}>Открыть предпросмотр</button>
               <button className="btn" disabled={saving || loading || !canEdit} onClick={resetTemplate}>Восстановить по умолчанию</button>
               <button className="btn-primary" disabled={saving || loading || !canEdit} onClick={saveTemplate}>
                 {saving ? 'Сохранение…' : 'Сохранить шаблон'}
@@ -301,36 +270,53 @@ export default function DocumentsPage() {
             </div>
           </div>
 
-          {editorMode === 'simple' ? (
-            <>
-              <p className="mb-2 text-xs text-gray-400">
-                Пиши обычный текст договора. Теги вида <code>{'{{client.fullName}}'}</code> можно вставлять кнопками справа.
-              </p>
-              <textarea
-                className="input min-h-[540px] w-full text-sm"
-                value={plainTemplate}
-                onChange={(e) => setPlainTemplate(e.target.value)}
-                placeholder="Введите текст договора"
-                disabled={!canEdit || loading}
-              />
-            </>
-          ) : (
-            <textarea
-              className="input min-h-[540px] w-full font-mono text-xs"
-              value={templateHtml}
-              onChange={(e) => setTemplateHtml(e.target.value)}
-              placeholder="Вставьте HTML шаблон договора"
-              disabled={!canEdit || loading}
-            />
-          )}
+          <div className="grid gap-2 md:grid-cols-2">
+            <div>
+              <label className="label">Заголовок</label>
+              <input className="input w-full" value={title} onChange={(e) => setTitle(e.target.value)} disabled={!canEdit || loading} />
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <label className="label">Шрифт, px</label>
+                <input type="number" min={10} max={20} className="input w-full" value={fontSize} onChange={(e) => setFontSize(Number(e.target.value || 14))} disabled={!canEdit || loading} />
+              </div>
+              <div>
+                <label className="label">Интервал</label>
+                <input type="number" min={1.1} max={2} step={0.05} className="input w-full" value={lineHeight} onChange={(e) => setLineHeight(Number(e.target.value || 1.45))} disabled={!canEdit || loading} />
+              </div>
+              <div>
+                <label className="label">Поля, мм</label>
+                <input type="number" min={8} max={30} className="input w-full" value={pageMarginMm} onChange={(e) => setPageMarginMm(Number(e.target.value || 16))} disabled={!canEdit || loading} />
+              </div>
+            </div>
+          </div>
 
-          {!canEdit && <p className="mt-2 text-xs text-red-300">У вас нет права documents для редактирования шаблона.</p>}
+          <div>
+            <label className="label">Текст договора</label>
+            <textarea className="input min-h-[360px] w-full text-sm" value={bodyText} onChange={(e) => setBodyText(e.target.value)} disabled={!canEdit || loading} />
+          </div>
+
+          <div className="grid gap-2 md:grid-cols-2">
+            <div>
+              <label className="label">Подпись слева</label>
+              <input className="input w-full" value={signerLeft} onChange={(e) => setSignerLeft(e.target.value)} disabled={!canEdit || loading} />
+            </div>
+            <div>
+              <label className="label">Подпись справа</label>
+              <input className="input w-full" value={signerRight} onChange={(e) => setSignerRight(e.target.value)} disabled={!canEdit || loading} />
+            </div>
+          </div>
+
+          <div>
+            <label className="label">Предпросмотр печатного вида (A4)</label>
+            <iframe title="print-preview" className="w-full h-[560px] rounded border border-white/10 bg-white" srcDoc={previewHtml} />
+          </div>
         </div>
 
         <div className="crm-card">
           <h3 className="mb-2 text-base font-semibold">Теги и пояснения</h3>
-          <p className="mb-2 text-xs text-gray-400">Нажми на тег, чтобы вставить его в шаблон.</p>
-          <div className="max-h-[560px] space-y-1 overflow-auto rounded border border-white/10 bg-[#111318] p-2 text-xs">
+          <p className="mb-2 text-xs text-gray-400">Нажми на тег, чтобы вставить его в текст договора.</p>
+          <div className="max-h-[760px] space-y-1 overflow-auto rounded border border-white/10 bg-[#111318] p-2 text-xs">
             {contractTags.map((item) => (
               <button
                 type="button"
