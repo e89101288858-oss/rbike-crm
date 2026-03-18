@@ -164,6 +164,34 @@ export default function DocumentsPage() {
     insertAtCursor('<table><tr><th>Колонка 1</th><th>Колонка 2</th><th>Колонка 3</th></tr><tr><td>Текст</td><td>Текст</td><td>Текст</td></tr><tr><td>Текст</td><td>Текст</td><td>Текст</td></tr></table>', true)
   }
 
+
+  function insertCustomTable() {
+    const rowsRaw = window.prompt('Сколько строк добавить?', '3')
+    const colsRaw = window.prompt('Сколько столбцов добавить?', '3')
+    const rows = Math.min(20, Math.max(1, Number(rowsRaw || 0)))
+    const cols = Math.min(10, Math.max(1, Number(colsRaw || 0)))
+    if (!rows || !cols || Number.isNaN(rows) || Number.isNaN(cols)) return
+
+    const header = `<tr>${Array.from({ length: cols }).map((_, i) => `<th>Колонка ${i + 1}</th>`).join('')}</tr>`
+    const body = Array.from({ length: Math.max(0, rows - 1) })
+      .map(() => `<tr>${Array.from({ length: cols }).map(() => '<td>Текст</td>').join('')}</tr>`)
+      .join('')
+
+    insertAtCursor(`<table>${header}${body}</table>`, true)
+  }
+
+  function insertTwoColumns() {
+    const html = `
+      <table style="width:100%; border:none;">
+        <tr>
+          <td style="width:50%; border:none; vertical-align:top; padding-right:10px;">Левая колонка</td>
+          <td style="width:50%; border:none; vertical-align:top; padding-left:10px;">Правая колонка</td>
+        </tr>
+      </table>
+    `
+    insertAtCursor(html, true)
+  }
+
   async function load() {
     setLoading(true)
     setError('')
@@ -300,6 +328,8 @@ export default function DocumentsPage() {
             <button className="btn" onClick={() => execCommand('justifyFull')}>≡</button>
             <button className="btn" onClick={insertTable}>Таблица 2×2</button>
             <button className="btn" onClick={insertTable3x3}>Таблица 3×3</button>
+            <button className="btn" onClick={insertCustomTable}>Таблица N×M</button>
+            <button className="btn" onClick={insertTwoColumns}>2 колонки</button>
           </div>
 
           <div
