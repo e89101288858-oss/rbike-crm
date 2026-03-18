@@ -157,11 +157,11 @@ export default function DocumentsPage() {
   }
 
   function insertTable() {
-    insertAtCursor('<table><tr><th>Колонка 1</th><th>Колонка 2</th></tr><tr><td>Текст</td><td>Текст</td></tr></table>', true)
+    insertAtCursor('<table style="width:100%; border-collapse:collapse; margin:8px 0 12px;"><tr><th style="border:1px solid #666; padding:6px;">Колонка 1</th><th style="border:1px solid #666; padding:6px;">Колонка 2</th></tr><tr><td style="border:1px solid #666; padding:6px;">Текст</td><td style="border:1px solid #666; padding:6px;">Текст</td></tr></table>', true)
   }
 
   function insertTable3x3() {
-    insertAtCursor('<table><tr><th>Колонка 1</th><th>Колонка 2</th><th>Колонка 3</th></tr><tr><td>Текст</td><td>Текст</td><td>Текст</td></tr><tr><td>Текст</td><td>Текст</td><td>Текст</td></tr></table>', true)
+    insertAtCursor('<table style="width:100%; border-collapse:collapse; margin:8px 0 12px;"><tr><th style="border:1px solid #666; padding:6px;">Колонка 1</th><th style="border:1px solid #666; padding:6px;">Колонка 2</th><th style="border:1px solid #666; padding:6px;">Колонка 3</th></tr><tr><td style="border:1px solid #666; padding:6px;">Текст</td><td style="border:1px solid #666; padding:6px;">Текст</td><td style="border:1px solid #666; padding:6px;">Текст</td></tr><tr><td style="border:1px solid #666; padding:6px;">Текст</td><td style="border:1px solid #666; padding:6px;">Текст</td><td style="border:1px solid #666; padding:6px;">Текст</td></tr></table>', true)
   }
 
 
@@ -172,12 +172,12 @@ export default function DocumentsPage() {
     const cols = Math.min(10, Math.max(1, Number(colsRaw || 0)))
     if (!rows || !cols || Number.isNaN(rows) || Number.isNaN(cols)) return
 
-    const header = `<tr>${Array.from({ length: cols }).map((_, i) => `<th>Колонка ${i + 1}</th>`).join('')}</tr>`
+    const header = `<tr>${Array.from({ length: cols }).map((_, i) => `<th style=\"border:1px solid #666; padding:6px;\">Колонка ${i + 1}</th>`).join('')}</tr>`
     const body = Array.from({ length: Math.max(0, rows - 1) })
-      .map(() => `<tr>${Array.from({ length: cols }).map(() => '<td>Текст</td>').join('')}</tr>`)
+      .map(() => `<tr>${Array.from({ length: cols }).map(() => '<td style=\"border:1px solid #666; padding:6px;\">Текст</td>').join('')}</tr>`)
       .join('')
 
-    insertAtCursor(`<table>${header}${body}</table>`, true)
+    insertAtCursor(`<table style=\"width:100%; border-collapse:collapse; margin:8px 0 12px;\">${header}${body}</table>`, true)
   }
 
   function insertTwoColumns() {
@@ -190,6 +190,68 @@ export default function DocumentsPage() {
       </table>
     `
     insertAtCursor(html, true)
+  }
+
+
+  function currentTableContext() {
+    const sel = window.getSelection()
+    if (!sel || sel.rangeCount === 0) return null
+    let node: any = sel.anchorNode
+    if (!node) return null
+    if (node.nodeType === 3) node = node.parentElement
+    const cell = node?.closest?.('td,th') as HTMLTableCellElement | null
+    const row = cell?.closest?.('tr') as HTMLTableRowElement | null
+    const table = cell?.closest?.('table') as HTMLTableElement | null
+    if (!cell || !row || !table) return null
+    return { cell, row, table }
+  }
+
+  function addRowBelow() {
+    const ctx = currentTableContext()
+    if (!ctx) return
+    const cols = ctx.row.cells.length
+    const tr = document.createElement('tr')
+    for (let i = 0; i < cols; i++) {
+      const td = document.createElement('td')
+      td.textContent = 'Текст'
+      td.style.border = '1px solid #666'
+      td.style.padding = '6px'
+      tr.appendChild(td)
+    }
+    ctx.row.parentElement?.insertBefore(tr, ctx.row.nextSibling)
+    syncFromEditor()
+  }
+
+  function addColRight() {
+    const ctx = currentTableContext()
+    if (!ctx) return
+    const idx = Array.from(ctx.row.cells).indexOf(ctx.cell)
+    Array.from(ctx.table.rows).forEach((r, rIdx) => {
+      const cell = document.createElement(rIdx === 0 ? 'th' : 'td')
+      cell.textContent = rIdx === 0 ? `Колонка ${r.cells.length + 1}` : 'Текст'
+      ;(cell as HTMLElement).style.border = '1px solid #666'
+      ;(cell as HTMLElement).style.padding = '6px'
+      r.insertBefore(cell, r.cells[idx + 1] || null)
+    })
+    syncFromEditor()
+  }
+
+  function deleteRow() {
+    const ctx = currentTableContext()
+    if (!ctx) return
+    if (ctx.table.rows.length <= 1) return
+    ctx.row.remove()
+    syncFromEditor()
+  }
+
+  function deleteCol() {
+    const ctx = currentTableContext()
+    if (!ctx) return
+    const idx = Array.from(ctx.row.cells).indexOf(ctx.cell)
+    Array.from(ctx.table.rows).forEach((r) => {
+      if (r.cells.length > 1 && r.cells[idx]) r.deleteCell(idx)
+    })
+    syncFromEditor()
   }
 
   async function load() {
@@ -329,6 +391,10 @@ export default function DocumentsPage() {
             <button className="btn" onClick={insertTable}>Таблица 2×2</button>
             <button className="btn" onClick={insertTable3x3}>Таблица 3×3</button>
             <button className="btn" onClick={insertCustomTable}>Таблица N×M</button>
+            <button className="btn" onClick={addRowBelow}>+ строка</button>
+            <button className="btn" onClick={addColRight}>+ столбец</button>
+            <button className="btn" onClick={deleteRow}>− строка</button>
+            <button className="btn" onClick={deleteCol}>− столбец</button>
             <button className="btn" onClick={insertTwoColumns}>2 колонки</button>
           </div>
 
