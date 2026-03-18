@@ -15,6 +15,7 @@ import { DocumentType, UserRole } from '@prisma/client'
 import { promises as fs } from 'fs'
 import * as path from 'path'
 import type { Request, Response } from 'express'
+import HTMLtoDOCX from 'html-to-docx'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
 import type { JwtUser } from '../common/decorators/current-user.decorator'
@@ -187,7 +188,7 @@ export class DocumentsController {
     const baseDir = path.join(process.cwd(), 'storage', 'documents', tenantId)
     await fs.mkdir(baseDir, { recursive: true })
 
-    const fileName = `contract-${rental.id}-${Date.now()}.doc`
+    const fileName = `contract-${rental.id}-${Date.now()}.docx`
     const absolute = path.join(baseDir, fileName)
     const relative = path.join('storage', 'documents', tenantId, fileName)
 
@@ -203,8 +204,13 @@ export class DocumentsController {
       return current
     })() ?? (await this.standardTemplate(req.tenantMode))
     const renderedHtml = this.applyTemplate(templateHtml, data)
+    const docxBuffer = await HTMLtoDOCX(renderedHtml, null, {
+      table: { row: { cantSplit: true } },
+      footer: false,
+      pageNumber: false,
+    })
 
-    await fs.writeFile(absolute, renderedHtml, 'utf-8')
+    await fs.writeFile(absolute, Buffer.from(docxBuffer))
 
     const doc = await this.prisma.document.create({
       data: {
