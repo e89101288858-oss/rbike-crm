@@ -163,7 +163,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="page max-w-md">
+    <main className="page mx-auto flex min-h-screen w-full max-w-md flex-col justify-center">
       <h1 className="mb-4 text-3xl font-bold">rbCRM</h1>
       <p className="mb-4 text-sm text-gray-600">Вход в систему</p>
 
