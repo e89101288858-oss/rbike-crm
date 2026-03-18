@@ -54,6 +54,23 @@ function htmlToPlainText(html: string) {
     .trim()
 }
 
+
+function sanitizePlainTemplate(text: string) {
+  return text
+    .split('\n')
+    .filter((line) => {
+      const v = line.trim()
+      if (!v) return true
+      if (/^(@page|@media|body\{|html\{|h1\{|h2\{|h3\{|p\{|\.\w+\{|#\w+\{|\*\{|\})/i.test(v)) return false
+      if (/[{};]/.test(v) && !/\{\{[^}]+\}\}/.test(v) && !/[А-Яа-яA-Za-z0-9]/.test(v.replace(/[{}:;,#.\-]/g, ''))) return false
+      if (/^(font-|line-height|margin|padding|display|color|background|text-|align-items|justify-content|gap|max-width|min-height|border|position)/i.test(v)) return false
+      return true
+    })
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
 function plainTextToHtml(text: string) {
   const escaped = text
     .replace(/&/g, '&amp;')
@@ -104,7 +121,7 @@ export default function DocumentsPage() {
       setMode((acc?.tenant?.mode as 'FRANCHISE' | 'SAAS') || '')
       setPermissions((acc?.permissions || null) as Record<string, boolean> | null)
       setTemplateHtml(tpl?.templateHtml || '')
-      setPlainTemplate(htmlToPlainText(tpl?.templateHtml || ''))
+      setPlainTemplate(sanitizePlainTemplate(htmlToPlainText(tpl?.templateHtml || '')))
       setUpdatedAt(tpl?.updatedAt || null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка загрузки шаблона договора')
@@ -197,6 +214,7 @@ export default function DocumentsPage() {
                 <option value="simple">Понятный редактор</option>
                 <option value="html">HTML-редактор</option>
               </select>
+              <button className="btn" disabled={saving || loading || !canEdit} onClick={() => setPlainTemplate((prev) => sanitizePlainTemplate(prev))}>Очистить код</button>
               <button className="btn" disabled={saving || loading || !canEdit} onClick={resetTemplate}>Восстановить по умолчанию</button>
               <button className="btn-primary" disabled={saving || loading || !canEdit} onClick={saveTemplate}>
                 {saving ? 'Сохранение…' : 'Сохранить шаблон'}
