@@ -496,18 +496,18 @@ export class DocumentsController {
       .replace(/style=("|')[\s\S]*?(display\s*:\s*grid|display\s*:\s*flex|position\s*:\s*sticky|min-height\s*:|height\s*:|margin-top\s*:\s*\d{2,}px)[\s\S]*?("|')/gi, '')
   }
 
-  private toNeutralTags(templateHtml: string) {
-    return templateHtml
-      .replace(/\{\{\s*franchisee\.name\s*\}\}/g, '{{org.name}}')
-      .replace(/\{\{\s*franchisee\.companyName\s*\}\}/g, '{{org.legalName}}')
-      .replace(/\{\{\s*franchisee\.signerFullName\s*\}\}/g, '{{org.signerFullName}}')
-      .replace(/\{\{\s*franchisee\.bankDetails\s*\}\}/g, '{{org.bankDetails}}')
-      .replace(/\{\{\s*franchisee\.city\s*\}\}/g, '{{org.city}}')
-      .replace(/\{\{\s*company\.name\s*\}\}/g, '{{org.name}}')
-      .replace(/\{\{\s*company\.legalName\s*\}\}/g, '{{org.legalName}}')
-      .replace(/\{\{\s*company\.signerFullName\s*\}\}/g, '{{org.signerFullName}}')
-      .replace(/\{\{\s*company\.bankDetails\s*\}\}/g, '{{org.bankDetails}}')
-      .replace(/\{\{\s*company\.city\s*\}\}/g, '{{org.city}}')
+  private toNeutralTags(templateText: string) {
+    return templateText
+      .replace(/franchisee\.companyName/g, 'org.legalName')
+      .replace(/company\.legalName/g, 'org.legalName')
+      .replace(/franchisee\.signerFullName/g, 'org.signerFullName')
+      .replace(/company\.signerFullName/g, 'org.signerFullName')
+      .replace(/franchisee\.bankDetails/g, 'org.bankDetails')
+      .replace(/company\.bankDetails/g, 'org.bankDetails')
+      .replace(/franchisee\.city/g, 'org.city')
+      .replace(/company\.city/g, 'org.city')
+      .replace(/franchisee\.name/g, 'org.name')
+      .replace(/company\.name/g, 'org.name')
   }
 
   private async standardTemplate(mode?: string) {
