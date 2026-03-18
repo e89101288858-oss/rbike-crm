@@ -86,6 +86,7 @@ const DEFAULT_EDITOR_HTML = `
 export default function DocumentsPage() {
   const router = useRouter()
   const editorRef = useRef<HTMLDivElement | null>(null)
+  const selectionRef = useRef<Range | null>(null)
 
   const [tenants, setTenants] = useState<any[]>([])
   const [mode, setMode] = useState<'FRANCHISE' | 'SAAS' | ''>('')
@@ -110,6 +111,22 @@ export default function DocumentsPage() {
 
   const previewHtml = useMemo(() => buildFullHtml(editorHtml, fontSize, lineHeight, pageMarginMm), [editorHtml, fontSize, lineHeight, pageMarginMm])
 
+  function saveSelection() {
+    const sel = window.getSelection()
+    if (!sel || sel.rangeCount === 0) return
+    const range = sel.getRangeAt(0)
+    if (editorRef.current && editorRef.current.contains(range.commonAncestorContainer)) {
+      selectionRef.current = range.cloneRange()
+    }
+  }
+
+  function restoreSelection() {
+    const sel = window.getSelection()
+    if (!sel || !selectionRef.current) return
+    sel.removeAllRanges()
+    sel.addRange(selectionRef.current)
+  }
+
   function syncFromEditor() {
     if (!editorRef.current) return
     setEditorHtml(editorRef.current.innerHTML)
@@ -117,17 +134,21 @@ export default function DocumentsPage() {
 
   function execCommand(cmd: string, value?: string) {
     editorRef.current?.focus()
+    restoreSelection()
     document.execCommand(cmd, false, value)
+    saveSelection()
     syncFromEditor()
   }
 
   function insertAtCursor(textOrHtml: string, asHtml = false) {
     editorRef.current?.focus()
+    restoreSelection()
     if (asHtml) {
       document.execCommand('insertHTML', false, textOrHtml)
     } else {
       document.execCommand('insertText', false, textOrHtml)
     }
+    saveSelection()
     syncFromEditor()
   }
 
@@ -137,6 +158,10 @@ export default function DocumentsPage() {
 
   function insertTable() {
     insertAtCursor('<table><tr><th>Колонка 1</th><th>Колонка 2</th></tr><tr><td>Текст</td><td>Текст</td></tr></table>', true)
+  }
+
+  function insertTable3x3() {
+    insertAtCursor('<table><tr><th>Колонка 1</th><th>Колонка 2</th><th>Колонка 3</th></tr><tr><td>Текст</td><td>Текст</td><td>Текст</td></tr><tr><td>Текст</td><td>Текст</td><td>Текст</td></tr></table>', true)
   }
 
   async function load() {
@@ -269,19 +294,27 @@ export default function DocumentsPage() {
             <button className="btn" onClick={() => execCommand('underline')}><u>U</u></button>
             <button className="btn" onClick={() => execCommand('insertUnorderedList')}>• Список</button>
             <button className="btn" onClick={() => execCommand('insertOrderedList')}>1. Список</button>
-            <button className="btn" onClick={insertTable}>Таблица</button>
+            <button className="btn" onClick={() => execCommand('justifyLeft')}>←</button>
+            <button className="btn" onClick={() => execCommand('justifyCenter')}>↔</button>
+            <button className="btn" onClick={() => execCommand('justifyRight')}>→</button>
+            <button className="btn" onClick={() => execCommand('justifyFull')}>≡</button>
+            <button className="btn" onClick={insertTable}>Таблица 2×2</button>
+            <button className="btn" onClick={insertTable3x3}>Таблица 3×3</button>
           </div>
 
           <div
             ref={editorRef}
-            className="min-h-[360px] rounded border border-white/10 bg-white p-3 text-black"
+            className="h-[420px] overflow-auto rounded border border-white/10 bg-white p-3 text-black"
             contentEditable={canEdit && !loading}
             suppressContentEditableWarning
             onInput={syncFromEditor}
+            onMouseUp={saveSelection}
+            onKeyUp={saveSelection}
+            onBlur={saveSelection}
           />
 
           <label className="label mt-3">Предпросмотр печатного вида (A4)</label>
-          <iframe title="print-preview" className="h-[520px] w-full rounded border border-white/10 bg-white" srcDoc={previewHtml} />
+          <iframe title="print-preview" className="h-[900px] w-full rounded border border-white/10 bg-white" srcDoc={previewHtml} />
         </div>
 
         <div className="crm-card">
@@ -293,6 +326,7 @@ export default function DocumentsPage() {
                 type="button"
                 key={item.tag}
                 className="w-full rounded border border-white/10 bg-white/5 px-2 py-1 text-left hover:bg-white/10"
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => insertTag(item.tag)}
               >
                 <div className="font-mono text-[11px] text-orange-300">{`{{${item.tag}}}`}</div>
