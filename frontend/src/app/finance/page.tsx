@@ -41,7 +41,10 @@ export default function FinancePage() {
   }, [periodMode, periodMonth, periodYear])
 
 
-  const revenueTotal = useMemo(() => (payments || []).reduce((sum: number, p: any) => sum + Number(p.amount ?? 0), 0), [payments])
+  const revenueTotal = useMemo(() => (payments || []).reduce((sum: number, p: any) => {
+    const amount = Number(p.amount ?? 0)
+    return sum + (amount > 0 ? amount : 0)
+  }, 0), [payments])
   const royaltyDue = Math.round(revenueTotal * (royaltyPercent / 100) * 100) / 100
 
   const expenseByBike = useMemo(() => {
@@ -75,12 +78,12 @@ export default function FinancePage() {
     const income = (payments || []).map((p: any) => ({
       id: `pay-${p.id}`,
       at: p.paidAt,
-      type: 'Поступление',
+      type: Number(p.amount || 0) < 0 ? 'Возврат аренды' : 'Поступление',
       amount: Number(p.amount || 0),
       source: 'Платеж аренды',
       counterparty: p.rental?.client?.fullName || '—',
       bike: p.rental?.bike?.code || '—',
-      category: 'Платеж',
+      category: Number(p.amount || 0) < 0 ? 'Возврат' : 'Платеж',
     }))
 
     const out = (expenses || []).map((e: any) => ({
@@ -111,7 +114,8 @@ export default function FinancePage() {
         if (!byMonth.has(d)) continue
         const cur = byMonth.get(d)!
         const amount = Number(p.amount || 0)
-        cur.income += amount
+        if (amount >= 0) cur.income += amount
+        else cur.expense += Math.abs(amount)
       }
 
       for (const e of expenses || []) {
@@ -133,7 +137,8 @@ export default function FinancePage() {
       if (!d) continue
       const cur = map.get(d) || { date: d, income: 0, expense: 0 }
       const amount = Number(p.amount || 0)
-      cur.income += amount
+      if (amount >= 0) cur.income += amount
+      else cur.expense += Math.abs(amount)
       map.set(d, cur)
     }
 
