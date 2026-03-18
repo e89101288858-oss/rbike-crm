@@ -37,7 +37,12 @@ const CONTRACT_TAGS: Array<{ tag: string; description: string }> = [
 
 function htmlToPlainText(html: string) {
   return html
+    .replace(/<head[\s\S]*?<\/head>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
     .replace(/<\/?h1[^>]*>/gi, '\n')
+    .replace(/<\/?h2[^>]*>/gi, '\n')
+    .replace(/<\/?h3[^>]*>/gi, '\n')
     .replace(/<\/?p[^>]*>/gi, '\n')
     .replace(/<br\s*\/?\s*>/gi, '\n')
     .replace(/<[^>]+>/g, '')
