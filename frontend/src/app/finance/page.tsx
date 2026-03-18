@@ -75,12 +75,12 @@ export default function FinancePage() {
     const income = (payments || []).map((p: any) => ({
       id: `pay-${p.id}`,
       at: p.paidAt,
-      type: Number(p.amount || 0) >= 0 ? 'Поступление' : 'Корректировка',
+      type: 'Поступление',
       amount: Number(p.amount || 0),
       source: 'Платеж аренды',
       counterparty: p.rental?.client?.fullName || '—',
       bike: p.rental?.bike?.code || '—',
-      category: Number(p.amount || 0) < 0 ? 'Корректировка' : 'Платеж',
+      category: 'Платеж',
     }))
 
     const out = (expenses || []).map((e: any) => ({
@@ -111,8 +111,7 @@ export default function FinancePage() {
         if (!byMonth.has(d)) continue
         const cur = byMonth.get(d)!
         const amount = Number(p.amount || 0)
-        if (amount >= 0) cur.income += amount
-        else cur.expense += Math.abs(amount)
+        cur.income += amount
       }
 
       for (const e of expenses || []) {
@@ -134,8 +133,7 @@ export default function FinancePage() {
       if (!d) continue
       const cur = map.get(d) || { date: d, income: 0, expense: 0 }
       const amount = Number(p.amount || 0)
-      if (amount >= 0) cur.income += amount
-      else cur.expense += Math.abs(amount)
+      cur.income += amount
       map.set(d, cur)
     }
 
