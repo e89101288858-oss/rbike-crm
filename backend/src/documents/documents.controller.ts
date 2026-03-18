@@ -15,8 +15,6 @@ import { DocumentType, UserRole } from '@prisma/client'
 import { promises as fs } from 'fs'
 import * as path from 'path'
 import type { Request, Response } from 'express'
-import Docxtemplater from 'docxtemplater'
-import PizZip from 'pizzip'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
 import type { JwtUser } from '../common/decorators/current-user.decorator'
@@ -180,27 +178,19 @@ export class DocumentsController {
     const baseDir = path.join(process.cwd(), 'storage', 'documents', tenantId)
     await fs.mkdir(baseDir, { recursive: true })
 
-    const fileName = `contract-${rental.id}-${Date.now()}.docx`
+    const fileName = `contract-${rental.id}-${Date.now()}.html`
     const absolute = path.join(baseDir, fileName)
     const relative = path.join('storage', 'documents', tenantId, fileName)
 
-    const templatePath = path.join(process.cwd(), 'templates', 'contract-template.docx')
-    const tplBuffer = await fs.readFile(templatePath)
-    const zip = new PizZip(tplBuffer)
-    const docx = new Docxtemplater(zip, {
-      delimiters: { start: '{{', end: '}}' },
-      paragraphLoop: true,
-      linebreaks: true,
+    const existingTemplate = await this.prisma.contractTemplate.findUnique({
+      where: { tenantId },
+      select: { templateHtml: true },
     })
 
-    try {
-      docx.render(data)
-    } catch (e) {
-      throw new BadRequestException('Ошибка генерации DOCX по шаблону. Проверь плейсхолдеры.')
-    }
+    const templateHtml = existingTemplate?.templateHtml ?? this.defaultTemplate(req.tenantMode)
+    const renderedHtml = this.applyTemplate(templateHtml, data)
 
-    const out = docx.getZip().generate({ type: 'nodebuffer', compression: 'DEFLATE' })
-    await fs.writeFile(absolute, out)
+    await fs.writeFile(absolute, renderedHtml, 'utf-8')
 
     const doc = await this.prisma.document.create({
       data: {
