@@ -40,9 +40,9 @@ export class DocumentsController {
       select: { templateHtml: true, updatedAt: true, createdAt: true },
     })
 
-    let templateHtml = existing?.templateHtml ?? this.defaultTemplate(req.tenantMode)
-    if (req.tenantMode === 'SAAS' && existing?.templateHtml && this.isLegacySaasTemplate(existing.templateHtml)) {
-      templateHtml = this.defaultTemplate()
+    let templateHtml = existing?.templateHtml ?? (await this.standardTemplate(req.tenantMode))
+    if (req.tenantMode === 'SAAS' && existing?.templateHtml && this.isOldSaasDefaultTemplate(existing.templateHtml)) {
+      templateHtml = await this.standardTemplate('SAAS')
       await this.prisma.contractTemplate.update({
         where: { tenantId },
         data: { templateHtml },
@@ -84,8 +84,8 @@ export class DocumentsController {
 
     const updated = await this.prisma.contractTemplate.upsert({
       where: { tenantId },
-      create: { tenantId, templateHtml: this.defaultTemplate(req.tenantMode), updatedById: user.userId },
-      update: { templateHtml: this.defaultTemplate(req.tenantMode), updatedById: user.userId },
+      create: { tenantId, templateHtml: await this.standardTemplate(req.tenantMode), updatedById: user.userId },
+      update: { templateHtml: await this.standardTemplate(req.tenantMode), updatedById: user.userId },
       select: { tenantId: true, updatedAt: true },
     })
 
@@ -197,12 +197,11 @@ export class DocumentsController {
     })
 
     const templateHtml = (() => {
-      const current = existingTemplate?.templateHtml ?? this.defaultTemplate(req.tenantMode)
-      if (req.tenantMode === 'SAAS' && this.isLegacySaasTemplate(current)) {
-        return this.defaultTemplate()
-      }
+      const current = existingTemplate?.templateHtml
+      if (!current) return null
+      if (req.tenantMode === 'SAAS' && this.isOldSaasDefaultTemplate(current)) return null
       return current
-    })()
+    })() ?? (await this.standardTemplate(req.tenantMode))
     const renderedHtml = this.applyTemplate(templateHtml, data)
 
     await fs.writeFile(absolute, renderedHtml, 'utf-8')
@@ -270,15 +269,37 @@ export class DocumentsController {
     return template.replace(/\{\{\s*([a-zA-Z0-9._-]+)\s*\}\}/g, (_, key: string) => data[key] ?? '—')
   }
 
-  private isLegacySaasTemplate(templateHtml: string) {
-    return /\{\{\s*company\./i.test(templateHtml)
+  private isOldSaasDefaultTemplate(templateHtml: string) {
+    return /(Арендодатель:|Подписант со стороны арендодателя|Город арендодателя)/i.test(templateHtml)
+  }
+
+  private toSaasTags(templateHtml: string) {
+    return templateHtml
+      .replace(/\{\{\s*franchisee\.name\s*\}\}/g, '{{company.name}}')
+      .replace(/\{\{\s*franchisee\.companyName\s*\}\}/g, '{{company.legalName}}')
+      .replace(/\{\{\s*franchisee\.signerFullName\s*\}\}/g, '{{company.signerFullName}}')
+      .replace(/\{\{\s*franchisee\.bankDetails\s*\}\}/g, '{{company.bankDetails}}')
+      .replace(/\{\{\s*franchisee\.city\s*\}\}/g, '{{company.city}}')
+  }
+
+  private async standardTemplate(mode?: string) {
+    if (mode === 'SAAS') {
+      const franchiseSeed = await this.prisma.contractTemplate.findFirst({
+        where: { tenant: { mode: 'FRANCHISE' } },
+        orderBy: { updatedAt: 'desc' },
+        select: { templateHtml: true },
+      })
+      const base = franchiseSeed?.templateHtml ?? this.defaultTemplate()
+      return this.toSaasTags(base)
+    }
+    return this.defaultTemplate()
   }
 
   private fmt(d: Date | string) {
     return new Date(d).toLocaleDateString('ru-RU')
   }
 
-  private defaultTemplate(_mode?: string) {
+  private defaultTemplate() {
     return `<!doctype html>
 <html lang="ru">
 <head>
