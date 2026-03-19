@@ -13,13 +13,18 @@ export default function OwnerSystemPage() {
   const [success, setSuccess] = useState('')
 
   const [overview, setOverview] = useState<any>(null)
-  const [saasTenants, setSaasTenants] = useState<any[]>([])
-  const [users, setUsers] = useState<any[]>([])
+  const [tenantsData, setTenantsData] = useState<any>({ items: [], totalPages: 1, page: 1 })
+  const [usersData, setUsersData] = useState<any>({ items: [] })
   const [invoices, setInvoices] = useState<any[]>([])
   const [audit, setAudit] = useState<any[]>([])
   const [testEmail, setTestEmail] = useState('')
 
-  const activeUsers = useMemo(() => users.filter((u) => u.isActive).length, [users])
+  const [tenantQ, setTenantQ] = useState('')
+  const [tenantMode, setTenantMode] = useState<'' | 'FRANCHISE' | 'SAAS'>('')
+  const [tenantIsActive, setTenantIsActive] = useState<'all' | 'true' | 'false'>('all')
+  const [tenantPage, setTenantPage] = useState(1)
+
+  const activeUsers = useMemo(() => (usersData.items || []).filter((u: any) => u.isActive).length, [usersData])
 
   async function loadAll() {
     setLoading(true)
@@ -28,17 +33,23 @@ export default function OwnerSystemPage() {
       const me = await api.me()
       if (me.role !== 'OWNER') return router.replace('/dashboard')
 
-      const [ov, tenants, us, inv, au] = await Promise.all([
+      const [ov, tenants, users, inv, au] = await Promise.all([
         api.adminSystemOverview(),
-        api.adminSaasTenants(),
-        api.adminUsers(),
+        api.adminTenantsPaged({
+          q: tenantQ || undefined,
+          mode: tenantMode || undefined,
+          isActive: tenantIsActive === 'all' ? null : tenantIsActive === 'true',
+          page: tenantPage,
+          pageSize: 20,
+        }),
+        api.adminUsersSearch({ page: 1, pageSize: 40 }),
         api.adminSaasInvoices(50),
         api.adminAudit(),
       ])
 
       setOverview(ov)
-      setSaasTenants(tenants || [])
-      setUsers(us || [])
+      setTenantsData(tenants || { items: [] })
+      setUsersData(users || { items: [] })
       setInvoices(inv || [])
       setAudit((au || []).slice(0, 20))
     } catch (e) {
@@ -51,7 +62,8 @@ export default function OwnerSystemPage() {
   useEffect(() => {
     if (!getToken()) return router.replace('/login')
     void loadAll()
-  }, [router])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router, tenantPage, tenantMode, tenantIsActive, tenantQ])
 
   async function toggleTenantActive(tenant: any) {
     setError('')
@@ -85,7 +97,7 @@ export default function OwnerSystemPage() {
         saasSubscriptionStatus: 'TRIAL',
         saasTrialEndsAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
       })
-      setSuccess(`Подписка ${tenant.name} переведена в TRIAL`) 
+      setSuccess(`Подписка ${tenant.name} переведена в TRIAL`)
       await loadAll()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Ошибка сброса trial')
@@ -129,51 +141,81 @@ export default function OwnerSystemPage() {
       {error && <div className="alert">{error}</div>}
       {success && <div className="alert-success">{success}</div>}
 
-      <section className="mb-3 grid gap-3 md:grid-cols-3">
-        <div className="crm-card">
+      <section className="mb-3 grid gap-3 md:grid-cols-4">
+        <div className="crm-card text-sm">
           <div className="text-xs text-gray-400">Система</div>
-          <div className="mt-1 text-sm">Uptime: <b>{overview?.uptimeSec ?? 0}s</b></div>
-          <div className="text-sm">Версия: <b>{overview?.version || 'unknown'}</b></div>
-          <div className="text-sm">Email: <b>{overview?.emailEnabled ? 'ON' : 'OFF'}</b></div>
+          <div>Uptime: <b>{overview?.uptimeSec ?? 0}s</b></div>
+          <div>Версия: <b>{overview?.version || 'unknown'}</b></div>
+          <div>ENV: <b>{overview?.env || 'unknown'}</b></div>
         </div>
-        <div className="crm-card">
+        <div className="crm-card text-sm">
+          <div className="text-xs text-gray-400">Health</div>
+          <div>API: <b>{overview?.health?.api ? 'OK' : 'FAIL'}</b></div>
+          <div>DB: <b>{overview?.health?.db ? 'OK' : 'FAIL'}</b></div>
+          <div>RAM: <b>{overview?.process?.memoryMb ?? 0} MB</b></div>
+        </div>
+        <div className="crm-card text-sm">
           <div className="text-xs text-gray-400">Сущности</div>
-          <div className="mt-1 text-sm">Франчайзи: <b>{overview?.counts?.franchisees ?? 0}</b></div>
-          <div className="text-sm">Точки: <b>{overview?.counts?.tenantsTotal ?? 0}</b></div>
-          <div className="text-sm">Пользователи: <b>{overview?.counts?.usersTotal ?? 0}</b> (активных {activeUsers})</div>
+          <div>Франчайзи: <b>{overview?.counts?.franchisees ?? 0}</b></div>
+          <div>Точки: <b>{overview?.counts?.tenantsTotal ?? 0}</b></div>
+          <div>Пользователи: <b>{overview?.counts?.usersTotal ?? 0}</b> (активных {activeUsers})</div>
         </div>
-        <div className="crm-card">
+        <div className="crm-card text-sm">
           <div className="text-xs text-gray-400">Billing</div>
-          <div className="mt-1 text-sm">PAID: <b>{overview?.billing?.paid ?? 0}</b></div>
-          <div className="text-sm">PENDING: <b>{overview?.billing?.pending ?? 0}</b></div>
-          <div className="text-sm">FAILED: <b>{overview?.billing?.failed ?? 0}</b></div>
+          <div>PAID: <b>{overview?.billing?.paid ?? 0}</b></div>
+          <div>PENDING: <b>{overview?.billing?.pending ?? 0}</b></div>
+          <div>FAILED: <b>{overview?.billing?.failed ?? 0}</b></div>
         </div>
       </section>
 
       <section className="grid gap-3 lg:grid-cols-2">
-        <div className="crm-card">
-          <div className="mb-2 text-base font-semibold">SaaS Точки (быстрые действия)</div>
-          <div className="space-y-2">
-            {saasTenants.slice(0, 20).map((t) => (
+        <div className="crm-card lg:col-span-2">
+          <div className="mb-2 text-base font-semibold">Точки (фильтры + быстрые действия)</div>
+          <div className="mb-3 grid gap-2 md:grid-cols-4">
+            <input className="input" placeholder="Поиск по имени точки" value={tenantQ} onChange={(e) => { setTenantPage(1); setTenantQ(e.target.value) }} />
+            <select className="input" value={tenantMode} onChange={(e) => { setTenantPage(1); setTenantMode(e.target.value as any) }}>
+              <option value="">Все режимы</option>
+              <option value="SAAS">SAAS</option>
+              <option value="FRANCHISE">FRANCHISE</option>
+            </select>
+            <select className="input" value={tenantIsActive} onChange={(e) => { setTenantPage(1); setTenantIsActive(e.target.value as any) }}>
+              <option value="all">Любой статус</option>
+              <option value="true">Только активные</option>
+              <option value="false">Только отключённые</option>
+            </select>
+            <div className="text-xs text-gray-400 self-center">Стр. {tenantsData.page || 1} / {tenantsData.totalPages || 1}</div>
+          </div>
+
+          <div className="space-y-2 max-h-[500px] overflow-auto">
+            {(tenantsData.items || []).map((t: any) => (
               <div key={t.id} className="rounded border border-white/10 p-2">
                 <div className="text-sm font-medium">{t.name}</div>
-                <div className="text-xs text-gray-400">{t.franchisee?.name || '—'} · {t.saasPlan} · {t.saasSubscriptionStatus}</div>
+                <div className="text-xs text-gray-400">{t.franchisee?.name || '—'} · {t.mode} · {t.isActive ? 'active' : 'disabled'} · {t.saasPlan || '-'}</div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <button className="btn" onClick={() => toggleTenantActive(t)}>{t.isActive ? 'Блокировать' : 'Разблокировать'}</button>
-                  <button className="btn" onClick={() => setPlan(t, 'STARTER')}>STARTER</button>
-                  <button className="btn" onClick={() => setPlan(t, 'PRO')}>PRO</button>
-                  <button className="btn" onClick={() => setPlan(t, 'ENTERPRISE')}>ENT</button>
-                  <button className="btn" onClick={() => resetSubscriptionDates(t)}>Сброс trial</button>
+                  {t.mode === 'SAAS' && (
+                    <>
+                      <button className="btn" onClick={() => setPlan(t, 'STARTER')}>STARTER</button>
+                      <button className="btn" onClick={() => setPlan(t, 'PRO')}>PRO</button>
+                      <button className="btn" onClick={() => setPlan(t, 'ENTERPRISE')}>ENT</button>
+                      <button className="btn" onClick={() => resetSubscriptionDates(t)}>Сброс trial</button>
+                    </>
+                  )}
                 </div>
               </div>
             ))}
           </div>
+
+          <div className="mt-3 flex items-center justify-between">
+            <button className="btn" disabled={tenantPage <= 1 || loading} onClick={() => setTenantPage((p) => Math.max(1, p - 1))}>Назад</button>
+            <button className="btn" disabled={loading || tenantPage >= (tenantsData.totalPages || 1)} onClick={() => setTenantPage((p) => p + 1)}>Далее</button>
+          </div>
         </div>
 
         <div className="crm-card">
-          <div className="mb-2 text-base font-semibold">Пользователи (глобально)</div>
+          <div className="mb-2 text-base font-semibold">Пользователи (последние 40)</div>
           <div className="max-h-[520px] space-y-2 overflow-auto">
-            {users.slice(0, 40).map((u) => (
+            {(usersData.items || []).map((u: any) => (
               <div key={u.id} className="rounded border border-white/10 p-2 text-sm">
                 <div><b>{u.email}</b> · {u.role} · {u.isActive ? 'active' : 'disabled'}</div>
                 <div className="mt-1 flex gap-2">
