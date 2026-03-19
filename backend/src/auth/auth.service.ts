@@ -214,14 +214,12 @@ export class AuthService {
     }
 
     const accessToken = await this.jwt.signAsync(payload)
-    const tenants = await this.prisma.userTenant.findMany({
+    const tenantLink = await this.prisma.userTenant.findFirst({
       where: { userId: user.id },
       select: { tenantId: true },
-      take: 1,
-      orderBy: { createdAt: 'asc' } as any,
-    } as any)
+    })
 
-    return { ok: true, accessToken, tenantId: tenants[0]?.tenantId ?? null }
+    return { ok: true, accessToken, tenantId: tenantLink?.tenantId ?? null }
   }
 
   async requestPasswordReset(email: string) {
