@@ -24,6 +24,7 @@ import { UpdateFranchiseeDto } from './dto/update-franchisee.dto'
 import { CreateTenantDto } from './dto/create-tenant.dto'
 import { UpdateTenantDto } from './dto/update-tenant.dto'
 import { UpdateSaasSubscriptionDto } from './dto/update-saas-subscription.dto'
+import { SaasBillingService } from '../saas-billing/saas-billing.service'
 
 @Controller()
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -32,6 +33,7 @@ export class AdminController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly email: EmailService,
+    private readonly saasBilling: SaasBillingService,
   ) {}
 
   private async audit(userId: string | undefined, action: string, targetType: string, targetId?: string, details?: any) {
@@ -239,6 +241,26 @@ export class AdminController {
         tenant: { select: { id: true, name: true, mode: true } },
       },
     })
+  }
+
+  @Get('admin/saas/invoices/:id')
+  async getSaasInvoice(@Param('id') id: string) {
+    const invoice = await this.prisma.saaSInvoice.findUnique({
+      where: { id },
+      include: { tenant: { select: { id: true, name: true, mode: true } } },
+    })
+    if (!invoice) throw new NotFoundException('Invoice not found')
+    return invoice
+  }
+
+  @Post('admin/saas/invoices/:id/reconcile')
+  async reconcileSaasInvoice(@Param('id') id: string) {
+    return this.saasBilling.adminReconcileInvoice({ invoiceId: id })
+  }
+
+  @Post('admin/saas/payments/:paymentId/reconcile')
+  async reconcileSaasPayment(@Param('paymentId') paymentId: string) {
+    return this.saasBilling.adminReconcileInvoice({ paymentId })
   }
 
   @Post('admin/system/test-email')

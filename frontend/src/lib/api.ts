@@ -821,6 +821,9 @@ export const api = {
     return request<any>(`/admin/tenants${query.toString() ? `?${query.toString()}` : ''}`)
   },
   adminSaasInvoices: (limit = 50) => request<any[]>(`/admin/saas/invoices?limit=${limit}`),
+  adminSaasInvoiceById: (id: string) => request<any>(`/admin/saas/invoices/${id}`),
+  adminReconcileSaasInvoice: (id: string) => request<any>(`/admin/saas/invoices/${id}/reconcile`, { method: 'POST' }),
+  adminReconcileSaasPayment: (paymentId: string) => request<any>(`/admin/saas/payments/${paymentId}/reconcile`, { method: 'POST' }),
   adminSendTestEmail: (to: string) =>
     request<any>('/admin/system/test-email', {
       method: 'POST',

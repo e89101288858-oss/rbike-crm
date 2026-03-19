@@ -30,7 +30,7 @@ export class SaasBillingService {
     return `Basic ${Buffer.from(`${shopId}:${secretKey}`).toString('base64')}`
   }
 
-  private async fetchPaymentFromYoo(paymentId: string) {
+  async fetchPaymentFromYoo(paymentId: string) {
     const response = await fetch(`https://api.yookassa.ru/v3/payments/${paymentId}`, {
       headers: { Authorization: this.getYooAuthHeader() },
     })
@@ -315,6 +315,50 @@ export class SaasBillingService {
         ENTERPRISE: { priceRub: PLAN_PRICES_RUB.ENTERPRISE, ...PLAN_FEATURES.ENTERPRISE },
       },
       prices: PLAN_PRICES_RUB,
+    }
+  }
+
+  async adminReconcileInvoice(params: { invoiceId?: string; paymentId?: string }) {
+    if (!params.invoiceId && !params.paymentId) {
+      throw new BadRequestException('invoiceId or paymentId is required')
+    }
+
+    let invoice = params.invoiceId
+      ? await this.prisma.saaSInvoice.findUnique({ where: { id: params.invoiceId } })
+      : null
+
+    if (!invoice && params.paymentId) {
+      invoice = await this.prisma.saaSInvoice.findFirst({ where: { providerPaymentId: params.paymentId } })
+    }
+
+    if (!invoice) throw new BadRequestException('Invoice not found')
+    if (!invoice.providerPaymentId) throw new BadRequestException('Invoice has no providerPaymentId')
+
+    const payment = await this.fetchPaymentFromYoo(invoice.providerPaymentId)
+    const status = String(payment?.status || '').toLowerCase()
+
+    if (status === 'succeeded') {
+      await this.markInvoicePaid({ id: invoice.id, tenantId: invoice.tenantId, plan: invoice.plan as any, durationMonths: invoice.durationMonths || 1, amountRub: invoice.amountRub }, payment)
+    } else if (status === 'canceled') {
+      await this.prisma.saaSInvoice.update({
+        where: { id: invoice.id },
+        data: { status: 'CANCELED', providerResponse: payment },
+      })
+    } else {
+      await this.prisma.saaSInvoice.update({
+        where: { id: invoice.id },
+        data: { status: 'PENDING', providerResponse: payment },
+      })
+    }
+
+    const updated = await this.prisma.saaSInvoice.findUnique({ where: { id: invoice.id } })
+
+    return {
+      ok: true,
+      invoiceId: invoice.id,
+      providerPaymentId: invoice.providerPaymentId,
+      providerStatus: status,
+      invoiceStatus: updated?.status,
     }
   }
 
