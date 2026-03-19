@@ -36,35 +36,35 @@ export default function Page() {
     void load()
   }, [router])
 
-  async function reconcileByInvoiceId() {
+  async function checkPaymentByInvoiceId() {
     if (!invoiceId.trim()) return
     setError('')
     setSuccess('')
     try {
       const res = await api.adminReconcileSaasInvoice(invoiceId.trim())
-      setSuccess(`Reconcile OK: invoice=${res.invoiceId}, provider=${res.providerStatus}, status=${res.invoiceStatus}`)
+      setSuccess(`Проверка оплаты выполнена: счёт=${res.invoiceId}, статус провайдера=${res.providerStatus}, статус счёта=${res.invoiceStatus}`)
       const details = await api.adminSaasInvoiceById(invoiceId.trim())
       setSelectedInvoice(details)
       await load()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка reconcile invoice')
+      setError(e instanceof Error ? e.message : 'Ошибка проверки оплаты по счёту')
     }
   }
 
-  async function reconcileByPaymentId() {
+  async function checkPaymentByProviderId() {
     if (!paymentId.trim()) return
     setError('')
     setSuccess('')
     try {
       const res = await api.adminReconcileSaasPayment(paymentId.trim())
-      setSuccess(`Reconcile OK: invoice=${res.invoiceId}, provider=${res.providerStatus}, status=${res.invoiceStatus}`)
+      setSuccess(`Проверка оплаты выполнена: счёт=${res.invoiceId}, статус провайдера=${res.providerStatus}, статус счёта=${res.invoiceStatus}`)
       if (res.invoiceId) {
         const details = await api.adminSaasInvoiceById(res.invoiceId)
         setSelectedInvoice(details)
       }
       await load()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка reconcile payment')
+      setError(e instanceof Error ? e.message : 'Ошибка проверки оплаты по ID платежа')
     }
   }
 
@@ -75,7 +75,7 @@ export default function Page() {
       const details = await api.adminSaasInvoiceById(id)
       setSelectedInvoice(details)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка загрузки invoice')
+      setError(e instanceof Error ? e.message : 'Ошибка загрузки счёта')
     }
   }
 
@@ -86,7 +86,7 @@ export default function Page() {
         <div className="flex items-center justify-between gap-2">
           <div>
             <div className="text-base font-semibold">OWNER / Подписка</div>
-            <div className="text-sm text-gray-400">Billing Control v2: reconcile + timeline</div>
+            <div className="text-sm text-gray-400">Проверка оплат и история статусов</div>
           </div>
           <button className="btn" onClick={() => load()} disabled={loading}>{loading ? 'Обновление…' : 'Обновить'}</button>
         </div>
@@ -97,19 +97,19 @@ export default function Page() {
 
       <section className="grid gap-3 lg:grid-cols-2">
         <div className="crm-card">
-          <div className="mb-2 text-base font-semibold">Ручной reconcile</div>
+          <div className="mb-2 text-base font-semibold">Проверка оплаты</div>
           <div className="mb-2 flex gap-2">
-            <input className="input w-full" value={invoiceId} onChange={(e) => setInvoiceId(e.target.value)} placeholder="invoiceId" />
-            <button className="btn-primary" onClick={reconcileByInvoiceId}>Reconcile invoice</button>
+            <input className="input w-full" value={invoiceId} onChange={(e) => setInvoiceId(e.target.value)} placeholder="ID счёта" />
+            <button className="btn-primary" onClick={checkPaymentByInvoiceId}>Проверить счёт</button>
           </div>
           <div className="flex gap-2">
-            <input className="input w-full" value={paymentId} onChange={(e) => setPaymentId(e.target.value)} placeholder="provider paymentId" />
-            <button className="btn" onClick={reconcileByPaymentId}>Reconcile payment</button>
+            <input className="input w-full" value={paymentId} onChange={(e) => setPaymentId(e.target.value)} placeholder="ID платежа у провайдера" />
+            <button className="btn" onClick={checkPaymentByProviderId}>Проверить платёж</button>
           </div>
         </div>
 
         <div className="crm-card">
-          <div className="mb-2 text-base font-semibold">Последние инвойсы</div>
+          <div className="mb-2 text-base font-semibold">Последние счета</div>
           <div className="max-h-[460px] space-y-2 overflow-auto text-sm">
             {invoices.map((i) => (
               <div key={i.id} className="rounded border border-white/10 p-2">
@@ -120,7 +120,7 @@ export default function Page() {
                 <div className="text-xs text-gray-400">{i.id}</div>
                 <div className="text-xs text-gray-400">{i.status} · {new Date(i.createdAt).toLocaleString('ru-RU')}</div>
                 <div className="mt-1">
-                  <button className="btn" onClick={() => { setInvoiceId(i.id); void reconcileByInvoiceId() }}>Reconcile</button>
+                  <button className="btn" onClick={() => { setInvoiceId(i.id); void checkPaymentByInvoiceId() }}>Проверить</button>
                 </div>
               </div>
             ))}
@@ -130,15 +130,15 @@ export default function Page() {
 
       {selectedInvoice && (
         <section className="crm-card mt-3">
-          <div className="mb-2 text-base font-semibold">Invoice details / timeline</div>
+          <div className="mb-2 text-base font-semibold">Детали счёта / история</div>
           <div className="text-sm">ID: <b>{selectedInvoice.id}</b></div>
-          <div className="text-sm">Tenant: <b>{selectedInvoice.tenant?.name || '—'}</b></div>
-          <div className="text-sm">Status: <b>{selectedInvoice.status}</b></div>
-          <div className="text-sm">Provider payment ID: <b>{selectedInvoice.providerPaymentId || '—'}</b></div>
-          <div className="text-sm">Created: <b>{new Date(selectedInvoice.createdAt).toLocaleString('ru-RU')}</b></div>
-          <div className="text-sm">Paid: <b>{selectedInvoice.paidAt ? new Date(selectedInvoice.paidAt).toLocaleString('ru-RU') : '—'}</b></div>
+          <div className="text-sm">Точка: <b>{selectedInvoice.tenant?.name || '—'}</b></div>
+          <div className="text-sm">Статус: <b>{selectedInvoice.status}</b></div>
+          <div className="text-sm">ID платежа у провайдера: <b>{selectedInvoice.providerPaymentId || '—'}</b></div>
+          <div className="text-sm">Создан: <b>{new Date(selectedInvoice.createdAt).toLocaleString('ru-RU')}</b></div>
+          <div className="text-sm">Оплачен: <b>{selectedInvoice.paidAt ? new Date(selectedInvoice.paidAt).toLocaleString('ru-RU') : '—'}</b></div>
 
-          <div className="mt-2 text-xs text-gray-400">providerResponse</div>
+          <div className="mt-2 text-xs text-gray-400">Ответ платёжного провайдера</div>
           <pre className="mt-1 max-h-[420px] overflow-auto rounded border border-white/10 bg-black/20 p-2 text-xs">{JSON.stringify(selectedInvoice.providerResponse || {}, null, 2)}</pre>
         </section>
       )}
