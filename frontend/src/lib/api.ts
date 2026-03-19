@@ -829,6 +829,8 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ to }),
     }),
+  adminPendingEmailVerification: (limit = 50) => request<any[]>(`/admin/email/verification-pending?limit=${limit}`),
+  adminResendEmailVerification: (userId: string) => request<any>(`/admin/users/${userId}/resend-email-verification`, { method: 'POST' }),
 
   adminUsers: () => request<any[]>('/admin/users'),
   adminUsersSearch: (params?: { q?: string; role?: string; isActive?: boolean | null; tenantId?: string; page?: number; pageSize?: number }) => {

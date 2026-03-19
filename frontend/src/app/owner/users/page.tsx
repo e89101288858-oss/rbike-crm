@@ -22,6 +22,8 @@ export default function Page() {
   const [error, setError] = useState('')
   const [data, setData] = useState<any>({ items: [], total: 0, totalPages: 1 })
   const [tenants, setTenants] = useState<any[]>([])
+  const [pendingVerify, setPendingVerify] = useState<any[]>([])
+  const [success, setSuccess] = useState('')
 
   async function load() {
     setLoading(true)
@@ -30,15 +32,19 @@ export default function Page() {
       const me = await api.me()
       if (me.role !== 'OWNER') return router.replace('/dashboard')
 
-      const res = await api.adminUsersSearch({
-        q: q || undefined,
-        role: role || undefined,
-        isActive: isActive === 'all' ? null : isActive === 'true',
-        tenantId: tenantId || undefined,
-        page,
-        pageSize,
-      })
+      const [res, pending] = await Promise.all([
+        api.adminUsersSearch({
+          q: q || undefined,
+          role: role || undefined,
+          isActive: isActive === 'all' ? null : isActive === 'true',
+          tenantId: tenantId || undefined,
+          page,
+          pageSize,
+        }),
+        api.adminPendingEmailVerification(30),
+      ])
       setData(res)
+      setPendingVerify(pending || [])
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Ошибка загрузки пользователей')
     } finally {
@@ -63,6 +69,18 @@ export default function Page() {
   useEffect(() => {
     void load()
   }, [q, role, isActive, tenantId, page, pageSize])
+
+  async function resendVerification(userId: string) {
+    setError('')
+    setSuccess('')
+    try {
+      await api.adminResendEmailVerification(userId)
+      setSuccess('Письмо подтверждения отправлено повторно')
+      await load()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Ошибка отправки письма подтверждения')
+    }
+  }
 
   return (
     <main className="page with-sidebar">
@@ -103,6 +121,23 @@ export default function Page() {
       </section>
 
       {error && <div className="alert">{error}</div>}
+      {success && <div className="alert-success">{success}</div>}
+
+      <section className="crm-card mb-3">
+        <div className="mb-2 text-base font-semibold">Ожидают подтверждение email</div>
+        <div className="max-h-[240px] space-y-2 overflow-auto">
+          {pendingVerify.length === 0 && <div className="text-sm text-gray-400">Нет пользователей в ожидании</div>}
+          {pendingVerify.map((u) => (
+            <div key={u.id} className="rounded border border-white/10 p-2 text-sm">
+              <div><b>{u.email}</b> · {u.role}</div>
+              <div className="text-xs text-gray-400">token exp: {u.emailVerifyExpiresAt ? new Date(u.emailVerifyExpiresAt).toLocaleString('ru-RU') : '—'}</div>
+              <div className="mt-1">
+                <button className="btn" onClick={() => resendVerification(u.id)}>Переотправить подтверждение</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <section className="crm-card">
         <div className="mb-2 flex items-center justify-between text-sm text-gray-400">

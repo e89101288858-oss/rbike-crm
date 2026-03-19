@@ -11,6 +11,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common'
+import { createHash, randomBytes } from 'crypto'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
 import type { JwtUser } from '../common/decorators/current-user.decorator'
@@ -241,6 +242,67 @@ export class AdminController {
         tenant: { select: { id: true, name: true, mode: true } },
       },
     })
+  }
+
+  @Get('admin/email/verification-pending')
+  async listPendingEmailVerification(@Query('limit') limit?: string) {
+    const take = Math.max(1, Math.min(200, Number(limit || 50)))
+    return this.prisma.user.findMany({
+      where: {
+        emailVerifiedAt: null,
+        emailVerifyTokenHash: { not: null },
+      },
+      orderBy: { createdAt: 'desc' },
+      take,
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+        emailVerifyExpiresAt: true,
+      },
+    })
+  }
+
+  @Post('admin/users/:id/resend-email-verification')
+  async resendEmailVerification(@Param('id') id: string, @CurrentUser() user: JwtUser) {
+    const target = await this.prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        emailVerifiedAt: true,
+      },
+    })
+
+    if (!target || !target.email) throw new NotFoundException('User not found')
+    if (target.emailVerifiedAt) throw new BadRequestException('Email already verified')
+
+    const verifyToken = randomBytes(24).toString('hex')
+    const verifyTokenHash = createHash('sha256').update(verifyToken).digest('hex')
+    const verifyExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
+
+    await this.prisma.user.update({
+      where: { id: target.id },
+      data: {
+        isActive: false,
+        emailVerifyTokenHash: verifyTokenHash,
+        emailVerifyExpiresAt: verifyExpiresAt,
+      },
+    })
+
+    const result = await this.email.sendEmailVerification(target.email, verifyToken)
+    if (!result.ok) {
+      throw new BadRequestException('Не удалось отправить письмо подтверждения')
+    }
+
+    await this.audit(user.userId, 'RESEND_EMAIL_VERIFICATION', 'USER', target.id, {
+      email: target.email,
+      verifyExpiresAt,
+    })
+
+    return { ok: true }
   }
 
   @Get('admin/saas/invoices/:id')
