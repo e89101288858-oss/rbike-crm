@@ -108,6 +108,10 @@ export class AuthService {
         },
       })
 
+      const verifyToken = randomBytes(24).toString('hex')
+      const verifyTokenHash = createHash('sha256').update(verifyToken).digest('hex')
+      const verifyExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
+
       const user = await tx.user.create({
         data: {
           email: dto.email,
@@ -116,7 +120,10 @@ export class AuthService {
           passwordHash,
           role: 'SAAS_USER',
           franchiseeId: franchisee.id,
-          isActive: true,
+          isActive: false,
+          emailVerifyTokenHash: verifyTokenHash,
+          emailVerifyExpiresAt: verifyExpiresAt,
+          emailVerifiedAt: null,
         },
       })
 
@@ -124,42 +131,30 @@ export class AuthService {
         data: { userId: user.id, tenantId: tenant.id },
       })
 
-      return { user, tenant, franchisee }
+      return { user, tenant, franchisee, verifyToken }
     })
 
-    const payload = {
-      userId: created.user.id,
-      role: created.user.role,
-      franchiseeId: created.user.franchiseeId ?? null,
-      tokenVersion: created.user.tokenVersion ?? 0,
+    if (created.user.email) {
+      void this.email.sendEmailVerification(created.user.email, (created as any).verifyToken)
     }
 
-    const accessToken = await this.jwt.signAsync(payload)
-
     return {
-      accessToken,
-      tenantId: created.tenant.id,
-      user: {
-        id: created.user.id,
-        email: created.user.email,
-        role: created.user.role,
-      },
-      tenant: {
-        id: created.tenant.id,
-        name: created.tenant.name,
-        mode: created.tenant.mode,
-      },
-      franchisee: {
-        id: created.franchisee.id,
-        name: created.franchisee.name,
-      },
+      ok: true,
+      requiresEmailVerification: true,
     }
   }
 
   async login(email: string, password: string, ip?: string | null, userAgent?: string | null) {
     const user = await this.prisma.user.findUnique({ where: { email } })
 
-    if (!user || !user.isActive) {
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials')
+    }
+
+    if (!user.isActive) {
+      if (user.emailVerifyTokenHash && user.emailVerifyExpiresAt && user.emailVerifyExpiresAt > new Date()) {
+        throw new UnauthorizedException('Подтвердите email перед входом')
+      }
       throw new UnauthorizedException('Invalid credentials')
     }
 
@@ -186,6 +181,47 @@ export class AuthService {
 
     const accessToken = await this.jwt.signAsync(payload)
     return { accessToken }
+  }
+
+
+  async confirmEmail(token: string) {
+    const tokenHash = createHash('sha256').update(token).digest('hex')
+
+    const user = await this.prisma.user.findFirst({
+      where: {
+        emailVerifyTokenHash: tokenHash,
+        emailVerifyExpiresAt: { gt: new Date() },
+      },
+    })
+
+    if (!user) throw new BadRequestException('Ссылка подтверждения недействительна или истекла')
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        isActive: true,
+        emailVerifiedAt: new Date(),
+        emailVerifyTokenHash: null,
+        emailVerifyExpiresAt: null,
+      },
+    })
+
+    const payload = {
+      userId: user.id,
+      role: user.role,
+      franchiseeId: user.franchiseeId ?? null,
+      tokenVersion: user.tokenVersion ?? 0,
+    }
+
+    const accessToken = await this.jwt.signAsync(payload)
+    const tenants = await this.prisma.userTenant.findMany({
+      where: { userId: user.id },
+      select: { tenantId: true },
+      take: 1,
+      orderBy: { createdAt: 'asc' } as any,
+    } as any)
+
+    return { ok: true, accessToken, tenantId: tenants[0]?.tenantId ?? null }
   }
 
   async requestPasswordReset(email: string) {

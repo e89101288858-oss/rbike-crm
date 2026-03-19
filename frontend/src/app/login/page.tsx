@@ -38,6 +38,20 @@ export default function LoginPage() {
     if (params.get('passwordChanged') === '1') {
       setPasswordChangedNotice(true)
     }
+
+    const verifyEmailToken = params.get('verifyEmailToken')
+    if (verifyEmailToken) {
+      setLoading(true)
+      api.confirmEmail(verifyEmailToken)
+        .then((res) => {
+          setToken(res.accessToken)
+          if (res.tenantId) setTenantId(res.tenantId)
+          setSuccess('Email подтвержден, выполняем вход...')
+          router.push('/dashboard')
+        })
+        .catch((err) => setError(err instanceof Error ? err.message : 'Ошибка подтверждения email'))
+        .finally(() => setLoading(false))
+    }
   }, [])
 
   async function onSubmitLogin(e: FormEvent) {
@@ -90,7 +104,7 @@ export default function LoginPage() {
     try {
       if (regPassword !== regPasswordConfirm) throw new Error('Пароли не совпадают')
 
-      const res = await api.registerSaas({
+      await api.registerSaas({
         fullName: regFullName.trim(),
         phone: regPhone.trim() || undefined,
         email: regEmail.trim(),
@@ -99,13 +113,6 @@ export default function LoginPage() {
         city: regCity.trim() || undefined,
         tenantName: regTenantName.trim() || undefined,
       })
-
-      setToken(res.accessToken)
-      setTenantId(res.tenantId)
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('rbike_onboarding', '1')
-        localStorage.removeItem('rbike_demo')
-      }
 
       setRegFullName('')
       setRegPhone('')
@@ -116,7 +123,8 @@ export default function LoginPage() {
       setRegCity('')
       setRegTenantName('')
 
-      router.push('/dashboard?onboarding=1')
+      setSuccess('Регистрация почти завершена. Проверьте почту и подтвердите email.')
+      setTab('login')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка регистрации')
     } finally {

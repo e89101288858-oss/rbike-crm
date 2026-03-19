@@ -6,6 +6,7 @@ import { RegisterRequestDto } from './dto/register-request.dto'
 import { RegisterSaasDto } from './dto/register-saas.dto'
 import { PasswordResetRequestDto } from './dto/password-reset-request.dto'
 import { PasswordResetConfirmDto } from './dto/password-reset-confirm.dto'
+import { EmailConfirmDto } from './dto/email-confirm.dto'
 
 @Controller('auth')
 export class AuthController {
@@ -19,6 +20,11 @@ export class AuthController {
   @Post('register-saas')
   async registerSaas(@Body() dto: RegisterSaasDto) {
     return this.auth.registerSaas(dto)
+  }
+
+  @Post('confirm-email')
+  async confirmEmail(@Body() dto: EmailConfirmDto) {
+    return this.auth.confirmEmail(dto.token)
   }
 
   @Post('login')

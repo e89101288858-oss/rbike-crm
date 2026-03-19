@@ -108,6 +108,9 @@ model User {
   lastLoginUserAgent String?
   passwordResetTokenHash String?
   passwordResetExpiresAt DateTime?
+  emailVerifyTokenHash String?
+  emailVerifyExpiresAt DateTime?
+  emailVerifiedAt DateTime?
   role         UserRole
   franchiseeId String?
   franchisee   Franchisee?  @relation(fields: [franchiseeId], references: [id])

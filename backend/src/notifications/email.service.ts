@@ -120,6 +120,29 @@ export class EmailService {
     return this.send(to, subject, tpl.html, tpl.text)
   }
 
+  async sendEmailVerification(to: string, token: string) {
+    const appUrl = this.config.get<string>('APP_URL') || 'https://app.rbcrm.ru'
+    const verifyUrl = `${appUrl}/login?verifyEmailToken=${encodeURIComponent(token)}`
+
+    const subject = 'Подтверждение регистрации rbCRM'
+    const body = `
+      <p style="margin:0 0 10px;">Спасибо за регистрацию в rbCRM.</p>
+      <p style="margin:0 0 10px;">Токен подтверждения:</p>
+      <p style="margin:0 0 10px;font-family:monospace;font-size:14px;background:#f1f5f9;padding:10px;border-radius:8px;word-break:break-all;"><b>${token}</b></p>
+      <p style="margin:0;">Подтвердите email в течение 24 часов.</p>
+    `
+
+    const tpl = this.renderLayout({
+      title: 'Подтвердите email',
+      body,
+      ctaLabel: 'Подтвердить email',
+      ctaUrl: verifyUrl,
+      footerNote: 'Если вы не регистрировались в rbCRM, просто проигнорируйте это письмо.',
+    })
+
+    return this.send(to, subject, tpl.html, tpl.text)
+  }
+
   async sendPasswordChanged(to: string) {
     const subject = 'Пароль rbCRM успешно изменён'
     const tpl = this.renderLayout({

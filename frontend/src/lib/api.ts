@@ -203,9 +203,15 @@ export const api = {
     city?: string
     tenantName?: string
   }) =>
-    request<{ accessToken: string; tenantId: string }>('/auth/register-saas', {
+    request<{ ok: boolean; requiresEmailVerification: boolean }>('/auth/register-saas', {
       method: 'POST',
       body: JSON.stringify(payload),
+    }),
+
+  confirmEmail: (token: string) =>
+    request<{ ok: boolean; accessToken: string; tenantId: string | null }>('/auth/confirm-email', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
     }),
 
   passwordResetRequest: (email: string) =>
