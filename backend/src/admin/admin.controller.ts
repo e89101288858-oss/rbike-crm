@@ -17,6 +17,7 @@ import type { JwtUser } from '../common/decorators/current-user.decorator'
 import { Roles } from '../common/decorators/roles.decorator'
 import { RolesGuard } from '../common/guards/roles.guard'
 import { PrismaService } from '../prisma/prisma.service'
+import { EmailService } from '../notifications/email.service'
 import { ApproveRegistrationDto } from './dto/approve-registration.dto'
 import { CreateFranchiseeDto } from './dto/create-franchisee.dto'
 import { UpdateFranchiseeDto } from './dto/update-franchisee.dto'
@@ -28,7 +29,10 @@ import { UpdateSaasSubscriptionDto } from './dto/update-saas-subscription.dto'
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('OWNER')
 export class AdminController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly email: EmailService,
+  ) {}
 
   private async audit(userId: string | undefined, action: string, targetType: string, targetId?: string, details?: any) {
     await this.prisma.auditLog.create({
@@ -134,6 +138,68 @@ export class AdminController {
 
     await this.audit(user.userId, 'REJECT_REGISTRATION', 'REGISTRATION_REQUEST', id, { email: req.email })
     return { id, rejected: true }
+  }
+
+  @Get('admin/system/overview')
+  async systemOverview() {
+    const now = Date.now()
+    const [franchisees, tenantsTotal, tenantsSaas, usersTotal, invoicesPending, invoicesFailed, invoicesPaid] = await Promise.all([
+      this.prisma.franchisee.count(),
+      this.prisma.tenant.count(),
+      this.prisma.tenant.count({ where: { mode: 'SAAS' } }),
+      this.prisma.user.count(),
+      this.prisma.saaSInvoice.count({ where: { status: 'PENDING' } }),
+      this.prisma.saaSInvoice.count({ where: { status: 'FAILED' } }),
+      this.prisma.saaSInvoice.count({ where: { status: 'PAID' } }),
+    ])
+
+    return {
+      serverTime: new Date(now).toISOString(),
+      uptimeSec: Math.round(process.uptime()),
+      version: process.env.npm_package_version || 'unknown',
+      counts: {
+        franchisees,
+        tenantsTotal,
+        tenantsSaas,
+        usersTotal,
+      },
+      billing: {
+        pending: invoicesPending,
+        failed: invoicesFailed,
+        paid: invoicesPaid,
+      },
+      emailEnabled: !!process.env.SMTP_HOST && !!process.env.SMTP_USER && !!process.env.SMTP_PASS,
+    }
+  }
+
+  @Get('admin/saas/invoices')
+  async listSaasInvoices(@Query('limit') limit?: string) {
+    const take = Math.max(1, Math.min(200, Number(limit || 50)))
+    return this.prisma.saaSInvoice.findMany({
+      orderBy: { createdAt: 'desc' },
+      take,
+      include: {
+        tenant: { select: { id: true, name: true, mode: true } },
+      },
+    })
+  }
+
+  @Post('admin/system/test-email')
+  async sendTestEmail(@Body() dto: { to: string }) {
+    if (!dto?.to) throw new BadRequestException('to is required')
+
+    const result = await this.email.send(
+      dto.to,
+      'Тестовое письмо rbCRM',
+      '<div style="font-family:Arial,sans-serif"><h3>rbCRM test</h3><p>SMTP настроен корректно.</p></div>',
+      'rbCRM test: SMTP настроен корректно.',
+    )
+
+    if (!result.ok) {
+      throw new BadRequestException('Не удалось отправить тестовое письмо')
+    }
+
+    return { ok: true }
   }
 
   @Get('admin/audit')

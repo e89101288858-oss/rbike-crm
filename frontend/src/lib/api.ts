@@ -809,6 +809,14 @@ export const api = {
 
   adminDeleteTenant: (id: string) => request<any>(`/tenants/${id}`, { method: 'DELETE' }),
 
+  adminSystemOverview: () => request<any>('/admin/system/overview'),
+  adminSaasInvoices: (limit = 50) => request<any[]>(`/admin/saas/invoices?limit=${limit}`),
+  adminSendTestEmail: (to: string) =>
+    request<any>('/admin/system/test-email', {
+      method: 'POST',
+      body: JSON.stringify({ to }),
+    }),
+
   adminUsers: () => request<any[]>('/admin/users'),
   adminCreateUser: (payload: { email: string; password: string; role: 'FRANCHISEE' | 'SAAS_USER' | 'MANAGER' | 'MECHANIC'; franchiseeId?: string }) =>
     request<any>('/admin/users', {
@@ -820,6 +828,7 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(payload),
     }),
+  adminResetUserSessions: (id: string) => request<any>(`/admin/users/${id}/reset-sessions`, { method: 'POST' }),
   adminDeleteUser: (id: string) => request<any>(`/admin/users/${id}`, { method: 'DELETE' }),
 
   tenantUsers: (tenantId: string) => request<any[]>(`/tenants/${tenantId}/users`),
