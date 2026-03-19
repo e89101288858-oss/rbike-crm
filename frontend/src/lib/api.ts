@@ -810,6 +810,16 @@ export const api = {
   adminDeleteTenant: (id: string) => request<any>(`/tenants/${id}`, { method: 'DELETE' }),
 
   adminSystemOverview: () => request<any>('/admin/system/overview'),
+  adminTenantsPaged: (params?: { q?: string; mode?: 'FRANCHISE' | 'SAAS'; isActive?: boolean | null; page?: number; pageSize?: number }) => {
+    const query = new URLSearchParams()
+    if (params?.q) query.set('q', params.q)
+    if (params?.mode) query.set('mode', params.mode)
+    if (params?.isActive === true) query.set('isActive', 'true')
+    if (params?.isActive === false) query.set('isActive', 'false')
+    if (params?.page) query.set('page', String(params.page))
+    if (params?.pageSize) query.set('pageSize', String(params.pageSize))
+    return request<any>(`/admin/tenants${query.toString() ? `?${query.toString()}` : ''}`)
+  },
   adminSaasInvoices: (limit = 50) => request<any[]>(`/admin/saas/invoices?limit=${limit}`),
   adminSendTestEmail: (to: string) =>
     request<any>('/admin/system/test-email', {
@@ -818,6 +828,17 @@ export const api = {
     }),
 
   adminUsers: () => request<any[]>('/admin/users'),
+  adminUsersSearch: (params?: { q?: string; role?: string; isActive?: boolean | null; tenantId?: string; page?: number; pageSize?: number }) => {
+    const query = new URLSearchParams()
+    if (params?.q) query.set('q', params.q)
+    if (params?.role) query.set('role', params.role)
+    if (params?.isActive === true) query.set('isActive', 'true')
+    if (params?.isActive === false) query.set('isActive', 'false')
+    if (params?.tenantId) query.set('tenantId', params.tenantId)
+    if (params?.page) query.set('page', String(params.page))
+    if (params?.pageSize) query.set('pageSize', String(params.pageSize))
+    return request<any>(`/admin/users/search${query.toString() ? `?${query.toString()}` : ''}`)
+  },
   adminCreateUser: (payload: { email: string; password: string; role: 'FRANCHISEE' | 'SAAS_USER' | 'MANAGER' | 'MECHANIC'; franchiseeId?: string }) =>
     request<any>('/admin/users', {
       method: 'POST',

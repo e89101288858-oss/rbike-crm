@@ -9,6 +9,7 @@ import {
   Patch,
   Post,
   Delete,
+  Query,
   UseGuards,
 } from '@nestjs/common'
 import * as bcrypt from 'bcrypt'
@@ -85,6 +86,64 @@ export class UsersController {
         createdAt: true,
       },
     })
+  }
+
+  @Get('search')
+  async search(
+    @Query('q') q?: string,
+    @Query('role') role?: string,
+    @Query('isActive') isActive?: string,
+    @Query('tenantId') tenantId?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    const pageNum = Math.max(1, Number(page || 1))
+    const sizeNum = Math.max(1, Math.min(100, Number(pageSize || 20)))
+
+    const where: Prisma.UserWhereInput = {
+      ...(q
+        ? {
+            OR: [
+              { email: { contains: q, mode: 'insensitive' } },
+              { fullName: { contains: q, mode: 'insensitive' } },
+              { phone: { contains: q, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+      ...(role ? { role: role as UserRole } : {}),
+      ...(isActive === 'true' ? { isActive: true } : {}),
+      ...(isActive === 'false' ? { isActive: false } : {}),
+      ...(tenantId ? { userTenants: { some: { tenantId } } } : {}),
+    }
+
+    const [total, items] = await Promise.all([
+      this.prisma.user.count({ where }),
+      this.prisma.user.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (pageNum - 1) * sizeNum,
+        take: sizeNum,
+        select: {
+          id: true,
+          email: true,
+          role: true,
+          franchiseeId: true,
+          isActive: true,
+          createdAt: true,
+          fullName: true,
+          phone: true,
+          userTenants: { select: { tenantId: true } },
+        },
+      }),
+    ])
+
+    return {
+      items,
+      page: pageNum,
+      pageSize: sizeNum,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / sizeNum)),
+    }
   }
 
   @Get(':id')

@@ -143,6 +143,13 @@ export class AdminController {
   @Get('admin/system/overview')
   async systemOverview() {
     const now = Date.now()
+    let dbOk = true
+    try {
+      await this.prisma.$queryRaw`SELECT 1`
+    } catch {
+      dbOk = false
+    }
+
     const [franchisees, tenantsTotal, tenantsSaas, usersTotal, invoicesPending, invoicesFailed, invoicesPaid] = await Promise.all([
       this.prisma.franchisee.count(),
       this.prisma.tenant.count(),
@@ -157,6 +164,15 @@ export class AdminController {
       serverTime: new Date(now).toISOString(),
       uptimeSec: Math.round(process.uptime()),
       version: process.env.npm_package_version || 'unknown',
+      env: process.env.NODE_ENV || 'development',
+      health: {
+        api: true,
+        db: dbOk,
+      },
+      process: {
+        pid: process.pid,
+        memoryMb: Math.round(process.memoryUsage().rss / 1024 / 1024),
+      },
       counts: {
         franchisees,
         tenantsTotal,
@@ -169,6 +185,47 @@ export class AdminController {
         paid: invoicesPaid,
       },
       emailEnabled: !!process.env.SMTP_HOST && !!process.env.SMTP_USER && !!process.env.SMTP_PASS,
+    }
+  }
+
+  @Get('admin/tenants')
+  async listTenantsGlobal(
+    @Query('q') q?: string,
+    @Query('mode') mode?: 'FRANCHISE' | 'SAAS',
+    @Query('isActive') isActive?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    const pageNum = Math.max(1, Number(page || 1))
+    const sizeNum = Math.max(1, Math.min(100, Number(pageSize || 20)))
+
+    const where = {
+      ...(q ? { name: { contains: q, mode: 'insensitive' as const } } : {}),
+      ...(mode ? { mode } : {}),
+      ...(isActive === 'true' ? { isActive: true } : {}),
+      ...(isActive === 'false' ? { isActive: false } : {}),
+    }
+
+    const [total, items] = await Promise.all([
+      this.prisma.tenant.count({ where }),
+      this.prisma.tenant.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (pageNum - 1) * sizeNum,
+        take: sizeNum,
+        include: {
+          franchisee: { select: { id: true, name: true } },
+          _count: { select: { userTenants: true, bikes: true, clients: true, rentals: true } },
+        },
+      }),
+    ])
+
+    return {
+      items,
+      page: pageNum,
+      pageSize: sizeNum,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / sizeNum)),
     }
   }
 
