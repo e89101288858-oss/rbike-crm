@@ -7,5 +7,6 @@ import { SaasBillingService } from './saas-billing.service'
   imports: [PrismaModule],
   controllers: [SaasBillingController],
   providers: [SaasBillingService],
+  exports: [SaasBillingService],
 })
 export class SaasBillingModule {}
