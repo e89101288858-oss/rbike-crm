@@ -244,6 +244,9 @@ export class AuthService {
     })
 
     await this.audit(user.id, 'PASSWORD_RESET_CONFIRM', 'USER', user.id)
+    if (user.email) {
+      void this.email.sendPasswordChanged(user.email)
+    }
     return { ok: true }
   }
 
