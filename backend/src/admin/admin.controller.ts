@@ -416,10 +416,32 @@ export class AdminController {
   }
 
   @Get('admin/audit')
-  async listAudit() {
+  async listAudit(
+    @Query('limit') limit?: string,
+    @Query('action') action?: string,
+    @Query('targetType') targetType?: string,
+    @Query('userId') userId?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    const take = Math.max(1, Math.min(500, Number(limit || 100)))
+
     return this.prisma.auditLog.findMany({
+      where: {
+        ...(action ? { action } : {}),
+        ...(targetType ? { targetType } : {}),
+        ...(userId ? { userId } : {}),
+        ...((from || to)
+          ? {
+              createdAt: {
+                ...(from ? { gte: new Date(from) } : {}),
+                ...(to ? { lte: new Date(to) } : {}),
+              },
+            }
+          : {}),
+      },
       orderBy: { createdAt: 'desc' },
-      take: 100,
+      take,
       include: {
         user: { select: { id: true, email: true, role: true } },
       },

@@ -895,7 +895,16 @@ export const api = {
   removeUserFromTenant: (tenantId: string, userId: string) =>
     request<any>(`/tenants/${tenantId}/users/${userId}`, { method: 'DELETE' }),
 
-  adminAudit: () => request<any[]>('/admin/audit'),
+  adminAudit: (params?: { limit?: number; action?: string; targetType?: string; userId?: string; from?: string; to?: string }) => {
+    const query = new URLSearchParams()
+    if (params?.limit) query.set('limit', String(params.limit))
+    if (params?.action) query.set('action', params.action)
+    if (params?.targetType) query.set('targetType', params.targetType)
+    if (params?.userId) query.set('userId', params.userId)
+    if (params?.from) query.set('from', params.from)
+    if (params?.to) query.set('to', params.to)
+    return request<any[]>(`/admin/audit${query.toString() ? `?${query.toString()}` : ''}`)
+  },
 
   adminRegistrationRequests: () => request<any[]>('/admin/registration-requests'),
   adminApproveRegistration: (id: string, payload: { franchiseeId: string; tenantId?: string }) =>
