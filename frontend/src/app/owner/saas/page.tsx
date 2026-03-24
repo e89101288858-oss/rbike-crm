@@ -3,8 +3,15 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
+import { DangerConfirmModal } from '@/components/danger-confirm-modal'
 import { api } from '@/lib/api'
 import { getToken } from '@/lib/auth'
+
+type DangerAction =
+  | { type: 'check-by-invoice'; invoiceId: string }
+  | { type: 'check-by-payment'; paymentId: string }
+  | { type: 'save-prices' }
+  | null
 
 export default function Page() {
   const router = useRouter()
@@ -16,6 +23,9 @@ export default function Page() {
   const [paymentId, setPaymentId] = useState('')
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null)
   const [prices, setPrices] = useState({ STARTER: 1, PRO: 4990, ENTERPRISE: 14990 })
+
+  const [dangerAction, setDangerAction] = useState<DangerAction>(null)
+  const [dangerLoading, setDangerLoading] = useState(false)
 
   async function load() {
     setLoading(true)
@@ -41,71 +51,6 @@ export default function Page() {
     void load()
   }, [router])
 
-  async function checkPaymentByInvoiceId() {
-    if (!invoiceId.trim()) return
-    const reason = window.prompt('Причина проверки оплаты:') || ''
-    if (!reason.trim()) return
-    const confirmText = window.prompt('Введите ПОДТВЕРЖДАЮ для выполнения действия:') || ''
-    if (!confirmText.trim()) return
-
-    setError('')
-    setSuccess('')
-    try {
-      const res = await api.adminReconcileSaasInvoice(invoiceId.trim(), { reason, confirmText })
-      setSuccess(`Проверка оплаты выполнена: счёт=${res.invoiceId}, статус провайдера=${res.providerStatus}, статус счёта=${res.invoiceStatus}`)
-      const details = await api.adminSaasInvoiceById(invoiceId.trim())
-      setSelectedInvoice(details)
-      await load()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка проверки оплаты по счёту')
-    }
-  }
-
-  async function checkPaymentByProviderId() {
-    if (!paymentId.trim()) return
-    const reason = window.prompt('Причина проверки оплаты:') || ''
-    if (!reason.trim()) return
-    const confirmText = window.prompt('Введите ПОДТВЕРЖДАЮ для выполнения действия:') || ''
-    if (!confirmText.trim()) return
-
-    setError('')
-    setSuccess('')
-    try {
-      const res = await api.adminReconcileSaasPayment(paymentId.trim(), { reason, confirmText })
-      setSuccess(`Проверка оплаты выполнена: счёт=${res.invoiceId}, статус провайдера=${res.providerStatus}, статус счёта=${res.invoiceStatus}`)
-      if (res.invoiceId) {
-        const details = await api.adminSaasInvoiceById(res.invoiceId)
-        setSelectedInvoice(details)
-      }
-      await load()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка проверки оплаты по ID платежа')
-    }
-  }
-
-  async function savePrices() {
-    const reason = window.prompt('Причина изменения тарифов:') || ''
-    if (!reason.trim()) return
-    const confirmText = window.prompt('Введите ПОДТВЕРЖДАЮ для выполнения действия:') || ''
-    if (!confirmText.trim()) return
-
-    setError('')
-    setSuccess('')
-    try {
-      await api.adminSetSaasPrices({
-        STARTER: Number(prices.STARTER),
-        PRO: Number(prices.PRO),
-        ENTERPRISE: Number(prices.ENTERPRISE),
-        reason,
-        confirmText,
-      })
-      setSuccess('Стоимость тарифов обновлена')
-      await load()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка сохранения тарифов')
-    }
-  }
-
   async function openInvoice(id: string) {
     setError('')
     setSuccess('')
@@ -114,6 +59,49 @@ export default function Page() {
       setSelectedInvoice(details)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Ошибка загрузки счёта')
+    }
+  }
+
+  async function confirmDanger(payload: { reason: string; confirmText: string }) {
+    if (!dangerAction) return
+    setDangerLoading(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      if (dangerAction.type === 'check-by-invoice') {
+        const res = await api.adminReconcileSaasInvoice(dangerAction.invoiceId, payload)
+        setSuccess(`Проверка оплаты выполнена: счёт=${res.invoiceId}, статус провайдера=${res.providerStatus}, статус счёта=${res.invoiceStatus}`)
+        const details = await api.adminSaasInvoiceById(dangerAction.invoiceId)
+        setSelectedInvoice(details)
+      }
+
+      if (dangerAction.type === 'check-by-payment') {
+        const res = await api.adminReconcileSaasPayment(dangerAction.paymentId, payload)
+        setSuccess(`Проверка оплаты выполнена: счёт=${res.invoiceId}, статус провайдера=${res.providerStatus}, статус счёта=${res.invoiceStatus}`)
+        if (res.invoiceId) {
+          const details = await api.adminSaasInvoiceById(res.invoiceId)
+          setSelectedInvoice(details)
+        }
+      }
+
+      if (dangerAction.type === 'save-prices') {
+        await api.adminSetSaasPrices({
+          STARTER: Number(prices.STARTER),
+          PRO: Number(prices.PRO),
+          ENTERPRISE: Number(prices.ENTERPRISE),
+          reason: payload.reason,
+          confirmText: payload.confirmText,
+        })
+        setSuccess('Стоимость тарифов обновлена')
+      }
+
+      setDangerAction(null)
+      await load()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Ошибка выполнения действия')
+    } finally {
+      setDangerLoading(false)
     }
   }
 
@@ -149,7 +137,7 @@ export default function Page() {
             <input className="input mt-1" type="number" min={1} value={prices.ENTERPRISE} onChange={(e) => setPrices((p) => ({ ...p, ENTERPRISE: Number(e.target.value) }))} />
           </label>
           <div className="flex items-end">
-            <button className="btn-primary w-full" onClick={savePrices}>Сохранить тарифы</button>
+            <button className="btn-primary w-full" onClick={() => setDangerAction({ type: 'save-prices' })}>Сохранить тарифы</button>
           </div>
         </div>
       </section>
@@ -159,11 +147,11 @@ export default function Page() {
           <div className="mb-2 text-base font-semibold">Проверка оплаты</div>
           <div className="mb-2 flex gap-2">
             <input className="input w-full" value={invoiceId} onChange={(e) => setInvoiceId(e.target.value)} placeholder="ID счёта" />
-            <button className="btn-primary" onClick={checkPaymentByInvoiceId}>Проверить счёт</button>
+            <button className="btn-primary" onClick={() => invoiceId.trim() && setDangerAction({ type: 'check-by-invoice', invoiceId: invoiceId.trim() })}>Проверить счёт</button>
           </div>
           <div className="flex gap-2">
             <input className="input w-full" value={paymentId} onChange={(e) => setPaymentId(e.target.value)} placeholder="ID платежа у провайдера" />
-            <button className="btn" onClick={checkPaymentByProviderId}>Проверить платёж</button>
+            <button className="btn" onClick={() => paymentId.trim() && setDangerAction({ type: 'check-by-payment', paymentId: paymentId.trim() })}>Проверить платёж</button>
           </div>
         </div>
 
@@ -179,7 +167,7 @@ export default function Page() {
                 <div className="text-xs text-gray-400">{i.id}</div>
                 <div className="text-xs text-gray-400">{i.status} · {new Date(i.createdAt).toLocaleString('ru-RU')}</div>
                 <div className="mt-1">
-                  <button className="btn" onClick={() => { setInvoiceId(i.id); void checkPaymentByInvoiceId() }}>Проверить</button>
+                  <button className="btn" onClick={() => setDangerAction({ type: 'check-by-invoice', invoiceId: i.id })}>Проверить</button>
                 </div>
               </div>
             ))}
@@ -201,6 +189,23 @@ export default function Page() {
           <pre className="mt-1 max-h-[420px] overflow-auto rounded border border-white/10 bg-black/20 p-2 text-xs">{JSON.stringify(selectedInvoice.providerResponse || {}, null, 2)}</pre>
         </section>
       )}
+
+      <DangerConfirmModal
+        open={!!dangerAction}
+        loading={dangerLoading}
+        title={
+          dangerAction?.type === 'check-by-invoice'
+            ? `Проверка оплаты по счёту: ${dangerAction.invoiceId}`
+            : dangerAction?.type === 'check-by-payment'
+              ? `Проверка оплаты по платежу: ${dangerAction.paymentId}`
+              : dangerAction?.type === 'save-prices'
+                ? 'Изменение стоимости тарифов'
+                : 'Подтверждение действия'
+        }
+        description="Это критичное действие. Укажите причину и подтвердите выполнение."
+        onCancel={() => setDangerAction(null)}
+        onConfirm={confirmDanger}
+      />
     </main>
   )
 }

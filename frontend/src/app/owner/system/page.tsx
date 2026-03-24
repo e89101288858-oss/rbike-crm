@@ -3,8 +3,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Topbar } from '@/components/topbar'
+import { DangerConfirmModal } from '@/components/danger-confirm-modal'
 import { api } from '@/lib/api'
 import { getToken } from '@/lib/auth'
+
+type DangerAction =
+  | { type: 'tenant-active'; tenant: any }
+  | { type: 'reset-user-sessions'; user: any }
+  | null
 
 export default function OwnerSystemPage() {
   const router = useRouter()
@@ -26,6 +32,9 @@ export default function OwnerSystemPage() {
   const [tenantMode, setTenantMode] = useState<'' | 'FRANCHISE' | 'SAAS'>('')
   const [tenantIsActive, setTenantIsActive] = useState<'all' | 'true' | 'false'>('all')
   const [tenantPage, setTenantPage] = useState(1)
+
+  const [dangerAction, setDangerAction] = useState<DangerAction>(null)
+  const [dangerLoading, setDangerLoading] = useState(false)
 
   const activeUsers = useMemo(() => (usersData.items || []).filter((u: any) => u.isActive).length, [usersData])
 
@@ -70,23 +79,6 @@ export default function OwnerSystemPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, tenantPage, tenantMode, tenantIsActive, tenantQ, emailLogStatus, emailLogTemplate])
 
-  async function toggleTenantActive(tenant: any) {
-    const reason = window.prompt('Причина действия:') || ''
-    if (!reason.trim()) return
-    const confirmText = window.prompt('Введите ПОДТВЕРЖДАЮ для выполнения действия:') || ''
-    if (!confirmText.trim()) return
-
-    setError('')
-    setSuccess('')
-    try {
-      await api.adminSetTenantActive(tenant.id, { isActive: !tenant.isActive, reason, confirmText })
-      setSuccess(`Точка ${tenant.name}: ${!tenant.isActive ? 'активирована' : 'деактивирована'}`)
-      await loadAll()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка обновления точки')
-    }
-  }
-
   async function setPlan(tenant: any, plan: 'STARTER' | 'PRO' | 'ENTERPRISE') {
     setError('')
     setSuccess('')
@@ -114,22 +106,6 @@ export default function OwnerSystemPage() {
     }
   }
 
-  async function resetUserSessions(user: any) {
-    const reason = window.prompt('Причина сброса сессий:') || ''
-    if (!reason.trim()) return
-    const confirmText = window.prompt('Введите ПОДТВЕРЖДАЮ для выполнения действия:') || ''
-    if (!confirmText.trim()) return
-
-    setError('')
-    setSuccess('')
-    try {
-      await api.adminResetUserSessions(user.id, { reason, confirmText })
-      setSuccess(`Сессии пользователя ${user.email} сброшены`)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка сброса сессий')
-    }
-  }
-
   async function sendTestEmail() {
     if (!testEmail.trim()) return
     setError('')
@@ -139,6 +115,42 @@ export default function OwnerSystemPage() {
       setSuccess(`Тестовое письмо отправлено на ${testEmail.trim()}`)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Ошибка отправки тестового письма')
+    }
+  }
+
+  async function confirmDanger(payload: { reason: string; confirmText: string }) {
+    if (!dangerAction) return
+
+    setDangerLoading(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      if (dangerAction.type === 'tenant-active') {
+        const tenant = dangerAction.tenant
+        await api.adminSetTenantActive(tenant.id, {
+          isActive: !tenant.isActive,
+          reason: payload.reason,
+          confirmText: payload.confirmText,
+        })
+        setSuccess(`Точка ${tenant.name}: ${!tenant.isActive ? 'активирована' : 'деактивирована'}`)
+      }
+
+      if (dangerAction.type === 'reset-user-sessions') {
+        const user = dangerAction.user
+        await api.adminResetUserSessions(user.id, {
+          reason: payload.reason,
+          confirmText: payload.confirmText,
+        })
+        setSuccess(`Сессии пользователя ${user.email} сброшены`)
+      }
+
+      setDangerAction(null)
+      await loadAll()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Ошибка выполнения действия')
+    } finally {
+      setDangerLoading(false)
     }
   }
 
@@ -207,7 +219,7 @@ export default function OwnerSystemPage() {
                 <div className="text-sm font-medium">{t.name}</div>
                 <div className="text-xs text-gray-400">{t.franchisee?.name || '—'} · {t.mode} · {t.isActive ? 'active' : 'disabled'} · {t.saasPlan || '-'}</div>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <button className="btn" onClick={() => toggleTenantActive(t)}>{t.isActive ? 'Блокировать' : 'Разблокировать'}</button>
+                  <button className="btn" onClick={() => setDangerAction({ type: 'tenant-active', tenant: t })}>{t.isActive ? 'Блокировать' : 'Разблокировать'}</button>
                   {t.mode === 'SAAS' && (
                     <>
                       <button className="btn" onClick={() => setPlan(t, 'STARTER')}>STARTER</button>
@@ -234,7 +246,7 @@ export default function OwnerSystemPage() {
               <div key={u.id} className="rounded border border-white/10 p-2 text-sm">
                 <div><b>{u.email}</b> · {u.role} · {u.isActive ? 'active' : 'disabled'}</div>
                 <div className="mt-1 flex gap-2">
-                  <button className="btn" onClick={() => resetUserSessions(u)}>Сброс сессий</button>
+                  <button className="btn" onClick={() => setDangerAction({ type: 'reset-user-sessions', user: u })}>Сброс сессий</button>
                 </div>
               </div>
             ))}
@@ -298,6 +310,21 @@ export default function OwnerSystemPage() {
           </div>
         </div>
       </section>
+
+      <DangerConfirmModal
+        open={!!dangerAction}
+        loading={dangerLoading}
+        title={
+          dangerAction?.type === 'tenant-active'
+            ? `Подтверждение действия для точки: ${dangerAction.tenant.name}`
+            : dangerAction?.type === 'reset-user-sessions'
+              ? `Сброс сессий пользователя: ${dangerAction.user.email}`
+              : 'Подтверждение действия'
+        }
+        description="Это критичное действие. Укажите причину и подтвердите выполнение."
+        onCancel={() => setDangerAction(null)}
+        onConfirm={confirmDanger}
+      />
     </main>
   )
 }
