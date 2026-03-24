@@ -20,7 +20,8 @@ export default function Page() {
       const me = await api.me()
       if (me.role !== 'OWNER') return router.replace('/dashboard')
       const data = await api.adminFranchisees()
-      setFranchisees(data || [])
+      const onlyFranchise = (data || []).filter((f: any) => Array.isArray(f.tenants) && f.tenants.some((t: any) => t.mode === 'FRANCHISE'))
+      setFranchisees(onlyFranchise)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Ошибка загрузки франшиз')
     } finally {
@@ -60,7 +61,7 @@ export default function Page() {
                 </div>
                 <Link href={`/owner/franchisees/${f.id}`} className="btn">Открыть</Link>
               </div>
-              <div className="mt-2 text-xs text-gray-400">Точек: {Array.isArray(f.tenants) ? f.tenants.length : 0}</div>
+              <div className="mt-2 text-xs text-gray-400">Точек: {Array.isArray(f.tenants) ? f.tenants.filter((t: any) => t.mode === 'FRANCHISE').length : 0}</div>
             </div>
           ))}
           {franchisees.length === 0 && <div className="text-sm text-gray-400">Франчайзи не найдены</div>}

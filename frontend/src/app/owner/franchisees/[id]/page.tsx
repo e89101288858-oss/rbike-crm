@@ -23,7 +23,7 @@ export default function Page() {
 
       const [franchisees, tenants] = await Promise.all([
         api.adminFranchisees(),
-        api.adminTenantsByFranchisee(params.id),
+        api.adminTenantsByFranchisee(params.id, 'FRANCHISE'),
       ])
       const f = (franchisees || []).find((x: any) => x.id === params.id) || null
       setItem({ franchisee: f, tenants: tenants || [] })
