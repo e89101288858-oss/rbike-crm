@@ -151,8 +151,8 @@ model Tenant {
   name           String
   isDemo         Boolean    @default(false)
   address        String?
-  franchiseeId   String
-  franchisee     Franchisee @relation(fields: [franchiseeId], references: [id])
+  franchiseeId   String?
+  franchisee     Franchisee? @relation(fields: [franchiseeId], references: [id])
   dailyRateRub   Float      @default(500)
   minRentalDays  Int        @default(7)
   royaltyPercent          Float                  @default(5)

@@ -69,8 +69,8 @@ export class FranchiseBillingService {
         const royaltyRate = Number(tenant.royaltyPercent ?? 5) / 100
         const royaltyDue = round2(revenue * royaltyRate)
         return {
-          franchiseeId: tenant.franchiseeId,
-          franchiseeName: tenant.franchisee.name,
+          franchiseeId: tenant.franchiseeId!,
+          franchiseeName: tenant.franchisee!.name,
           tenantId: tenant.id,
           tenantName: tenant.name,
           paidPaymentsCount: row?._count._all ?? 0,

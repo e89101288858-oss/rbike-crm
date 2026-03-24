@@ -224,7 +224,7 @@ export class MyTenantSettingsController {
         })
       }
 
-      if (dto.companyName !== undefined || dto.city !== undefined) {
+      if ((dto.companyName !== undefined || dto.city !== undefined) && tenant.franchiseeId) {
         await tx.franchisee.update({
           where: { id: tenant.franchiseeId },
           data: {

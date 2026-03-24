@@ -1,0 +1,1 @@
+ALTER TABLE "Tenant" ALTER COLUMN "franchiseeId" DROP NOT NULL;

@@ -571,6 +571,9 @@ export class AdminController {
       throw new NotFoundException('Franchisee not found')
     }
     const tenantMode = dto.mode ?? 'FRANCHISE'
+    if (tenantMode === 'SAAS') {
+      throw new BadRequestException('SaaS точка не создаётся через франшизу')
+    }
     const created = await this.prisma.tenant.create({
       data: {
         franchiseeId,
@@ -581,11 +584,6 @@ export class AdminController {
         minRentalDays: dto.minRentalDays ?? 7,
         royaltyPercent: dto.royaltyPercent ?? 5,
         mode: tenantMode,
-        ...(tenantMode === 'SAAS' && {
-          saasPlan: 'STARTER',
-          saasSubscriptionStatus: 'TRIAL',
-          saasTrialEndsAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
-        }),
       },
     })
     await this.audit(user.userId, 'CREATE_TENANT', 'TENANT', created.id, {

@@ -140,7 +140,7 @@ export class WeeklyPaymentsService {
     const perTenant = [] as Array<{
       tenantId: string
       tenantName: string
-      franchiseeId: string
+      franchiseeId: string | null
       rentalsChecked: number
       created: number
       skipped: number

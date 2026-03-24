@@ -93,18 +93,8 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(dto.password, 10)
 
     const created = await this.prisma.$transaction(async (tx) => {
-      const franchisee = await tx.franchisee.create({
-        data: {
-          name: dto.companyName,
-          companyName: dto.companyName,
-          city: dto.city ?? null,
-          isActive: true,
-        },
-      })
-
       const tenant = await tx.tenant.create({
         data: {
-          franchiseeId: franchisee.id,
           name: dto.tenantName?.trim() || `${dto.companyName} — точка 1`,
           isActive: true,
           mode: 'SAAS',
@@ -128,7 +118,7 @@ export class AuthService {
           phone: dto.phone ?? null,
           passwordHash,
           role: 'SAAS_USER',
-          franchiseeId: franchisee.id,
+          franchiseeId: null,
           isActive: false,
           emailVerifyTokenHash: verifyTokenHash,
           emailVerifyExpiresAt: verifyExpiresAt,
@@ -140,7 +130,7 @@ export class AuthService {
         data: { userId: user.id, tenantId: tenant.id },
       })
 
-      return { user, tenant, franchisee, verifyToken }
+      return { user, tenant, verifyToken }
     })
 
     if (created.user.email) {
@@ -518,19 +508,8 @@ export class AuthService {
     const pattern = await this.loadNnPattern()
 
     const created = await this.prisma.$transaction(async (tx) => {
-      const franchisee = await tx.franchisee.create({
-        data: {
-          name: `Demo ${slug}`,
-          companyName: `Demo ${slug}`,
-          city: 'Demo City',
-          isActive: true,
-          isDemo: true,
-        },
-      })
-
       const tenant = await tx.tenant.create({
         data: {
-          franchiseeId: franchisee.id,
           name: `Демо точка ${slug}`,
           isActive: true,
           isDemo: true,
@@ -550,7 +529,7 @@ export class AuthService {
           fullName: 'Demo User',
           passwordHash,
           role: 'SAAS_USER',
-          franchiseeId: franchisee.id,
+          franchiseeId: null,
           isActive: true,
           isDemo: true,
         },
