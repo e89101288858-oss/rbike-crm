@@ -15,6 +15,7 @@ export default function Page() {
   const [invoiceId, setInvoiceId] = useState('')
   const [paymentId, setPaymentId] = useState('')
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null)
+  const [prices, setPrices] = useState({ STARTER: 1, PRO: 4990, ENTERPRISE: 14990 })
 
   async function load() {
     setLoading(true)
@@ -22,8 +23,12 @@ export default function Page() {
     try {
       const me = await api.me()
       if (me.role !== 'OWNER') return router.replace('/dashboard')
-      const inv = await api.adminSaasInvoices(100)
+      const [inv, pr] = await Promise.all([
+        api.adminSaasInvoices(100),
+        api.adminSaasPrices(),
+      ])
       setInvoices(inv || [])
+      if (pr) setPrices(pr)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Ошибка загрузки')
     } finally {
@@ -78,6 +83,29 @@ export default function Page() {
     }
   }
 
+  async function savePrices() {
+    const reason = window.prompt('Причина изменения тарифов:') || ''
+    if (!reason.trim()) return
+    const confirmText = window.prompt('Введите ПОДТВЕРЖДАЮ для выполнения действия:') || ''
+    if (!confirmText.trim()) return
+
+    setError('')
+    setSuccess('')
+    try {
+      await api.adminSetSaasPrices({
+        STARTER: Number(prices.STARTER),
+        PRO: Number(prices.PRO),
+        ENTERPRISE: Number(prices.ENTERPRISE),
+        reason,
+        confirmText,
+      })
+      setSuccess('Стоимость тарифов обновлена')
+      await load()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Ошибка сохранения тарифов')
+    }
+  }
+
   async function openInvoice(id: string) {
     setError('')
     setSuccess('')
@@ -104,6 +132,27 @@ export default function Page() {
 
       {error && <div className="alert">{error}</div>}
       {success && <div className="alert-success">{success}</div>}
+
+      <section className="crm-card mb-3">
+        <div className="mb-2 text-base font-semibold">Стоимость тарифов</div>
+        <div className="grid gap-2 md:grid-cols-4">
+          <label className="text-sm">
+            STARTER
+            <input className="input mt-1" type="number" min={1} value={prices.STARTER} onChange={(e) => setPrices((p) => ({ ...p, STARTER: Number(e.target.value) }))} />
+          </label>
+          <label className="text-sm">
+            PRO
+            <input className="input mt-1" type="number" min={1} value={prices.PRO} onChange={(e) => setPrices((p) => ({ ...p, PRO: Number(e.target.value) }))} />
+          </label>
+          <label className="text-sm">
+            ENTERPRISE
+            <input className="input mt-1" type="number" min={1} value={prices.ENTERPRISE} onChange={(e) => setPrices((p) => ({ ...p, ENTERPRISE: Number(e.target.value) }))} />
+          </label>
+          <div className="flex items-end">
+            <button className="btn-primary w-full" onClick={savePrices}>Сохранить тарифы</button>
+          </div>
+        </div>
+      </section>
 
       <section className="grid gap-3 lg:grid-cols-2">
         <div className="crm-card">

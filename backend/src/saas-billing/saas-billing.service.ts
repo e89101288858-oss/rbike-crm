@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config'
 import { PrismaService } from '../prisma/prisma.service'
 import { EmailService } from '../notifications/email.service'
 
-const PLAN_PRICES_RUB: Record<string, number> = {
+const DEFAULT_PLAN_PRICES_RUB: Record<string, number> = {
   STARTER: 1,
   PRO: 4990,
   ENTERPRISE: 14990,
@@ -22,6 +22,33 @@ export class SaasBillingService {
     private readonly config: ConfigService,
     private readonly email: EmailService,
   ) {}
+
+  async getPlanPricesRub() {
+    const setting = await this.prisma.systemSetting.findUnique({ where: { key: 'saasPlanPricesRub' } })
+    const custom = (setting?.value || {}) as Record<string, any>
+
+    return {
+      STARTER: Number(custom.STARTER ?? DEFAULT_PLAN_PRICES_RUB.STARTER),
+      PRO: Number(custom.PRO ?? DEFAULT_PLAN_PRICES_RUB.PRO),
+      ENTERPRISE: Number(custom.ENTERPRISE ?? DEFAULT_PLAN_PRICES_RUB.ENTERPRISE),
+    }
+  }
+
+  async setPlanPricesRub(prices: { STARTER: number; PRO: number; ENTERPRISE: number }) {
+    const normalized = {
+      STARTER: Math.max(1, Math.trunc(Number(prices.STARTER))),
+      PRO: Math.max(1, Math.trunc(Number(prices.PRO))),
+      ENTERPRISE: Math.max(1, Math.trunc(Number(prices.ENTERPRISE))),
+    }
+
+    await this.prisma.systemSetting.upsert({
+      where: { key: 'saasPlanPricesRub' },
+      update: { value: normalized as any },
+      create: { key: 'saasPlanPricesRub', value: normalized as any },
+    })
+
+    return normalized
+  }
 
   private getYooAuthHeader() {
     const shopId = this.config.get<string>('YOOKASSA_SHOP_ID')
@@ -54,8 +81,10 @@ export class SaasBillingService {
     if (!tenant) throw new BadRequestException('Tenant не найден')
     if (tenant.mode !== 'SAAS') throw new BadRequestException('Оплата доступна только для SaaS tenant')
 
+    const prices = await this.getPlanPricesRub()
+
     const targetPlan = plan || (tenant.saasPlan || 'STARTER')
-    const baseAmountRub = PLAN_PRICES_RUB[targetPlan]
+    const baseAmountRub = prices[targetPlan]
     if (!baseAmountRub) throw new BadRequestException('Неизвестный план')
 
     if (![1,3,6,12].includes(durationMonths)) {
@@ -306,15 +335,17 @@ export class SaasBillingService {
       },
     })
 
+    const prices = await this.getPlanPricesRub()
+
     return {
       tenant,
       invoices,
       plans: {
-        STARTER: { priceRub: PLAN_PRICES_RUB.STARTER, ...PLAN_FEATURES.STARTER },
-        PRO: { priceRub: PLAN_PRICES_RUB.PRO, ...PLAN_FEATURES.PRO },
-        ENTERPRISE: { priceRub: PLAN_PRICES_RUB.ENTERPRISE, ...PLAN_FEATURES.ENTERPRISE },
+        STARTER: { priceRub: prices.STARTER, ...PLAN_FEATURES.STARTER },
+        PRO: { priceRub: prices.PRO, ...PLAN_FEATURES.PRO },
+        ENTERPRISE: { priceRub: prices.ENTERPRISE, ...PLAN_FEATURES.ENTERPRISE },
       },
-      prices: PLAN_PRICES_RUB,
+      prices,
     }
   }
 

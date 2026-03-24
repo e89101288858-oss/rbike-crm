@@ -312,6 +312,31 @@ export class AdminController {
     return { ok: true }
   }
 
+  @Get('admin/saas/prices')
+  async getSaasPrices() {
+    return this.saasBilling.getPlanPricesRub()
+  }
+
+  @Post('admin/saas/prices')
+  async setSaasPrices(
+    @Body() dto: { STARTER: number; PRO: number; ENTERPRISE: number; reason?: string; confirmText?: string },
+    @CurrentUser() user: JwtUser,
+  ) {
+    this.requireDangerConfirm(dto)
+    const prices = await this.saasBilling.setPlanPricesRub({
+      STARTER: dto.STARTER,
+      PRO: dto.PRO,
+      ENTERPRISE: dto.ENTERPRISE,
+    })
+
+    await this.audit(user.userId, 'SET_SAAS_PRICES', 'SYSTEM_SETTING', 'saasPlanPricesRub', {
+      reason: dto.reason,
+      prices,
+    })
+
+    return { ok: true, prices }
+  }
+
   @Get('admin/saas/invoices/:id')
   async getSaasInvoice(@Param('id') id: string) {
     const invoice = await this.prisma.saaSInvoice.findUnique({

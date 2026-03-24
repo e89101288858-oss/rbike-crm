@@ -826,6 +826,9 @@ export const api = {
     return request<any>(`/admin/tenants${query.toString() ? `?${query.toString()}` : ''}`)
   },
   adminSaasInvoices: (limit = 50) => request<any[]>(`/admin/saas/invoices?limit=${limit}`),
+  adminSaasPrices: () => request<{ STARTER: number; PRO: number; ENTERPRISE: number }>('/admin/saas/prices'),
+  adminSetSaasPrices: (payload: { STARTER: number; PRO: number; ENTERPRISE: number; reason: string; confirmText: string }) =>
+    request<any>('/admin/saas/prices', { method: 'POST', body: JSON.stringify(payload) }),
   adminSaasInvoiceById: (id: string) => request<any>(`/admin/saas/invoices/${id}`),
   adminReconcileSaasInvoice: (id: string, payload: { reason: string; confirmText: string }) =>
     request<any>(`/admin/saas/invoices/${id}/reconcile`, { method: 'POST', body: JSON.stringify(payload) }),
