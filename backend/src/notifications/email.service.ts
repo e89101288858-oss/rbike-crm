@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import nodemailer, { Transporter } from 'nodemailer'
+import { PrismaService } from '../prisma/prisma.service'
 
 type TemplateBlock = { title: string; body: string; ctaLabel?: string; ctaUrl?: string; footerNote?: string }
 
@@ -10,7 +11,10 @@ export class EmailService {
   private transporter: Transporter | null = null
   private from = ''
 
-  constructor(private readonly config: ConfigService) {
+  constructor(
+    private readonly config: ConfigService,
+    private readonly prisma: PrismaService,
+  ) {
     const host = this.config.get<string>('SMTP_HOST')
     const port = Number(this.config.get<string>('SMTP_PORT') || 0)
     const user = this.config.get<string>('SMTP_USER')
@@ -80,19 +84,51 @@ export class EmailService {
     return { html, text }
   }
 
-  async send(to: string, subject: string, html: string, text?: string) {
-    if (!this.transporter) return { ok: false, reason: 'disabled' }
+  async send(to: string, subject: string, html: string, text?: string, template?: string) {
+    if (!this.transporter) {
+      await this.prisma.emailLog.create({
+        data: {
+          toEmail: to,
+          subject,
+          template: template ?? null,
+          status: 'DISABLED',
+          error: 'SMTP disabled',
+        },
+      })
+      return { ok: false, reason: 'disabled' }
+    }
     try {
-      await this.transporter.sendMail({
+      const info = await this.transporter.sendMail({
         from: this.from,
         to,
         subject,
         html,
         text: text || html.replace(/<[^>]+>/g, ' '),
       })
+
+      await this.prisma.emailLog.create({
+        data: {
+          toEmail: to,
+          subject,
+          template: template ?? null,
+          status: 'SENT',
+          meta: { messageId: info?.messageId } as any,
+        },
+      })
+
       return { ok: true }
     } catch (e) {
-      this.logger.error(`send failed to ${to}: ${e instanceof Error ? e.message : String(e)}`)
+      const msg = e instanceof Error ? e.message : String(e)
+      this.logger.error(`send failed to ${to}: ${msg}`)
+      await this.prisma.emailLog.create({
+        data: {
+          toEmail: to,
+          subject,
+          template: template ?? null,
+          status: 'FAILED',
+          error: msg,
+        },
+      })
       return { ok: false, reason: 'send_failed' }
     }
   }
@@ -117,7 +153,7 @@ export class EmailService {
       footerNote: 'Если вы не запрашивали сброс пароля, проигнорируйте письмо и никому не передавайте токен.',
     })
 
-    return this.send(to, subject, tpl.html, tpl.text)
+    return this.send(to, subject, tpl.html, tpl.text, 'PASSWORD_RESET')
   }
 
   async sendEmailVerification(to: string, token: string) {
@@ -140,7 +176,7 @@ export class EmailService {
       footerNote: 'Если вы не регистрировались в rbCRM, просто проигнорируйте это письмо.',
     })
 
-    return this.send(to, subject, tpl.html, tpl.text)
+    return this.send(to, subject, tpl.html, tpl.text, 'EMAIL_VERIFICATION')
   }
 
   async sendPasswordChanged(to: string) {
@@ -151,7 +187,7 @@ export class EmailService {
       footerNote: 'Если это сделали не вы — срочно свяжитесь с поддержкой и выполните восстановление доступа.',
     })
 
-    return this.send(to, subject, tpl.html, tpl.text)
+    return this.send(to, subject, tpl.html, tpl.text, 'PASSWORD_CHANGED')
   }
 
   async sendBillingSuccess(to: string, payload: { plan: string; amountRub: number; paidUntil?: Date | null }) {
@@ -173,6 +209,6 @@ export class EmailService {
       footerNote: 'Спасибо, что пользуетесь rbCRM.',
     })
 
-    return this.send(to, subject, tpl.html, tpl.text)
+    return this.send(to, subject, tpl.html, tpl.text, 'BILLING_SUCCESS')
   }
 }

@@ -251,6 +251,25 @@ export class AdminController {
     })
   }
 
+  @Get('admin/email/logs')
+  async listEmailLogs(
+    @Query('limit') limit?: string,
+    @Query('status') status?: string,
+    @Query('template') template?: string,
+    @Query('to') to?: string,
+  ) {
+    const take = Math.max(1, Math.min(300, Number(limit || 100)))
+    return this.prisma.emailLog.findMany({
+      where: {
+        ...(status ? { status } : {}),
+        ...(template ? { template } : {}),
+        ...(to ? { toEmail: { contains: to, mode: 'insensitive' } } : {}),
+      },
+      orderBy: { createdAt: 'desc' },
+      take,
+    })
+  }
+
   @Get('admin/email/verification-pending')
   async listPendingEmailVerification(@Query('limit') limit?: string) {
     const take = Math.max(1, Math.min(200, Number(limit || 50)))

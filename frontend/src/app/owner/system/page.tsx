@@ -18,6 +18,9 @@ export default function OwnerSystemPage() {
   const [invoices, setInvoices] = useState<any[]>([])
   const [audit, setAudit] = useState<any[]>([])
   const [testEmail, setTestEmail] = useState('')
+  const [emailLogs, setEmailLogs] = useState<any[]>([])
+  const [emailLogStatus, setEmailLogStatus] = useState('')
+  const [emailLogTemplate, setEmailLogTemplate] = useState('')
 
   const [tenantQ, setTenantQ] = useState('')
   const [tenantMode, setTenantMode] = useState<'' | 'FRANCHISE' | 'SAAS'>('')
@@ -33,7 +36,7 @@ export default function OwnerSystemPage() {
       const me = await api.me()
       if (me.role !== 'OWNER') return router.replace('/dashboard')
 
-      const [ov, tenants, users, inv, au] = await Promise.all([
+      const [ov, tenants, users, inv, au, logs] = await Promise.all([
         api.adminSystemOverview(),
         api.adminTenantsPaged({
           q: tenantQ || undefined,
@@ -45,6 +48,7 @@ export default function OwnerSystemPage() {
         api.adminUsersSearch({ page: 1, pageSize: 40 }),
         api.adminSaasInvoices(50),
         api.adminAudit(),
+        api.adminEmailLogs({ limit: 50, status: emailLogStatus || undefined, template: emailLogTemplate || undefined }),
       ])
 
       setOverview(ov)
@@ -52,6 +56,7 @@ export default function OwnerSystemPage() {
       setUsersData(users || { items: [] })
       setInvoices(inv || [])
       setAudit((au || []).slice(0, 20))
+      setEmailLogs(logs || [])
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Ошибка загрузки owner system')
     } finally {
@@ -63,7 +68,7 @@ export default function OwnerSystemPage() {
     if (!getToken()) return router.replace('/login')
     void loadAll()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router, tenantPage, tenantMode, tenantIsActive, tenantQ])
+  }, [router, tenantPage, tenantMode, tenantIsActive, tenantQ, emailLogStatus, emailLogTemplate])
 
   async function toggleTenantActive(tenant: any) {
     const reason = window.prompt('Причина действия:') || ''
@@ -249,12 +254,41 @@ export default function OwnerSystemPage() {
         </div>
 
         <div className="crm-card">
-          <div className="mb-2 text-base font-semibold">Email / Audit</div>
+          <div className="mb-2 text-base font-semibold">Email / Журнал / Аудит</div>
           <div className="mb-2 flex gap-2">
             <input className="input w-full" placeholder="test@email.com" value={testEmail} onChange={(e) => setTestEmail(e.target.value)} />
             <button className="btn-primary" onClick={sendTestEmail}>Тест</button>
           </div>
-          <div className="max-h-[360px] space-y-2 overflow-auto text-xs">
+
+          <div className="mb-2 grid gap-2 md:grid-cols-2">
+            <select className="input" value={emailLogStatus} onChange={(e) => setEmailLogStatus(e.target.value)}>
+              <option value="">Все статусы писем</option>
+              <option value="SENT">SENT</option>
+              <option value="FAILED">FAILED</option>
+              <option value="DISABLED">DISABLED</option>
+            </select>
+            <select className="input" value={emailLogTemplate} onChange={(e) => setEmailLogTemplate(e.target.value)}>
+              <option value="">Все типы писем</option>
+              <option value="EMAIL_VERIFICATION">Подтверждение email</option>
+              <option value="PASSWORD_RESET">Сброс пароля</option>
+              <option value="PASSWORD_CHANGED">Пароль изменён</option>
+              <option value="BILLING_SUCCESS">Успешная оплата</option>
+            </select>
+          </div>
+
+          <div className="mb-2 text-xs text-gray-400">Журнал отправок писем</div>
+          <div className="max-h-[200px] space-y-2 overflow-auto text-xs">
+            {emailLogs.map((l) => (
+              <div key={l.id} className="rounded border border-white/10 p-2">
+                <div><b>{l.status}</b> · {l.template || '—'} · {l.toEmail}</div>
+                <div className="text-gray-400">{new Date(l.createdAt).toLocaleString('ru-RU')}</div>
+                {l.error ? <div className="text-red-300">{l.error}</div> : null}
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-2 mb-2 text-xs text-gray-400">Аудит действий</div>
+          <div className="max-h-[140px] space-y-2 overflow-auto text-xs">
             {audit.map((a) => (
               <div key={a.id} className="rounded border border-white/10 p-2">
                 <div><b>{a.action}</b> · {a.targetType}</div>

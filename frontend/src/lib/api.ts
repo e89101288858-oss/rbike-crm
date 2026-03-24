@@ -839,6 +839,14 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ to }),
     }),
+  adminEmailLogs: (params?: { limit?: number; status?: string; template?: string; to?: string }) => {
+    const query = new URLSearchParams()
+    if (params?.limit) query.set('limit', String(params.limit))
+    if (params?.status) query.set('status', params.status)
+    if (params?.template) query.set('template', params.template)
+    if (params?.to) query.set('to', params.to)
+    return request<any[]>(`/admin/email/logs${query.toString() ? `?${query.toString()}` : ''}`)
+  },
   adminPendingEmailVerification: (limit = 50) => request<any[]>(`/admin/email/verification-pending?limit=${limit}`),
   adminResendEmailVerification: (userId: string) => request<any>(`/admin/users/${userId}/resend-email-verification`, { method: 'POST' }),
 
