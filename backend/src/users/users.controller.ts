@@ -233,7 +233,11 @@ export class UsersController {
   }
 
   @Post(':id/reset-sessions')
-  async resetSessions(@Param('id') id: string) {
+  async resetSessions(@Param('id') id: string, @Body() dto: { reason?: string; confirmText?: string }) {
+    if (!dto?.reason?.trim()) throw new BadRequestException('Укажите причину действия')
+    if ((dto?.confirmText || '').trim() !== 'ПОДТВЕРЖДАЮ') {
+      throw new BadRequestException('Нужно подтверждение: введите "ПОДТВЕРЖДАЮ"')
+    }
     const user = await this.prisma.user.findUnique({ where: { id }, select: { id: true, role: true, tokenVersion: true } })
     if (!user) throw new NotFoundException('User not found')
     if (user.role === 'OWNER') throw new BadRequestException('OWNER user cannot be modified')

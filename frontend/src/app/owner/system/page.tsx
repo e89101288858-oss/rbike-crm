@@ -66,10 +66,15 @@ export default function OwnerSystemPage() {
   }, [router, tenantPage, tenantMode, tenantIsActive, tenantQ])
 
   async function toggleTenantActive(tenant: any) {
+    const reason = window.prompt('Причина действия:') || ''
+    if (!reason.trim()) return
+    const confirmText = window.prompt('Введите ПОДТВЕРЖДАЮ для выполнения действия:') || ''
+    if (!confirmText.trim()) return
+
     setError('')
     setSuccess('')
     try {
-      await api.adminUpdateTenant(tenant.id, { isActive: !tenant.isActive })
+      await api.adminSetTenantActive(tenant.id, { isActive: !tenant.isActive, reason, confirmText })
       setSuccess(`Точка ${tenant.name}: ${!tenant.isActive ? 'активирована' : 'деактивирована'}`)
       await loadAll()
     } catch (e) {
@@ -105,10 +110,15 @@ export default function OwnerSystemPage() {
   }
 
   async function resetUserSessions(user: any) {
+    const reason = window.prompt('Причина сброса сессий:') || ''
+    if (!reason.trim()) return
+    const confirmText = window.prompt('Введите ПОДТВЕРЖДАЮ для выполнения действия:') || ''
+    if (!confirmText.trim()) return
+
     setError('')
     setSuccess('')
     try {
-      await api.adminResetUserSessions(user.id)
+      await api.adminResetUserSessions(user.id, { reason, confirmText })
       setSuccess(`Сессии пользователя ${user.email} сброшены`)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Ошибка сброса сессий')

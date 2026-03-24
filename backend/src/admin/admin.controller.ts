@@ -37,6 +37,13 @@ export class AdminController {
     private readonly saasBilling: SaasBillingService,
   ) {}
 
+  private requireDangerConfirm(dto: { reason?: string; confirmText?: string }) {
+    if (!dto?.reason?.trim()) throw new BadRequestException('Укажите причину действия')
+    if ((dto?.confirmText || '').trim() !== 'ПОДТВЕРЖДАЮ') {
+      throw new BadRequestException('Нужно подтверждение: введите "ПОДТВЕРЖДАЮ"')
+    }
+  }
+
   private async audit(userId: string | undefined, action: string, targetType: string, targetId?: string, details?: any) {
     await this.prisma.auditLog.create({
       data: {
@@ -316,13 +323,34 @@ export class AdminController {
   }
 
   @Post('admin/saas/invoices/:id/reconcile')
-  async reconcileSaasInvoice(@Param('id') id: string) {
-    return this.saasBilling.adminReconcileInvoice({ invoiceId: id })
+  async reconcileSaasInvoice(
+    @Param('id') id: string,
+    @Body() dto: { reason?: string; confirmText?: string },
+    @CurrentUser() user: JwtUser,
+  ) {
+    this.requireDangerConfirm(dto)
+    const result = await this.saasBilling.adminReconcileInvoice({ invoiceId: id })
+    await this.audit(user.userId, 'RECONCILE_SAAS_INVOICE', 'SAAS_INVOICE', id, {
+      reason: dto.reason,
+      result,
+    })
+    return result
   }
 
   @Post('admin/saas/payments/:paymentId/reconcile')
-  async reconcileSaasPayment(@Param('paymentId') paymentId: string) {
-    return this.saasBilling.adminReconcileInvoice({ paymentId })
+  async reconcileSaasPayment(
+    @Param('paymentId') paymentId: string,
+    @Body() dto: { reason?: string; confirmText?: string },
+    @CurrentUser() user: JwtUser,
+  ) {
+    this.requireDangerConfirm(dto)
+    const result = await this.saasBilling.adminReconcileInvoice({ paymentId })
+    await this.audit(user.userId, 'RECONCILE_SAAS_PAYMENT', 'SAAS_INVOICE', result?.invoiceId, {
+      paymentId,
+      reason: dto.reason,
+      result,
+    })
+    return result
   }
 
   @Post('admin/system/test-email')
@@ -628,6 +656,27 @@ export class AdminController {
         saasMaxBikes: updated.saasMaxBikes,
         saasMaxActiveRentals: updated.saasMaxActiveRentals,
       },
+    })
+
+    return updated
+  }
+
+  @Post('admin/tenants/:id/set-active')
+  async setTenantActive(
+    @Param('id') id: string,
+    @Body() dto: { isActive: boolean; reason?: string; confirmText?: string },
+    @CurrentUser() user: JwtUser,
+  ) {
+    this.requireDangerConfirm(dto)
+
+    const tenant = await this.prisma.tenant.findUnique({ where: { id } })
+    if (!tenant) throw new NotFoundException('Tenant not found')
+
+    const updated = await this.prisma.tenant.update({ where: { id }, data: { isActive: !!dto.isActive } })
+    await this.audit(user.userId, 'SET_TENANT_ACTIVE', 'TENANT', id, {
+      from: tenant.isActive,
+      to: updated.isActive,
+      reason: dto.reason,
     })
 
     return updated

@@ -38,10 +38,15 @@ export default function Page() {
 
   async function checkPaymentByInvoiceId() {
     if (!invoiceId.trim()) return
+    const reason = window.prompt('Причина проверки оплаты:') || ''
+    if (!reason.trim()) return
+    const confirmText = window.prompt('Введите ПОДТВЕРЖДАЮ для выполнения действия:') || ''
+    if (!confirmText.trim()) return
+
     setError('')
     setSuccess('')
     try {
-      const res = await api.adminReconcileSaasInvoice(invoiceId.trim())
+      const res = await api.adminReconcileSaasInvoice(invoiceId.trim(), { reason, confirmText })
       setSuccess(`Проверка оплаты выполнена: счёт=${res.invoiceId}, статус провайдера=${res.providerStatus}, статус счёта=${res.invoiceStatus}`)
       const details = await api.adminSaasInvoiceById(invoiceId.trim())
       setSelectedInvoice(details)
@@ -53,10 +58,15 @@ export default function Page() {
 
   async function checkPaymentByProviderId() {
     if (!paymentId.trim()) return
+    const reason = window.prompt('Причина проверки оплаты:') || ''
+    if (!reason.trim()) return
+    const confirmText = window.prompt('Введите ПОДТВЕРЖДАЮ для выполнения действия:') || ''
+    if (!confirmText.trim()) return
+
     setError('')
     setSuccess('')
     try {
-      const res = await api.adminReconcileSaasPayment(paymentId.trim())
+      const res = await api.adminReconcileSaasPayment(paymentId.trim(), { reason, confirmText })
       setSuccess(`Проверка оплаты выполнена: счёт=${res.invoiceId}, статус провайдера=${res.providerStatus}, статус счёта=${res.invoiceStatus}`)
       if (res.invoiceId) {
         const details = await api.adminSaasInvoiceById(res.invoiceId)

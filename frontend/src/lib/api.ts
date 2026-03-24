@@ -806,6 +806,11 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(payload),
     }),
+  adminSetTenantActive: (id: string, payload: { isActive: boolean; reason: string; confirmText: string }) =>
+    request<any>(`/admin/tenants/${id}/set-active`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
 
   adminDeleteTenant: (id: string) => request<any>(`/tenants/${id}`, { method: 'DELETE' }),
 
@@ -822,8 +827,10 @@ export const api = {
   },
   adminSaasInvoices: (limit = 50) => request<any[]>(`/admin/saas/invoices?limit=${limit}`),
   adminSaasInvoiceById: (id: string) => request<any>(`/admin/saas/invoices/${id}`),
-  adminReconcileSaasInvoice: (id: string) => request<any>(`/admin/saas/invoices/${id}/reconcile`, { method: 'POST' }),
-  adminReconcileSaasPayment: (paymentId: string) => request<any>(`/admin/saas/payments/${paymentId}/reconcile`, { method: 'POST' }),
+  adminReconcileSaasInvoice: (id: string, payload: { reason: string; confirmText: string }) =>
+    request<any>(`/admin/saas/invoices/${id}/reconcile`, { method: 'POST', body: JSON.stringify(payload) }),
+  adminReconcileSaasPayment: (paymentId: string, payload: { reason: string; confirmText: string }) =>
+    request<any>(`/admin/saas/payments/${paymentId}/reconcile`, { method: 'POST', body: JSON.stringify(payload) }),
   adminSendTestEmail: (to: string) =>
     request<any>('/admin/system/test-email', {
       method: 'POST',
@@ -854,7 +861,8 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(payload),
     }),
-  adminResetUserSessions: (id: string) => request<any>(`/admin/users/${id}/reset-sessions`, { method: 'POST' }),
+  adminResetUserSessions: (id: string, payload: { reason: string; confirmText: string }) =>
+    request<any>(`/admin/users/${id}/reset-sessions`, { method: 'POST', body: JSON.stringify(payload) }),
   adminDeleteUser: (id: string) => request<any>(`/admin/users/${id}`, { method: 'DELETE' }),
 
   tenantUsers: (tenantId: string) => request<any[]>(`/tenants/${tenantId}/users`),
