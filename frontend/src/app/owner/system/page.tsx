@@ -10,6 +10,7 @@ import { getToken } from '@/lib/auth'
 type DangerAction =
   | { type: 'tenant-active'; tenant: any }
   | { type: 'reset-user-sessions'; user: any }
+  | { type: 'demo-cleanup' }
   | null
 
 export default function OwnerSystemPage() {
@@ -27,6 +28,7 @@ export default function OwnerSystemPage() {
   const [emailLogs, setEmailLogs] = useState<any[]>([])
   const [emailLogStatus, setEmailLogStatus] = useState('')
   const [emailLogTemplate, setEmailLogTemplate] = useState('')
+  const [demoStatus, setDemoStatus] = useState<any>(null)
 
   const [tenantQ, setTenantQ] = useState('')
   const [tenantMode, setTenantMode] = useState<'' | 'FRANCHISE' | 'SAAS'>('')
@@ -45,7 +47,7 @@ export default function OwnerSystemPage() {
       const me = await api.me()
       if (me.role !== 'OWNER') return router.replace('/dashboard')
 
-      const [ov, tenants, users, inv, au, logs] = await Promise.all([
+      const [ov, tenants, users, inv, au, logs, demo] = await Promise.all([
         api.adminSystemOverview(),
         api.adminTenantsPaged({
           q: tenantQ || undefined,
@@ -58,6 +60,7 @@ export default function OwnerSystemPage() {
         api.adminSaasInvoices(50),
         api.adminAudit(),
         api.adminEmailLogs({ limit: 50, status: emailLogStatus || undefined, template: emailLogTemplate || undefined }),
+        api.adminDemoStatus(),
       ])
 
       setOverview(ov)
@@ -66,6 +69,7 @@ export default function OwnerSystemPage() {
       setInvoices(inv || [])
       setAudit((au || []).slice(0, 20))
       setEmailLogs(logs || [])
+      setDemoStatus(demo || null)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Ошибка загрузки owner system')
     } finally {
@@ -145,6 +149,15 @@ export default function OwnerSystemPage() {
         setSuccess(`Сессии пользователя ${user.email} сброшены`)
       }
 
+      if (dangerAction.type === 'demo-cleanup') {
+        const res = await api.adminRunDemoCleanup({
+          olderThanHours: 6,
+          reason: payload.reason,
+          confirmText: payload.confirmText,
+        })
+        setSuccess(`Очистка демо выполнена: users=${res?.result?.cleanedUsers || 0}, tenants=${res?.result?.cleanedTenants || 0}, errors=${res?.result?.errors || 0}`)
+      }
+
       setDangerAction(null)
       await loadAll()
     } catch (e) {
@@ -168,7 +181,7 @@ export default function OwnerSystemPage() {
       {error && <div className="alert">{error}</div>}
       {success && <div className="alert-success">{success}</div>}
 
-      <section className="mb-3 grid gap-3 md:grid-cols-4">
+      <section className="mb-3 grid gap-3 md:grid-cols-5">
         <div className="crm-card text-sm">
           <div className="text-xs text-gray-400">Система</div>
           <div>Uptime: <b>{overview?.uptimeSec ?? 0}s</b></div>
@@ -192,6 +205,12 @@ export default function OwnerSystemPage() {
           <div>PAID: <b>{overview?.billing?.paid ?? 0}</b></div>
           <div>PENDING: <b>{overview?.billing?.pending ?? 0}</b></div>
           <div>FAILED: <b>{overview?.billing?.failed ?? 0}</b></div>
+        </div>
+        <div className="crm-card text-sm">
+          <div className="text-xs text-gray-400">Демо</div>
+          <div>Users: <b>{demoStatus?.demoUsersTotal ?? 0}</b> (active {demoStatus?.demoUsersActive ?? 0})</div>
+          <div>Tenants: <b>{demoStatus?.demoTenantsTotal ?? 0}</b> (active {demoStatus?.demoTenantsActive ?? 0})</div>
+          <button className="btn mt-2" onClick={() => setDangerAction({ type: 'demo-cleanup' })}>Очистить демо сейчас</button>
         </div>
       </section>
 
@@ -319,7 +338,9 @@ export default function OwnerSystemPage() {
             ? `Подтверждение действия для точки: ${dangerAction.tenant.name}`
             : dangerAction?.type === 'reset-user-sessions'
               ? `Сброс сессий пользователя: ${dangerAction.user.email}`
-              : 'Подтверждение действия'
+              : dangerAction?.type === 'demo-cleanup'
+                ? 'Принудительная очистка демо-данных'
+                : 'Подтверждение действия'
         }
         description="Это критичное действие. Укажите причину и подтвердите выполнение."
         onCancel={() => setDangerAction(null)}

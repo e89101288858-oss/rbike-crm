@@ -26,6 +26,7 @@ import { CreateTenantDto } from './dto/create-tenant.dto'
 import { UpdateTenantDto } from './dto/update-tenant.dto'
 import { UpdateSaasSubscriptionDto } from './dto/update-saas-subscription.dto'
 import { SaasBillingService } from '../saas-billing/saas-billing.service'
+import { AuthService } from '../auth/auth.service'
 
 @Controller()
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -35,6 +36,7 @@ export class AdminController {
     private readonly prisma: PrismaService,
     private readonly email: EmailService,
     private readonly saasBilling: SaasBillingService,
+    private readonly authService: AuthService,
   ) {}
 
   private requireDangerConfirm(dto: { reason?: string; confirmText?: string }) {
@@ -196,6 +198,33 @@ export class AdminController {
       },
       emailEnabled: !!process.env.SMTP_HOST && !!process.env.SMTP_USER && !!process.env.SMTP_PASS,
     }
+  }
+
+  @Get('admin/system/demo-status')
+  async demoStatus() {
+    const [demoUsersTotal, demoUsersActive, demoTenantsTotal, demoTenantsActive] = await Promise.all([
+      this.prisma.user.count({ where: { email: { startsWith: 'demo+' } } }),
+      this.prisma.user.count({ where: { email: { startsWith: 'demo+' }, isActive: true } }),
+      this.prisma.tenant.count({ where: { franchisee: { name: { startsWith: 'Demo ' } } } }),
+      this.prisma.tenant.count({ where: { isActive: true, franchisee: { name: { startsWith: 'Demo ' } } } }),
+    ])
+
+    return { demoUsersTotal, demoUsersActive, demoTenantsTotal, demoTenantsActive }
+  }
+
+  @Post('admin/system/demo-cleanup')
+  async runDemoCleanup(
+    @Body() dto: { olderThanHours?: number; reason?: string; confirmText?: string },
+    @CurrentUser() user: JwtUser,
+  ) {
+    this.requireDangerConfirm(dto)
+    const result = await this.authService.cleanupDemoSessions({ olderThanHours: dto.olderThanHours ?? 6, limit: 500 })
+    await this.audit(user.userId, 'RUN_DEMO_CLEANUP', 'SYSTEM', 'demo-cleanup', {
+      reason: dto.reason,
+      olderThanHours: dto.olderThanHours ?? 6,
+      result,
+    })
+    return { ok: true, result }
   }
 
   @Get('admin/tenants')

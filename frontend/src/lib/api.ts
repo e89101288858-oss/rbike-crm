@@ -815,6 +815,9 @@ export const api = {
   adminDeleteTenant: (id: string) => request<any>(`/tenants/${id}`, { method: 'DELETE' }),
 
   adminSystemOverview: () => request<any>('/admin/system/overview'),
+  adminDemoStatus: () => request<any>('/admin/system/demo-status'),
+  adminRunDemoCleanup: (payload: { olderThanHours?: number; reason: string; confirmText: string }) =>
+    request<any>('/admin/system/demo-cleanup', { method: 'POST', body: JSON.stringify(payload) }),
   adminTenantsPaged: (params?: { q?: string; mode?: 'FRANCHISE' | 'SAAS'; isActive?: boolean | null; page?: number; pageSize?: number }) => {
     const query = new URLSearchParams()
     if (params?.q) query.set('q', params.q)

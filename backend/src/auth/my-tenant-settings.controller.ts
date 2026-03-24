@@ -12,12 +12,16 @@ import { UpdateMyTenantSettingsDto } from './dto/update-my-tenant-settings.dto'
 import { UpdateMyAccountSettingsDto } from './dto/update-my-account-settings.dto'
 import { ChangeMyPasswordDto } from './dto/change-my-password.dto'
 import { ALL_TENANT_PERMISSION_KEYS, defaultPermissionsForRole, normalizePermissions } from '../common/tenant-permissions'
+import { AuthService } from './auth.service'
 
 @Controller('my')
 @UseGuards(JwtAuthGuard, TenantGuard, TenantModeGuard)
 @TenantModes('FRANCHISE', 'SAAS')
 export class MyTenantSettingsController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly authService: AuthService,
+  ) {}
 
 
   private ensureAllowedRole(role: string) {
@@ -289,52 +293,10 @@ export class MyTenantSettingsController {
   }
 
   @Patch('demo/end')
-  async endDemoSession(@Req() req: Request, @CurrentUser() user: JwtUser) {
+  async endDemoSession(@CurrentUser() user: JwtUser) {
     this.ensureAllowedRole(user.role)
-    const tenantId = req.tenantId!
-
-    const me = await this.prisma.user.findUnique({
-      where: { id: user.userId },
-      select: { id: true, email: true, franchiseeId: true },
-    })
-    if (!me) return { ok: true }
-
-    const isDemoUser = me.email.startsWith('demo+') && me.email.endsWith('@rbcrm.local')
-    if (!isDemoUser) return { ok: true }
-
-    await this.prisma.$transaction(async (tx) => {
-      await tx.rentalBattery.deleteMany({ where: { tenantId } })
-      await tx.payment.deleteMany({ where: { tenantId } })
-      await tx.rentalChange.deleteMany({ where: { tenantId } })
-      await tx.document.deleteMany({ where: { tenantId } })
-      await tx.rental.deleteMany({ where: { tenantId } })
-      await tx.expenseBike.deleteMany({ where: { tenantId } })
-      await tx.expense.deleteMany({ where: { tenantId } })
-      await tx.repair.deleteMany({ where: { tenantId } })
-      await tx.battery.deleteMany({ where: { tenantId } })
-      await tx.bike.deleteMany({ where: { tenantId } })
-      await tx.client.deleteMany({ where: { tenantId } })
-      await tx.contractTemplate.deleteMany({ where: { tenantId } })
-
-      await tx.tenant.updateMany({
-        where: { id: tenantId },
-        data: { isActive: false, name: `DEMO_CLOSED_${tenantId.slice(0, 8)}` },
-      })
-
-      await tx.user.update({
-        where: { id: me.id },
-        data: { isActive: false, tokenVersion: { increment: 1 } },
-      })
-
-      if (me.franchiseeId) {
-        await tx.franchisee.update({
-          where: { id: me.franchiseeId },
-          data: { isActive: false },
-        })
-      }
-    })
-
-    await this.audit(user.userId, 'DEMO_AUTO_CLEANUP_ON_SESSION_END', 'TENANT', tenantId)
+    const result = await this.authService.cleanupDemoUserById(user.userId)
+    await this.audit(user.userId, 'DEMO_AUTO_CLEANUP_ON_SESSION_END', 'USER', user.userId, result)
     return { ok: true }
   }
 }
