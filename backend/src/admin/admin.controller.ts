@@ -163,10 +163,10 @@ export class AdminController {
     }
 
     const [franchisees, tenantsTotal, tenantsSaas, usersTotal, invoicesPending, invoicesFailed, invoicesPaid] = await Promise.all([
-      this.prisma.franchisee.count(),
-      this.prisma.tenant.count(),
-      this.prisma.tenant.count({ where: { mode: 'SAAS' } }),
-      this.prisma.user.count(),
+      this.prisma.franchisee.count({ where: { isDemo: false } }),
+      this.prisma.tenant.count({ where: { isDemo: false } }),
+      this.prisma.tenant.count({ where: { mode: 'SAAS', isDemo: false } }),
+      this.prisma.user.count({ where: { isDemo: false } }),
       this.prisma.saaSInvoice.count({ where: { status: 'PENDING' } }),
       this.prisma.saaSInvoice.count({ where: { status: 'FAILED' } }),
       this.prisma.saaSInvoice.count({ where: { status: 'PAID' } }),
@@ -203,10 +203,10 @@ export class AdminController {
   @Get('admin/system/demo-status')
   async demoStatus() {
     const [demoUsersTotal, demoUsersActive, demoTenantsTotal, demoTenantsActive] = await Promise.all([
-      this.prisma.user.count({ where: { email: { startsWith: 'demo+' } } }),
-      this.prisma.user.count({ where: { email: { startsWith: 'demo+' }, isActive: true } }),
-      this.prisma.tenant.count({ where: { franchisee: { name: { startsWith: 'Demo ' } } } }),
-      this.prisma.tenant.count({ where: { isActive: true, franchisee: { name: { startsWith: 'Demo ' } } } }),
+      this.prisma.user.count({ where: { isDemo: true } }),
+      this.prisma.user.count({ where: { isDemo: true, isActive: true } }),
+      this.prisma.tenant.count({ where: { isDemo: true } }),
+      this.prisma.tenant.count({ where: { isDemo: true, isActive: true } }),
     ])
 
     return { demoUsersTotal, demoUsersActive, demoTenantsTotal, demoTenantsActive }
@@ -239,6 +239,7 @@ export class AdminController {
     const sizeNum = Math.max(1, Math.min(100, Number(pageSize || 20)))
 
     const where = {
+      isDemo: false,
       ...(q ? { name: { contains: q, mode: 'insensitive' as const } } : {}),
       ...(mode ? { mode } : {}),
       ...(isActive === 'true' ? { isActive: true } : {}),
@@ -480,16 +481,17 @@ export class AdminController {
   @Get('franchisees')
   async listFranchisees() {
     return this.prisma.franchisee.findMany({
-      include: { tenants: true },
+      where: { isDemo: false },
+      include: { tenants: { where: { isDemo: false } } },
       orderBy: { createdAt: 'asc' },
     })
   }
 
   @Get('franchisees/:id')
   async getFranchisee(@Param('id') id: string) {
-    const franchisee = await this.prisma.franchisee.findUnique({
-      where: { id },
-      include: { tenants: true },
+    const franchisee = await this.prisma.franchisee.findFirst({
+      where: { id, isDemo: false },
+      include: { tenants: { where: { isDemo: false } } },
     })
     if (!franchisee) {
       throw new NotFoundException('Franchisee not found')
@@ -613,9 +615,9 @@ export class AdminController {
     return this.prisma.tenant.findMany({
       where: {
         franchiseeId,
+        isDemo: false,
         ...(mode ? { mode } : {}),
         isActive: true,
-        name: { not: { startsWith: 'DEMO_CLOSED_' } },
       },
       orderBy: { createdAt: 'asc' },
     })
@@ -626,11 +628,11 @@ export class AdminController {
     return this.prisma.tenant.findMany({
       where: {
         mode: 'SAAS',
+        isDemo: false,
         isActive: true,
-        name: { not: { startsWith: 'DEMO_CLOSED_' } },
         franchisee: {
           isActive: true,
-          name: { not: { startsWith: 'Demo ' } },
+          isDemo: false,
         },
       },
       orderBy: { createdAt: 'asc' },
@@ -649,11 +651,11 @@ export class AdminController {
 
     const saasBaseWhere = {
       mode: 'SAAS' as const,
+      isDemo: false,
       isActive: true,
-      name: { not: { startsWith: 'DEMO_CLOSED_' } },
       franchisee: {
         isActive: true,
-        name: { not: { startsWith: 'Demo ' } },
+        isDemo: false,
       },
     }
 

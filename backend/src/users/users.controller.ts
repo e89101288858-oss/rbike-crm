@@ -76,6 +76,7 @@ export class UsersController {
   @Get()
   async list() {
     return this.prisma.user.findMany({
+      where: { isDemo: false },
       orderBy: { createdAt: 'asc' },
       select: {
         id: true,
@@ -101,6 +102,7 @@ export class UsersController {
     const sizeNum = Math.max(1, Math.min(100, Number(pageSize || 20)))
 
     const where: Prisma.UserWhereInput = {
+      isDemo: false,
       ...(q
         ? {
             OR: [
@@ -148,8 +150,8 @@ export class UsersController {
 
   @Get(':id')
   async getById(@Param('id') id: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id },
+    const user = await this.prisma.user.findFirst({
+      where: { id, isDemo: false },
       select: {
         id: true,
         email: true,

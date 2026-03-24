@@ -411,7 +411,7 @@ export class AuthService {
 
     const staleUsers = await this.prisma.user.findMany({
       where: {
-        email: { startsWith: 'demo+' },
+        isDemo: true,
         createdAt: { lt: cutoff },
       },
       select: {
@@ -511,6 +511,7 @@ export class AuthService {
           companyName: `Demo ${slug}`,
           city: 'Demo City',
           isActive: true,
+          isDemo: true,
         },
       })
 
@@ -519,6 +520,7 @@ export class AuthService {
           franchiseeId: franchisee.id,
           name: `Демо точка ${slug}`,
           isActive: true,
+          isDemo: true,
           mode: 'SAAS',
           dailyRateRub: 500,
           minRentalDays: 7,
@@ -537,6 +539,7 @@ export class AuthService {
           role: 'SAAS_USER',
           franchiseeId: franchisee.id,
           isActive: true,
+          isDemo: true,
         },
       })
 
