@@ -36,15 +36,16 @@ export default function Page() {
 
       <section className="mb-3 grid gap-3 md:grid-cols-4">
         <div className="crm-card text-sm">
-          <div className="text-gray-400">Франчайзи</div>
+          <div className="text-gray-400">Франчайзи (активные)</div>
           <div className="mt-1 text-xl font-semibold">{overview?.counts?.franchisees ?? 0}</div>
         </div>
         <div className="crm-card text-sm">
-          <div className="text-gray-400">Точки</div>
+          <div className="text-gray-400">Точки (активные)</div>
           <div className="mt-1 text-xl font-semibold">{overview?.counts?.tenantsTotal ?? 0}</div>
+          <div className="text-xs text-gray-500">FRANCHISE: {overview?.counts?.tenantsFranchise ?? 0} · SAAS: {overview?.counts?.tenantsSaas ?? 0}</div>
         </div>
         <div className="crm-card text-sm">
-          <div className="text-gray-400">Пользователи</div>
+          <div className="text-gray-400">Пользователи (активные)</div>
           <div className="mt-1 text-xl font-semibold">{overview?.counts?.usersTotal ?? 0}</div>
         </div>
         <div className="crm-card text-sm">

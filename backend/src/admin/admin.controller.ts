@@ -162,14 +162,21 @@ export class AdminController {
       dbOk = false
     }
 
-    const [franchisees, tenantsTotal, tenantsSaas, usersTotal, invoicesPending, invoicesFailed, invoicesPaid] = await Promise.all([
-      this.prisma.franchisee.count({ where: { isDemo: false } }),
-      this.prisma.tenant.count({ where: { isDemo: false } }),
-      this.prisma.tenant.count({ where: { mode: 'SAAS', isDemo: false } }),
-      this.prisma.user.count({ where: { isDemo: false } }),
-      this.prisma.saaSInvoice.count({ where: { status: 'PENDING' } }),
-      this.prisma.saaSInvoice.count({ where: { status: 'FAILED' } }),
-      this.prisma.saaSInvoice.count({ where: { status: 'PAID' } }),
+    const [franchisees, tenantsTotal, tenantsSaas, tenantsFranchise, usersTotal, invoicesPending, invoicesFailed, invoicesPaid] = await Promise.all([
+      this.prisma.franchisee.count({
+        where: {
+          isDemo: false,
+          isActive: true,
+          tenants: { some: { isDemo: false, isActive: true, mode: 'FRANCHISE' } },
+        },
+      }),
+      this.prisma.tenant.count({ where: { isDemo: false, isActive: true } }),
+      this.prisma.tenant.count({ where: { mode: 'SAAS', isDemo: false, isActive: true } }),
+      this.prisma.tenant.count({ where: { mode: 'FRANCHISE', isDemo: false, isActive: true } }),
+      this.prisma.user.count({ where: { isDemo: false, isActive: true } }),
+      this.prisma.saaSInvoice.count({ where: { status: 'PENDING', tenant: { isDemo: false } } }),
+      this.prisma.saaSInvoice.count({ where: { status: 'FAILED', tenant: { isDemo: false } } }),
+      this.prisma.saaSInvoice.count({ where: { status: 'PAID', tenant: { isDemo: false } } }),
     ])
 
     return {
@@ -189,6 +196,7 @@ export class AdminController {
         franchisees,
         tenantsTotal,
         tenantsSaas,
+        tenantsFranchise,
         usersTotal,
       },
       billing: {
