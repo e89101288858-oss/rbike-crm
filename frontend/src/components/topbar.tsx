@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { clearTenantId, clearToken, getTenantId, getToken, setTenantId } from '@/lib/auth'
@@ -221,7 +222,10 @@ export function Topbar({ tenants = [] }: { tenants?: TenantOption[] }) {
 
       <aside className={`sidebar ${mobileOpen ? 'sidebar-open' : ''}`}>
         <div className="sidebar-head">
-          <div className="text-lg font-bold">rbCRM</div>
+          <div className="flex items-center gap-2 text-lg font-bold">
+            <Image src="/logo-rbcrm.png" alt="rbCRM" width={24} height={24} className="h-6 w-6" />
+            <span>rbCRM</span>
+          </div>
         </div>
 
         <nav className="sidebar-nav">

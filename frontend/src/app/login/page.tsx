@@ -1,6 +1,7 @@
 'use client'
 
 import { FormEvent, useEffect, useState } from 'react'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { setTenantId, setToken } from '@/lib/auth'
@@ -172,7 +173,10 @@ export default function LoginPage() {
 
   return (
     <main className="page mx-auto flex min-h-screen w-full max-w-md flex-col justify-center">
-      <h1 className="mb-4 text-3xl font-bold">rbCRM</h1>
+      <div className="mb-3 flex items-center gap-3">
+        <Image src="/logo-rbcrm.png" alt="rbCRM" width={44} height={44} className="h-11 w-11" />
+        <h1 className="text-3xl font-bold">rbCRM</h1>
+      </div>
       <p className="mb-4 text-sm text-gray-600">Вход в систему</p>
 
       {passwordChangedNotice ? (
