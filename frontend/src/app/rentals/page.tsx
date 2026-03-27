@@ -545,7 +545,7 @@ export default function RentalsPage() {
             <div className="crm-action-row sticky top-2 z-10 mb-3 backdrop-blur bg-[#181a1f]/95">
               {r.status === 'ACTIVE' && (
                 <>
-                  <input type="number" className="input w-44" min={1} step={10} placeholder="Ставка ₽/сутки" value={dailyRateMap[r.id] ?? Math.round((Number(r.weeklyRateRub || 0) / 7) * 100) / 100} onChange={(e) => setDailyRateMap((prev) => ({ ...prev, [r.id]: e.target.value }))} />
+                  <input type="number" className="input w-44" min={1} step={1} placeholder="Ставка ₽/сутки" value={dailyRateMap[r.id] ?? Math.round((Number(r.weeklyRateRub || 0) / 7) * 100) / 100} onChange={(e) => setDailyRateMap((prev) => ({ ...prev, [r.id]: e.target.value }))} />
                   <button className="btn" onClick={() => setRentalDailyRate(r.id, Number(r.weeklyRateRub || 0))}>Обновить ставку</button>
                   <button className="btn-primary" onClick={() => { setExtendModalRentalId(r.id); setExtendDays('') }}>Продлить</button>
                   <button className="btn" onClick={() => { setShortenModalRentalId(r.id); setShortenDays('') }}>Сократить срок</button>
@@ -786,7 +786,7 @@ export default function RentalsPage() {
 
               <label className="space-y-1 md:col-span-4">
                 <div className="text-xs text-gray-500">Суточная ставка, ₽</div>
-                <input type="number" className="input" min={1} step={10} value={createDailyRateRub} onChange={(e) => setCreateDailyRateRub(Number(e.target.value || 0))} placeholder={tenantMode === 'SAAS' ? 'Введи ставку для этой аренды' : 'Введи ставку (можно изменить от базовой)'} />
+                <input type="number" className="input" min={1} step={1} value={createDailyRateRub} onChange={(e) => setCreateDailyRateRub(Number(e.target.value || 0))} placeholder={tenantMode === 'SAAS' ? 'Введи ставку для этой аренды' : 'Введи ставку (можно изменить от базовой)'} />
                 <div className="text-[11px] text-gray-500">{tenantMode === 'SAAS' ? 'Ставка задается вручную для каждой аренды.' : 'Для франшизы можно использовать базовую ставку точки или указать свою.'}</div>
               </label>
 
